@@ -1,0 +1,30 @@
+mpirun -np 1 tt -posfile sphere.wrl_16_20_1/pos -denfile sphere.wrl_16_20_1/den -geomprtn sphere.wrl_16_20_1/geomprtn -valfile sphere.wrl_16_20_1/val -chkfile sphere.wrl_16_20_1/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 16 -wave3d_ptsmax 100 -wave3d_maxlevel 12
+
+mpirun -np 2 tt -posfile sphere.wrl_16_20_2/pos -denfile sphere.wrl_16_20_2/den -geomprtn sphere.wrl_16_20_2/geomprtn -valfile sphere.wrl_16_20_2/val -chkfile sphere.wrl_16_20_2/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 16 -wave3d_ptsmax 100 -wave3d_maxlevel 12
+
+mpirun -np 4 tt -posfile sphere.wrl_16_20_4/pos -denfile sphere.wrl_16_20_4/den -geomprtn sphere.wrl_16_20_4/geomprtn -valfile sphere.wrl_16_20_4/val -chkfile sphere.wrl_16_20_4/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 16 -wave3d_ptsmax 100 -wave3d_maxlevel 12
+
+mpirun -np 32 tt -posfile sphere.wrl_64_20_32/pos -denfile sphere.wrl_64_20_32/den -geomprtn sphere.wrl_64_20_32/geomprtn -valfile sphere.wrl_64_20_32/val -chkfile sphere.wrl_64_20_32/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 64 -wave3d_ptsmax 100 -wave3d_maxlevel 12
+
+mpirun -np 1 tt -posfile sphere.wrl_64_20_1/pos -denfile sphere.wrl_64_20_1/den -geomprtn sphere.wrl_64_20_1/geomprtn -valfile sphere.wrl_64_20_1/val -chkfile sphere.wrl_64_20_1/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 64 -wave3d_ptsmax 100 -wave3d_maxlevel 12
+
+
+mpirun -np 2 tt -posfile sphere.wrl_2_20_2/pos -denfile sphere.wrl_2_20_2/den -geomprtn sphere.wrl_2_20_2/geomprtn -valfile sphere.wrl_2_20_2/val -chkfile sphere.wrl_2_20_2/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 2 -wave3d_ptsmax 100 -wave3d_maxlevel 12
+
+mpirun -np 1 tt -posfile sphere.wrl_16_20_1/pos -denfile sphere.wrl_16_20_1/den -geomprtn sphere.wrl_16_20_1/geomprtn -valfile sphere.wrl_16_20_1/val -chkfile sphere.wrl_16_20_1/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 16 -wave3d_ptsmax 100 -wave3d_maxlevel 12
+
+mpirun -np 1 tt -posfile sphere.wrl_2_20_1/pos -denfile sphere.wrl_2_20_1/den -geomprtn sphere.wrl_2_20_1/geomprtn -valfile sphere.wrl_2_20_1/val -chkfile sphere.wrl_2_20_1/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 2 -wave3d_ptsmax 100 -wave3d_maxlevel 12
+
+------------------------------
+
+mpirun -np 1 tt -posfile F16.wrl_64_20_1/pos -denfile F16.wrl_64_20_1/den -geomprtn F16.wrl_64_20_1/geomprtn -valfile F16.wrl_64_20_1/val -chkfile F16.wrl_64_20_1/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 64 -wave3d_ptsmax 80 -wave3d_maxlevel 12
+
+mpirun -np 4 tt -posfile F16.wrl_64_20_4/pos -denfile F16.wrl_64_20_4/den -geomprtn F16.wrl_64_20_4/geomprtn -valfile F16.wrl_64_20_4/val -chkfile F16.wrl_64_20_4/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 64 -wave3d_ptsmax 80 -wave3d_maxlevel 12
+
+------------------------------
+
+mpirun -np 4 tt -posfile SubmarineJ.wrl_64_20_4/pos -denfile SubmarineJ.wrl_64_20_4/den -geomprtn SubmarineJ.wrl_64_20_4/geomprtn -valfile SubmarineJ.wrl_64_20_4/val -chkfile SubmarineJ.wrl_64_20_4/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 64 -wave3d_ptsmax 80 -wave3d_maxlevel 12
+
+mpirun -np 1 tt -posfile SubmarineJ.wrl_64_20_1/pos -denfile SubmarineJ.wrl_64_20_1/den -geomprtn SubmarineJ.wrl_64_20_1/geomprtn -valfile SubmarineJ.wrl_64_20_1/val -chkfile SubmarineJ.wrl_64_20_1/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 64 -wave3d_ptsmax 80 -wave3d_maxlevel 12
+
+mpirun -np 1 tt -posfile SubmarineJ.wrl_2_20_1/pos -denfile SubmarineJ.wrl_2_20_1/den -geomprtn SubmarineJ.wrl_2_20_1/geomprtn -valfile SubmarineJ.wrl_2_20_1/val -chkfile SubmarineJ.wrl_2_20_1/chk -knl 0 -mlib3d_NPQ 4 -mlib3d_ldname helm3d_ld_1.bin -mlib3d_hdname helm3d_hd_1_4.bin -wave3d_ACCU 1 -wave3d_NPQ 4 -wave3d_K 2 -wave3d_ptsmax 80 -wave3d_maxlevel 12

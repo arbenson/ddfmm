@@ -1,0 +1,32 @@
+# ----------------------------machine dependent file
+MODE = optim
+
+# compiler and linker variable 
+#INCLUDES	=	-I/usr/include/mpi
+#LIBS 		= 	-lfftw3 -L/home/lexing/intel/mkl/9.0/lib/32 -lmkl -lvml -lguide -lm -lmpi
+
+INCLUDES	=	
+LIBS 		= 	-lfftw3 -llapack -lblas -lm -lmpi 
+
+AR = ar
+ARFLAGS = rc
+
+CC  = mpicc
+CXX = mpicxx
+
+# -Wall -Wno-sign-compare 
+CFLAGS   = -g -MMD -w ${INCLUDES}
+CXXFLAGS = -g -MMD -w ${INCLUDES}
+ifeq ($(MODE),debug)
+else
+	CFLAGS 	+= -O3 -DNDEBUG
+	CXXFLAGS += -O3 -DNDEBUG
+endif
+
+LDFLAGS = ${LIBS}
+
+RANLIB = ranlib
+
+# rules
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $*.cpp
