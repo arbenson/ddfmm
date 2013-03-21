@@ -1,6 +1,7 @@
 function [points,coords]=new_readwrl(fname)
 %read and normalize
-  fid = fopen(fname, 'r');
+  full_fname = sprintf('data/%s',fname);
+  fid = fopen(full_fname, 'r');
   
   tmp = fscanf(fid, '%c', 6);
   points = fscanf(fid, '%f');

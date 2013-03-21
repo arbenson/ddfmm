@@ -7,12 +7,12 @@ if(0)
   NPQ = 4;
   kind = 0; kindstr = 'helm';
 
-  binstr = sprintf('aug3d_ld_%d.bin',ACCU);
+  binstr = sprintf('data/aug3d_ld_%d.bin',ACCU);
   fid = fopen(binstr,'r');
   lowall = readdata(fid);
   fclose(fid);
 
-  binstr = sprintf('aug3d_hd_%d_%d.bin',ACCU,NPQ);
+  binstr = sprintf('data/aug3d_hd_%d_%d.bin',ACCU,NPQ);
   fid = fopen(binstr,'r');
   hghall = readdata(fid);
   fclose(fid);
@@ -26,7 +26,7 @@ if(0)
     lownew{k,2} = lowall(k,2:end);
   end
   
-  binstr = sprintf('helm3d_ld_%d.bin',ACCU);
+  binstr = sprintf('data/helm3d_ld_%d.bin',ACCU);
   fid = fopen(binstr,'w');
   string = {'map', ...
             {'double'}, ...
@@ -61,7 +61,7 @@ if(0)
     end    
   end
   
-  binstr = sprintf('helm3d_hd_%d_%d.bin',ACCU,NPQ);
+  binstr = sprintf('data/helm3d_hd_%d_%d.bin',ACCU,NPQ);
   fid = fopen(binstr,'w');
   string = {'map' ...
             {'double'} ...

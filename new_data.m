@@ -1,6 +1,6 @@
 function [prtn, geom] = new_data(fname, K, NPW, NCPU, NC)
 
-  outdir = sprintf('%s_%d_%d_%d',fname,K,NPW,NCPU);
+  outdir = sprintf('data/%s_%d_%d_%d',fname,K,NPW,NCPU);
   mkdir(outdir);
 
   [points, coords] = new_readwrl(fname);
@@ -254,15 +254,8 @@ function [prtn, geom] = new_data(fname, K, NPW, NCPU, NC)
                {'int'}...
               }...
              };
-    outdir = sprintf('%s_%d_%d_%d',fname,K,NPW,NCPU);
+    outdir = sprintf('data/%s_%d_%d_%d',fname,K,NPW,NCPU);
     binstr = sprintf('%s/pos_%d_%d',outdir,0,NCPU);
     fid = fopen(binstr,'r');
     postst = deserialize(fid,string);
   end
-  
-  
-  
-  
-  
-  
-  

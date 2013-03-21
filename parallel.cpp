@@ -4,6 +4,7 @@ using std::ifstream;
 using std::ofstream;
 using std::vector;
 using std::cerr;
+using std::endl;
 
 //---------------------------------------------------------
 int Separate_Read(string name, istringstream& is)
@@ -13,7 +14,8 @@ int Separate_Read(string name, istringstream& is)
   int mpisize;  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
   //
   char filename[100];
-  sprintf(filename, "%s_%d_%d", name.c_str(), mpirank, mpisize);  //cerr<<filename<<endl;
+  sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);  
+  cerr<<filename<<endl;
   ifstream fin(filename);
   is.str( string(std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>()) );
   fin.close();
@@ -30,7 +32,8 @@ int Separate_Write(string name, ostringstream& os)
   int mpisize;  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
   //
   char filename[100];
-  sprintf(filename, "%s_%d_%d", name.c_str(), mpirank, mpisize);
+  sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);
+  cerr<<filename<<endl;
   ofstream fout(filename);
   fout<<os.str();
   fout.close();
@@ -48,7 +51,10 @@ int Shared_Read(string name, istringstream& is)
   //
   vector<char> tmpstr;
   if(mpirank==0) {
-    ifstream fin(name.c_str());
+    char filename[100];
+    sprintf(filename, "data/%s", name.c_str());
+    cerr << filename << endl;
+    ifstream fin( filename );
     //string str(std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>());
     //tmpstr.insert(tmpstr.end(), str.begin(), str.end());
     tmpstr.insert(tmpstr.end(), std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>());
@@ -76,7 +82,10 @@ int Shared_Write(string name, ostringstream& os)
   int mpisize;  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
   //
   if(mpirank==0) {
-    ofstream fout(name.c_str());
+    char filename[100];
+    sprintf(filename, "data/%s", name.c_str());
+    cerr << filename << endl;
+    ofstream fout( filename );
     fout<<os.str();
     fout.close();
   }

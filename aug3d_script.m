@@ -13,7 +13,7 @@ if(1)
     lowall{g,2} = tmp;
   end
   
-  binstr = sprintf('%s3d_ld_%d.bin',kindstr,ACCU);
+  binstr = sprintf('data/%s3d_ld_%d.bin',kindstr,ACCU);
   fid = fopen(binstr, 'w');
   string = {'map', ...
             {'double'}, ...
@@ -54,7 +54,7 @@ if(1)
     hghall{g,2} = res;
   end
   
-  binstr = sprintf('%s3d_hd_%d_%d.bin',kindstr,ACCU,NPQ);
+  binstr = sprintf('data/%s3d_hd_%d_%d.bin',kindstr,ACCU,NPQ);
   fid = fopen(binstr, 'w');
   string = {'map' ...
             {'double'} ...

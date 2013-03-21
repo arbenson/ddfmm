@@ -1,4 +1,4 @@
-include makefile.${HOST}
+include makeinc/${HOST}
 
 LIB_SRC	=	wave3d.cpp	kernel3d.cpp	mlib3d.cpp	wave3d_setup.cpp	wave3d_eval.cpp	wave3d_check.cpp \
 		vecmatop.cpp	parallel.cpp
@@ -26,7 +26,7 @@ tilde:
 	rm -f *~
 
 clean:
-	rm -rf *~ *.d *.o *.a
+	rm -rf *~ *.d *.o *.a tt data/*.bin data/*.wrl_*_*_*
 
 tags:
 	etags *.hpp *.cpp
