@@ -1,0 +1,4 @@
+To generate the data:
+
+cd matlab; matlab < data_script.m
+
