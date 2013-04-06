@@ -2,7 +2,7 @@ close all;
 if(1)
   hold on;
   
-  [points, coords] = new_readwrl(fname);
+[points, coords] = new_readwrl(fname, '.');
   points = points * K/2 * 0.875; %LEXING: SCALING
   
   %1. get the partition

@@ -1,7 +1,9 @@
-function [points,coords]=new_readwrl(fname)
+function [points,coords]=new_readwrl(fname, datadir)
 %read and normalize
-  full_fname = sprintf('data/%s',fname);
+  fprintf('Reading data from %s/%s\n', datadir, fname);
+  full_fname = sprintf('%s/%s', datadir, fname);
   fid = fopen(full_fname, 'r');
+  assert(fid ~= -1, 'Unsuccessful file open');
   
   tmp = fscanf(fid, '%c', 6);
   points = fscanf(fid, '%f');

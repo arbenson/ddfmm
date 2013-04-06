@@ -1,9 +1,9 @@
-function [prtn, geom] = new_data(fname, K, NPW, NCPU, NC)
+function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
 
-  outdir = sprintf('data/%s_%d_%d_%d',fname,K,NPW,NCPU);
+  outdir = sprintf('%s/%s_%d_%d_%d',datadir,fname,K,NPW,NCPU);
   mkdir(outdir);
 
-  [points, coords] = new_readwrl(fname);
+  [points, coords] = new_readwrl(fname, datadir);
   points = points * K/2 * 0.875; %LEXING: SCALING
   
   %1. get the partition
