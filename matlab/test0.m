@@ -1,24 +1,22 @@
-if(1)
-  
-end
+datadir = './..'
 
-if(0)
+if(1)
   ACCU = 1;
   NPQ = 4;
   kind = 0; kindstr = 'helm';
 
-  binstr = sprintf('data/aug3d_ld_%d.bin',ACCU);
+  binstr = sprintf('%s/data/aug3d_ld_%d.bin',datadir,ACCU);
   fid = fopen(binstr,'r');
   lowall = readdata(fid);
   fclose(fid);
 
-  binstr = sprintf('data/aug3d_hd_%d_%d.bin',ACCU,NPQ);
+binstr = sprintf('%s/data/aug3d_hd_%d_%d.bin',datadir,ACCU,NPQ);
   fid = fopen(binstr,'r');
   hghall = readdata(fid);
   fclose(fid);
 end
 
-if(0)
+if(1)
   num = size(lowall,1);
   lownew = cell(num,2);
   for k=1:num
@@ -26,7 +24,7 @@ if(0)
     lownew{k,2} = lowall(k,2:end);
   end
   
-  binstr = sprintf('data/helm3d_ld_%d.bin',ACCU);
+  binstr = sprintf('%s/data/helm3d_ld_%d.bin',datadir,ACCU);
   fid = fopen(binstr,'w');
   string = {'map', ...
             {'double'}, ...
@@ -49,7 +47,7 @@ if(0)
   fclose(fid);
 end
 
-if(0)
+if(1)
   num = size(hghall,1);
   hghnew = cell(num,2);
   for k=1:num
@@ -61,7 +59,7 @@ if(0)
     end    
   end
   
-  binstr = sprintf('data/helm3d_hd_%d_%d.bin',ACCU,NPQ);
+  binstr = sprintf('%s/data/helm3d_hd_%d_%d.bin',datadir,ACCU,NPQ);
   fid = fopen(binstr,'w');
   string = {'map' ...
             {'double'} ...
@@ -84,7 +82,7 @@ if(0)
   fclose(fid);
 end
 
-if(0)
+if(1)
   N = 40;
   [tx,ty,tz] = sphere(N);
   surf(tx,ty,tz);  axis equal;
@@ -115,5 +113,3 @@ if(0)
   end
   fclose(fid);
 end
-
-
