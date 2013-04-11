@@ -1,7 +1,7 @@
 ACCU = 1;
 
 kind = 0; kindstr = 'helm';
-datadir = './..'
+datadir = './..';
 
 if(1)
   Wall = 2.^[-7:-1];  %Wall = 2.^[-1];
@@ -14,7 +14,7 @@ if(1)
     lowall{g,2} = tmp;
   end
   
-  binstr = sprintf('%s/data/%s3d_ld_%d.bin',datadirkindstr,ACCU);
+  binstr = sprintf('%s/data/%s3d_ld_%d.bin',datadir,kindstr,ACCU);
   fid = fopen(binstr, 'w');
   string = {'map', ...
             {'double'}, ...
