@@ -39,7 +39,11 @@ tilde:
 	rm -f *~
 
 clean:
-	rm -rf *~ src/*.d src/*.o *.a tt data/*.bin data/*.wrl_*_*_*
+	rm -rf *~ src/*.d src/*.o *.a tt 
+
+# TODO (Austin): not sure if these should be included in the default clean or not
+cleandata:
+	rm -rf data/*.bin data/*.wrl_*_*_*
 
 tags:
 	etags include/*.hpp src/*.cpp
