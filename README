@@ -1,4 +1,6 @@
 To generate the data:
 
-cd matlab; matlab < data_script.m
+cd matlab
+matlab < data_script.m
+matlab < aug3d_script.m
 
