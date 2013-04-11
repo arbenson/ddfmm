@@ -3,3 +3,5 @@ syntax: glob
 *.d
 *.a
 *~
+data/*.wrl_*_*_*
+data/*.bin
