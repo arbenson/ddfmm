@@ -17,6 +17,10 @@ int Separate_Read(string name, istringstream& is)
   sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);  
   cerr<<filename<<endl;
   ifstream fin(filename);
+  if (fin.fail()) {
+    fprintf(stderr, "failed to open input file stream (%s)\n", filename);
+  }
+  // TODO (Austin): We should probably exit in this case
   is.str( string(std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>()) );
   fin.close();
   //
@@ -35,6 +39,10 @@ int Separate_Write(string name, ostringstream& os)
   sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);
   cerr<<filename<<endl;
   ofstream fout(filename);
+  if (fout.fail()) {
+    fprintf(stderr, "failed to open output file stream (%s)\n", filename);
+  }
+  // TODO (Austin): We should probably exit in this case
   fout<<os.str();
   fout.close();
   //
@@ -54,7 +62,12 @@ int Shared_Read(string name, istringstream& is)
     char filename[100];
     sprintf(filename, "data/%s", name.c_str());
     cerr << filename << endl;
-    ifstream fin( filename );
+    ifstream fin(filename);
+    if (fin.fail()) {
+      fprintf(stderr, "failed to open input file stream (%s)\n", filename);
+    }
+    // TODO (Austin): We should probably exit in this case
+
     //string str(std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>());
     //tmpstr.insert(tmpstr.end(), str.begin(), str.end());
     tmpstr.insert(tmpstr.end(), std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>());
@@ -85,7 +98,11 @@ int Shared_Write(string name, ostringstream& os)
     char filename[100];
     sprintf(filename, "data/%s", name.c_str());
     cerr << filename << endl;
-    ofstream fout( filename );
+    ofstream fout(filename);
+    if (fout.fail()) {
+      fprintf(stderr, "failed to open output file stream (%s)\n", filename);
+    }
+    // TODO (Austin): We should probably exit in this case
     fout<<os.str();
     fout.close();
   }
