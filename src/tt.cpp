@@ -74,6 +74,7 @@ int main(int argc, char** argv)
   }
   Kernel3d knl(KNL_HELM);
   mi = opts.find("-knl");
+  // TODO (Austin): change this to the other format for getting an option
   if(mi!=opts.end()) {
     istringstream ss(mi->second);
     int type;
@@ -93,7 +94,7 @@ int main(int argc, char** argv)
     return 0;
   }
   
-  istringstream giss;  iC( Shared_Read(mi->second, giss) );
+  istringstream giss;  iC( Shared_Read(opt, giss) );
   iC( deserialize(geomprtn, giss, all) );
   if(mpirank==0) {
     cout<<"Done reading geomprtn "<<geomprtn.m()<<" "<<geomprtn.n()<<" "<<geomprtn.p()<<endl;
