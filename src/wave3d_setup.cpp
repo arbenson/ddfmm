@@ -17,19 +17,39 @@ int Wave3d::setup(map<string,string>& opts)
   //read optional data
   map<string,string>::iterator mi;
   mi = opts.find("-" + prefix() + "ACCU");
-  if(mi!=opts.end()) {	istringstream ss((*mi).second);	ss>>_ACCU;  }
+  if (mi != opts.end()) {
+    istringstream ss(mi->second);
+    ss >> _ACCU;
+  }
   mi = opts.find("-" + prefix() + "NPQ");
-  if(mi!=opts.end()) {	istringstream ss((*mi).second);	ss>>_NPQ;  }
+  if (mi != opts.end()) {
+    istringstream ss(mi->second);
+    ss >> _NPQ;
+  }
   mi = opts.find("-" + prefix() + "K");
-  if(mi!=opts.end()) {	istringstream ss((*mi).second);	ss>>_K;  }
+  if (mi != opts.end()) {
+    istringstream ss(mi->second);
+    ss >> _K;
+  }
   mi = opts.find("-" + prefix() + "ctr");
-  if(mi!=opts.end()) {	istringstream ss((*mi).second);	double x,y,z;	ss>>x>>y>>z;	_ctr = Point3(x,y,z);  }
+  if (mi != opts.end()) {
+    istringstream ss(mi->second);
+    double x, y, z;
+    ss >> x >> y >> z;
+    _ctr = Point3(x,y,z);
+  }
   mi = opts.find("-" + prefix() + "ptsmax");
-  if(mi!=opts.end()) {	istringstream ss((*mi).second);	ss>>_ptsmax;  }
+  if (mi != opts.end()) {
+    istringstream ss(mi->second);
+    ss >> _ptsmax;
+  }
   mi = opts.find("-" + prefix() + "maxlevel");
-  if(mi!=opts.end()) {	istringstream ss((*mi).second);	ss>>_maxlevel;  }
+  if (mi != opts.end()) {
+    istringstream ss(mi->second);
+    ss >> _maxlevel;
+  }
   //
-  if(mpirank==0) {
+  if(mpirank == 0) {
     cerr<<_K<<" | "<<_ACCU<<" | "<<_NPQ<<" | "<<_ctr<<" | "<<_ptsmax<<" | "<<_maxlevel<<endl;
   }
   //
@@ -43,12 +63,17 @@ int Wave3d::setup(map<string,string>& opts)
   //plans
   int _P = P();
   _denfft.resize(2*_P, 2*_P, 2*_P);
-  _fplan = fftw_plan_dft_3d(2*_P,2*_P,2*_P,(fftw_complex*)(_denfft.data()),(fftw_complex*)(_denfft.data()), FFTW_FORWARD,FFTW_MEASURE);
+  _fplan = fftw_plan_dft_3d(2 * _P, 2 * _P, 2 * _P, (fftw_complex*) (_denfft.data()),
+                            (fftw_complex*)(_denfft.data()), FFTW_FORWARD,
+                            FFTW_MEASURE);
   iA(_fplan!=NULL);
   setvalue(_denfft,cpx(0,0));
   //
-  _valfft.resize(2*_P, 2*_P, 2*_P);
-  _bplan = fftw_plan_dft_3d(2*_P,2*_P,2*_P,(fftw_complex*)(_valfft.data()),(fftw_complex*)(_valfft.data()), FFTW_BACKWARD,FFTW_ESTIMATE); 
+  _valfft.resize(2 * _P, 2 * _P, 2 * _P);
+  _bplan = fftw_plan_dft_3d(2 * _P, 2 * _P, 2 * _P,
+                            (fftw_complex*) (_valfft.data()),
+                            (fftw_complex*)(_valfft.data()), FFTW_BACKWARD,
+                            FFTW_ESTIMATE); 
   iA(_bplan!=NULL);
   setvalue(_valfft,cpx(0,0));
   return 0;
@@ -269,18 +294,17 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
 			bool adj = setup_tree_adjacent(reskey, curkey);
 			if( reskey.first<curkey.first ) {
 			  if(adj) {
-				if(isterminal(curdat)) {
-				  if(resdat.tag()&WAVE3D_PTS)
-					Uset.insert(reskey);
-				}
-			  } else {
-				if(resdat.tag()&WAVE3D_PTS)
+			    if(isterminal(curdat) && (resdat.tag()&WAVE3D_PTS)) {
+			      Uset.insert(reskey);
+			    }
+			  } else if (resdat.tag()&WAVE3D_PTS) {
 				  Xset.insert(reskey);
 			  }
 			}
 			if( reskey.first==curkey.first ) {
 			  if(!adj) {
-				Index3 bb = reskey.second - curkey.second;				iA( bb.linfty()<=3 );
+				Index3 bb = reskey.second - curkey.second;
+                                iA( bb.linfty()<=3 );
 				if(resdat.tag()&WAVE3D_PTS)
 				  Vset.insert(reskey);
 			  } else {
@@ -299,9 +323,9 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
 						  Uset.insert(fntkey);
 					  } else {
 						for(int a=0; a<2; a++)
-						  for(int b=0; b<2; b++)
-							for(int c=0; c<2; c++)
-							  rest.push( chdkey(fntkey, Index3(a,b,c)) );
+						    for(int b=0; b<2; b++)
+						        for(int c=0; c<2; c++)
+						            rest.push( chdkey(fntkey, Index3(a,b,c)) );
 					  }
 					}
 				  }
@@ -311,9 +335,9 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
 		  }
 		}
 	  }
-  if(isterminal(curdat))
-	if(curdat.tag()&WAVE3D_PTS)
-	  Uset.insert(curkey);
+  if(isterminal(curdat) && (curdat.tag()&WAVE3D_PTS)) {
+    Uset.insert(curkey);
+  }
   //
   for(set<BoxKey>::iterator si=Uset.begin(); si!=Uset.end(); si++)
 	curdat.undeidxvec().push_back(*si);
@@ -473,4 +497,3 @@ int Wave3d::setup_Q2_wrapper(BoxKey key, BoxDat& dat, vector<int>& pids)
 {
   return (Wave3d::_self)->setup_Q2(key, dat, pids);
 }
-
