@@ -1,16 +1,9 @@
 #include "kernel3d.hpp"
+#include "vecmath.hpp"
 
 double Kernel3d::_mindif = 1e-8;
 using std::polar;
-
-/*
-extern "C"
-{
-  void vdsqrt_(int* n, double*, double*);
-  void vdinv_(int* n, double*, double*);
-  void vdsincos_(int* n, double*, double*, double*);
-}
-*/
+using std::cerr;
 
 //---------------------------------------------------------------------------
 //exp(i*K*r)/r
@@ -26,36 +19,35 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos, const Dbl
   double mindif2 = _mindif*_mindif;
   int TTL = M*N;
 
-  if(_type==KNL_HELM) {
+  if(_type == KNL_HELM) {
     //-------------------------------
     DblNumMat r2(M,N);
     for(int i=0; i<M; i++) {
       for(int j=0; j<N; j++) {
-	double x = trgpos(0,i) - srcpos(0,j);	  double y = trgpos(1,i) - srcpos(1,j);	  double z = trgpos(2,i) - srcpos(2,j);
+	double x = trgpos(0,i) - srcpos(0,j);
+        double y = trgpos(1,i) - srcpos(1,j);
+        double z = trgpos(2,i) - srcpos(2,j);
 	double tmp = x*x + y*y + z*z;
 	r2(i,j) = tmp;
-	if(tmp<mindif2)
+	if(tmp < mindif2)
 	  r2(i,j) = 1;
       }
     }
     DblNumMat r(M,N);
-    //vdsqrt_(&TTL, r2.data(), r.data());
-    for(int i=0; i<M; i++)      for(int j=0; j<N; j++)	r(i,j) = sqrt(r2(i,j));
+    mat_dsqrt(M, N, r2, r);
     
     DblNumMat& ir = r2;  //1/r
-    //vdinv_( &TTL, r.data(), ir.data());
-    for(int i=0; i<M; i++)      for(int j=0; j<N; j++)	ir(i,j) = 1.0/(r(i,j));
+    mat_dinv(M, N, r, ir);
 
     DblNumMat& kr = r; //Kr
-    for(int i=0; i<M; i++)	for(int j=0; j<N; j++)	  kr(i,j) *= K;
+    mat_dscale(M, N, kr, K);
     
     DblNumMat skr(M,N), ckr(M,N);
-    //vdsincos_(&TTL, kr.data(), skr.data(), ckr.data());
-    for(int i=0; i<M; i++)      for(int j=0; j<N; j++)	sincos(kr(i,j), &skr(i,j), &ckr(i,j));
+    mat_dsincos(M, N, kr, skr, ckr);
     
     inter.resize(M,N);
     for(int i=0; i<M; i++)	for(int j=0; j<N; j++)	  inter(i,j) = cpx( ckr(i,j)*ir(i,j), skr(i,j)*ir(i,j) );
-  } else if(_type==KNL_EXPR) {
+  } else if(_type == KNL_EXPR) {
     //-------------------------------
     DblNumMat r2(M,N);
     for(int i=0; i<M; i++) {
@@ -68,20 +60,19 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos, const Dbl
       }
     }
     DblNumMat r(M,N);
-    //vdsqrt_(&TTL, r2.data(), r.data());
-    for(int i=0; i<M; i++)      for(int j=0; j<N; j++)	r(i,j) = sqrt(r2(i,j));
+    mat_dsqrt(M, N, r2, r);
     
     DblNumMat& kr = r; //Kr
-    for(int i=0; i<M; i++)	for(int j=0; j<N; j++)	  kr(i,j) *= K;
+    mat_dscale(M, N, kr, K);
     
     DblNumMat skr(M,N), ckr(M,N);
-    //vdsincos_(&TTL, kr.data(), skr.data(), ckr.data());
-    for(int i=0; i<M; i++)      for(int j=0; j<N; j++)	sincos(kr(i,j), &skr(i,j), &ckr(i,j));
+    mat_dsincos(M, N, kr, skr, ckr);
     
     inter.resize(M,N);
     for(int i=0; i<M; i++)	for(int j=0; j<N; j++)	  inter(i,j) = cpx( ckr(i,j), skr(i,j) );
   } else {
     //-------------------------------
+    cerr << "Unknown kernel type " << _type << std::endl;
     iA(0);
   }
   return 0;
