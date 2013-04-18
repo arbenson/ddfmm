@@ -26,7 +26,8 @@ public:
   int sdof() const { return 1; }
   int tdof() const { return 1; }
   
-  int kernel(const DblNumMat& trgpos, const DblNumMat& srcpos, const DblNumMat& srcnor, CpxNumMat& mat);
+  int kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
+             const DblNumMat& srcnor, CpxNumMat& mat);
 };
 
 #endif
