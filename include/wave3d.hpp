@@ -226,7 +226,10 @@ public:
     int depth = curkey.first;
     Index3 path = curkey.second;
     int tmp = pow2(depth);
-    Point3 t;	for(int d=0; d<3; d++)	  t(d) = _ctr(d) - _K/2 + (path(d)+0.5)/tmp*_K;
+    Point3 t;
+    for(int d=0; d<3; d++) {
+      t(d) = _ctr(d) - _K / 2 + (path(d) + 0.5) / tmp * _K;
+    }
     return t;
   }
   double width(BoxKey& curkey) {
