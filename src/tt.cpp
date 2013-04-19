@@ -115,7 +115,9 @@ int main(int argc, char** argv)
   t0 = time(0);
   iC( wave.setup(opts) );
   t1 = time(0);
-  if(mpirank==0) {	cout<<"wave setup used "<<difftime(t1,t0)<<"secs "<<endl;  }
+  if (mpirank == 0) {
+      cout << "wave setup used " <<difftime(t1,t0) << "secs " << endl;
+  }
   double time_setup = difftime(t1,t0);
 
   //3. eval
