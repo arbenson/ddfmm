@@ -206,7 +206,16 @@ public:
   Mlib3d*& mlibptr() { return _mlibptr; }
   IntNumTns& geomprtn() { return _geomprtn; }
   //
-  int P() {	assert(_ACCU>=1 && _ACCU<=3);	if(_ACCU==1) return 4;	else if(_ACCU==2) return 6;	else return 8;  }
+  int P() {
+    assert(_ACCU>=1 && _ACCU<=3);
+    if (_ACCU==1) {
+      return 4;
+    } else if (_ACCU==2) {
+      return 6;
+    } else {
+      return 8;
+    }
+  }
   double& K() { return _K; }
   Point3& ctr() { return _ctr; }
   int& ptsmax() { return _ptsmax; }
@@ -226,24 +235,25 @@ public:
     return _K/tmp;
   }
   bool iscell(const BoxKey& curkey) {
-    return (curkey.first==celllevel());
+    return curkey.first == celllevel();
   }
   BoxKey parkey(BoxKey& curkey) {
-    BoxKey tmp;	tmp.first = curkey.first-1;	tmp.second = curkey.second/2;
-    return tmp;
+    return BoxKey(curkey.first - 1, curkey.second / 2);
   }
   BoxKey chdkey(BoxKey& curkey, Index3 idx) {
-    BoxKey tmp;	tmp.first = curkey.first + 1;	tmp.second = 2*curkey.second + idx;
-    return tmp;
+    return BoxKey(curkey.first + 1, 2 * curkey.second + idx);
   }
   BoxDat& boxdata(BoxKey& curkey) {
     return _boxvec.access(curkey);
   }
   bool isterminal(BoxDat& curdat) {
-    return (curdat.tag()&WAVE3D_TERMINAL);
+    return curdat.tag() & WAVE3D_TERMINAL;
   }
   bool ispts(BoxDat& curdat) {
-    return (curdat.tag()&WAVE3D_PTS);
+    return curdat.tag() & WAVE3D_PTS;
+  }
+  bool own_box(BoxKey& curkey, int mpirank) {
+    return _boxvec.prtn().owner(curkey) == mpirank;
   }
   
   //simple functions
