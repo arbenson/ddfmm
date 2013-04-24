@@ -20,10 +20,12 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         mi != pos.lclmap().end(); mi++) {
         reqpts.push_back( mi->first );
     }
+
     //2. call den's get
     vector<int> all(1,1);
-    iC( den.getBegin(reqpts, all) );  iC( den.getEnd(all) );
-    //iC( den.get(reqpts, all) );
+    iC( den.getBegin(reqpts, all) );
+    iC( den.getEnd(all) );
+
     //3. compute extden using ptidxvec
     for(map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); mi++) {
@@ -40,6 +42,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         }
     }
     iC( den.discard(reqpts) );
+
     //3. gather maps, low frequency level by level, high frequency dir by dir
     map< double, vector<BoxKey> > ldmap;
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > > hdmap;
@@ -49,7 +52,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         BoxDat& curdat = mi->second;
         double W = width(curkey);
         if(ispts(curdat) && own_box(curkey, mpirank)) {
-            if(W<1-eps) {
+            if(W < 1 - eps) {
                 ldmap[W].push_back(curkey);
             } else {
                 BndDat dummy;
@@ -80,6 +83,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     if (mpirank==0) {
 	cout<<"LOW UP "<<difftime(t1,t0)<<"secs "<<endl;
     }
+
     //HIGH
     if(mpirank==0) cout<<"HGH"<<endl;
     t0 = time(0);
@@ -151,7 +155,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 	cout << "HGH " << difftime(t1,t0) << "secs " << endl;
     }
     //LOW COMM
-    vector<BoxKey> reqbox;  reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
+    vector<BoxKey> reqbox;
+    reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
     vector<int> mask(BoxDat_Number,0);
     mask[BoxDat_extden] = 1;  mask[BoxDat_upeqnden] = 1;
     t0 = time(0);
@@ -198,7 +203,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     }
     //call val->put
     val.putBegin(wrtpts, all);  val.putEnd(all);
-    //val.put(wrtpts, all);
     val.discard(wrtpts);
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
@@ -217,14 +221,14 @@ int Wave3d::eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqbo
     for(int k=0; k<srcvec.size(); k++) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
-        if(srcdat.tag() & WAVE3D_PTS) {
+        if(ispts(srcdat)) {
             //-----------------------------------------------------------------------------
             Point3 srcctr = center(srckey);
             //get array
             CpxNumVec upchkval(tdof*ucp.n());     setvalue(upchkval,cpx(0,0));
             CpxNumVec& upeqnden = srcdat.upeqnden();
             //ue2dc
-            if(isterminal(srcdat)==true) {
+            if(isterminal(srcdat)) {
                 DblNumMat upchkpos(ucp.m(), ucp.n());
                 for(int k=0; k<ucp.n(); k++)
                     for(int d=0; d<dim(); d++)
@@ -238,7 +242,7 @@ int Wave3d::eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqbo
                         for(int c = 0; c<2; c++) {
                             BoxKey chdkey = this->chdkey(srckey, Index3(a,b,c));
                             BoxDat& chddat = _boxvec.access(chdkey);
-                            if(chddat.tag() & WAVE3D_PTS) {
+                            if(ispts(chddat)) {
                                 iC( zgemv(1.0, ue2uc(a,b,c), chddat.upeqnden(), 1.0, upchkval) );
                             }
                         }
@@ -286,7 +290,7 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
     for(int k=0; k<trgvec.size(); k++) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
-        if(trgdat.tag() & WAVE3D_PTS) {
+        if (ispts(trgdat)) {
             //-----------------------------------------------------------------------------
             Point3 trgctr = center(trgkey);
             //array
@@ -327,7 +331,9 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
                 //mul
                 Point3 neictr = center(neikey);         //double DD = neinde.width();
                 Index3 idx;
-                for(int d=0; d<dim(); d++)                       idx(d) = int(round( (trgctr[d]-neictr[d])/W )); //LEXING:CHECK
+                for(int d=0; d<dim(); d++) {
+		    idx(d) = int(round( (trgctr[d]-neictr[d])/W )); //LEXING:CHECK
+		}
                 //creat if it is missing
                 if(neidat.fftcnt()==0) {
                     setvalue(_denfft, cpx(0,0));
@@ -442,7 +448,7 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
                         for(int c = 0; c < 2; c++) {
                             BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
                             BoxDat& chddat = _boxvec.access(chdkey);
-                            if(chddat.tag() & WAVE3D_PTS) {
+                            if(ispts(chddat)) {
                                 //mul
                                 if(chddat.dnchkval().m()==0) {
                                     chddat.dnchkval().resize(de2dc(a,b,c).m());
@@ -460,7 +466,8 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
 }
 
 //---------------------------------------------------------------------
-int Wave3d::eval_upward_hgh_recursive(double W, Index3 nowdir, map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap, set<BndKey>& reqbndset)
+int Wave3d::eval_upward_hgh_recursive(double W, Index3 nowdir,
+        map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap, set<BndKey>& reqbndset)
 {
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
     if(mi!=hdmap.end()) {
@@ -474,7 +481,8 @@ int Wave3d::eval_upward_hgh_recursive(double W, Index3 nowdir, map< Index3, pair
 }
 
 //---------------------------------------------------------------------
-int Wave3d::eval_dnward_hgh_recursive(double W, Index3 nowdir, map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap)
+int Wave3d::eval_dnward_hgh_recursive(double W, Index3 nowdir,
+        map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap)
 {
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
     if(mi!=hdmap.end()) {
@@ -516,7 +524,7 @@ int Wave3d::eval_upward_hgh(double W, Index3 dir, pair< vector<BoxKey>, vector<B
                         for(int c=0; c<2; c++) {
                             BoxKey chdkey = this->chdkey(srckey, Index3(a,b,c));
                             BoxDat& chddat = _boxvec.access(chdkey);
-                            if(chddat.tag() & WAVE3D_PTS) {
+                            if(ispts(chddat)) {
                                 CpxNumVec& chdued = chddat.upeqnden();
                                 iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
                             }
