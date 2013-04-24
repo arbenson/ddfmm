@@ -26,8 +26,6 @@ public:
     vector<int> rnbvec;
     vector< vector<char> > sbufvec;
     vector< vector<char> > rbufvec;
-    //vector<MPI_Request> reqs;
-    //vector<MPI_Status> stats;
     MPI_Request *reqs;
     MPI_Status  *stats;
 public:
@@ -98,8 +96,6 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&), c
   rbufvec.resize(mpisize);
   reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
   stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
-  //reqs.resize(2*mpisize);
-  //stats.resize(2*mpisize);
   //---------
   vector<ostringstream*> ossvec(mpisize);  for(int k=0; k<mpisize; k++)	ossvec[k] = new ostringstream();
   //1. serialize
@@ -167,8 +163,7 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
   rbufvec.resize(mpisize);
   reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
   stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
-  //reqs.resize(2*mpisize);
-  //stats.resize(2*mpisize);
+
   //1. go thrw the keyvec to partition them among other procs
   vector< vector<Key> > skeyvec(mpisize);
   for(int i=0; i<keyvec.size(); i++) {
@@ -185,11 +180,11 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
   iC( MPI_Alltoall( (void*)&(sszvec[0]), 1, MPI_INT, (void*)&(rszvec[0]), 1, MPI_INT, MPI_COMM_WORLD ) );
   //3. allocate space for the keys, send and receive
   vector< vector<Key> > rkeyvec(mpisize);
-  for(int k=0; k<mpisize; k++)
+  for(int k=0; k<mpisize; k++) {
     rkeyvec[k].resize(rszvec[k]);
+  }
+
   {
-    //vector<MPI_Request> reqs;
-    //vector<MPI_Status> stats;
     MPI_Request *reqs;
     MPI_Status  *stats;
     reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
@@ -202,6 +197,7 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
     free(reqs);
     free(stats);
   }
+
   skeyvec.clear(); //save space
   //4. prepare the streams
   vector<ostringstream*> ossvec(mpisize);  for(int k=0; k<mpisize; k++)	ossvec[k] = new ostringstream();
@@ -210,8 +206,8 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
       Key curkey = rkeyvec[k][g];
       typename map<Key,Data>::iterator mi = _lclmap.find(curkey);	  iA( mi!=_lclmap.end() );
       iA( _prtn.owner(curkey)==mpirank );
-      Key key = (*mi).first;
-      const Data& dat = (*mi).second;
+      Key key = mi->first;
+      const Data& dat = mi->second;
       iC( serialize(key, *(ossvec[k]), mask) );
       iC( serialize(dat, *(ossvec[k]), mask) );
       snbvec[k]++; //LEXING: VERY IMPORTANT
@@ -304,8 +300,6 @@ int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>&
   rbufvec.resize(mpisize);
   reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
   stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
-  //reqs.resize(2*mpisize);
-  //stats.resize(2*mpisize);
   //1.
   vector<ostringstream*> ossvec(mpisize);  for(int k=0; k<mpisize; k++)	ossvec[k] = new ostringstream();
   //1. go thrw the keyvec to partition them among other procs
@@ -314,8 +308,8 @@ int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>&
     int k = _prtn.owner(key); //the owner
     if(k!=mpirank) {
       typename map<Key,Data>::iterator mi = _lclmap.find(key);
-      iA( mi!=_lclmap.end() );	  iA( key==(*mi).first );
-      Data& dat = (*mi).second;
+      iA( mi!=_lclmap.end() );	  iA( key == mi->first );
+      Data& dat = mi->second;
       iC( serialize(key, *(ossvec[k]), mask) );
       iC( serialize(dat, *(ossvec[k]), mask) );
       snbvec[k]++;
@@ -327,7 +321,10 @@ int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>&
     sbufvec[k].clear();
     sbufvec[k].insert(sbufvec[k].end(), tmp.begin(), tmp.end());
   }
-  for(int k=0; k<mpisize; k++) {	delete ossvec[k];	ossvec[k] = NULL;  }
+  for(int k=0; k<mpisize; k++) {
+    delete ossvec[k];
+    ossvec[k] = NULL;
+  }
   //3. get size
   vector<int> sszvec(mpisize);
   for(int k=0; k<mpisize; k++)
@@ -377,7 +374,7 @@ int ParVec<Key,Data,Partition>::putEnd( const vector<int>& mask )
     for(int i=0; i<rnbvec[k]; i++) {
       Key key;	  deserialize(key, *(issvec[k]), mask);	  iA( _prtn.owner(key)==mpirank );
       typename map<Key,Data>::iterator mi=_lclmap.find(key);	  iA( mi!=_lclmap.end() );
-      deserialize((*mi).second, *(issvec[k]), mask);
+      deserialize(mi->second, *(issvec[k]), mask);
     }
   }
   for(int k=0; k<mpisize; k++) {	delete issvec[k];	issvec[k] = NULL;  }
