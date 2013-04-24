@@ -92,9 +92,11 @@ int Wave3d::setup_tree()
     int mpisize = this->mpisize();
     double eps = 1e-12;
     double K = this->K();
+    // pos contains all data read by this processor
     ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
 
     //1. call get
+    // 1.  Get all of the geometry information needed for this processor
     vector<int> all(1,1);
     iC( pos.getBegin(&(Wave3d::setup_Q1_wrapper), all) );
     iC( pos.getEnd(all) );
@@ -102,7 +104,7 @@ int Wave3d::setup_tree()
 
     //2. _tree
     int numC = _geomprtn.m();
-    int lvlC = celllevel();
+    int lvlC = cell_level();
     // generate cell level boxes, put them into queue
     Point3 bctr = ctr(); //OVERALL CENTER
     NumTns<BoxDat> cellboxtns(numC, numC, numC);
@@ -131,7 +133,7 @@ int Wave3d::setup_tree()
     cellboxtns.resize(0,0,0);
 
     //-------tree, 
-    while(tmpq.empty()==false) {
+    while(!tmpq.empty()) {
         pair<BoxKey,BoxDat> curent = tmpq.front();
         tmpq.pop();
         BoxKey& curkey = curent.first;
@@ -140,7 +142,7 @@ int Wave3d::setup_tree()
         if(curdat.ptidxvec().size() > 0) {
             curdat.tag() |=  WAVE3D_PTS;
         }
-        bool action = (curkey.first <= unitlevel() && curdat.ptidxvec().size()>0) ||
+        bool action = (curkey.first <= unitlevel() && curdat.ptidxvec().size() > 0) ||
             (curdat.ptidxvec().size() > ptsmax() && curkey.first < maxlevel() - 1);
         if(action) {
             //1. subdivide to get new children
@@ -187,16 +189,19 @@ int Wave3d::setup_tree()
     //call get setup_Q2
     vector<int> mask1(BoxDat_Number,0);
     mask1[BoxDat_tag] = 1;
-    iC( _boxvec.getBegin( &(Wave3d::setup_Q2_wrapper), mask1 ) );  iC( _boxvec.getEnd( mask1 ) );
-    //iC( _boxvec.get( &(Wave3d::setup_Q2_wrapper), mask1 ) );
+    iC( _boxvec.getBegin( &(Wave3d::setup_Q2_wrapper), mask1 ) );
+    iC( _boxvec.getEnd( mask1 ) );
     //compute lists, low list and high list
-    for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin(); mi!=_boxvec.lclmap().end(); mi++) {
+    for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin();
+        mi!=_boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if(own_box(curkey, mpirank) && ispts(curdat)) { //LEXING: JUST COMPUTE MY OWN BOXES
-            if(width(curkey)<1-eps) { //LEXING: STRICTLY < 1
+            if(width(curkey) < 1-eps) { //LEXING: STRICTLY < 1
+                // Low frequency regime
                 iC( setup_tree_callowlist(curkey, curdat) );
             } else {
+                // High frequency regime
                 iC( setup_tree_calhghlist(curkey, curdat) );
             }
         }
@@ -204,50 +209,48 @@ int Wave3d::setup_tree()
 
     //3. get extpos
     set<BoxKey> reqboxset;
-    for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin(); mi!=_boxvec.lclmap().end(); mi++) {
+    for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin();
+        mi!=_boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if(ispts(curdat)) {
-            if (own_box(curkey, mpirank)) {
-                for(int k=0; k<curdat.undeidxvec().size(); k++)
-                    reqboxset.insert( curdat.undeidxvec()[k] );
-                for(int k=0; k<curdat.vndeidxvec().size(); k++)
-                    reqboxset.insert( curdat.vndeidxvec()[k] );
-                for(int k=0; k<curdat.wndeidxvec().size(); k++)
-                    reqboxset.insert( curdat.wndeidxvec()[k] );
-                for(int k=0; k<curdat.xndeidxvec().size(); k++)
-                    reqboxset.insert( curdat.xndeidxvec()[k] );
-            }
+        if(ispts(curdat) && own_box(curkey, mpirank)) {
+	    for(int k=0; k<curdat.undeidxvec().size(); k++)
+		reqboxset.insert( curdat.undeidxvec()[k] );
+	    for(int k=0; k<curdat.vndeidxvec().size(); k++)
+		reqboxset.insert( curdat.vndeidxvec()[k] );
+	    for(int k=0; k<curdat.wndeidxvec().size(); k++)
+		reqboxset.insert( curdat.wndeidxvec()[k] );
+	    for(int k=0; k<curdat.xndeidxvec().size(); k++)
+		reqboxset.insert( curdat.xndeidxvec()[k] );
         }
     }
     vector<BoxKey> reqbox;  reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
     vector<int> mask2(BoxDat_Number,0);
     mask2[BoxDat_extpos] = 1;
     iC( _boxvec.getBegin(reqbox, mask2) );  iC( _boxvec.getEnd(mask2) );
-    //iC( _boxvec.get(reqbox, mask2) );
-    for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin(); mi!=_boxvec.lclmap().end(); mi++) {
+    for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin();
+        mi!=_boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (ispts(curdat)) {
-            if (own_box(curkey, mpirank)) {
-                for(vector<BoxKey>::iterator vi=curdat.vndeidxvec().begin();
-                    vi != curdat.vndeidxvec().end(); vi++) {
-                    BoxKey neikey = (*vi);
-                    BoxDat& neidat = _boxvec.access(neikey);
-                    neidat.fftnum() ++;
-                }
-            }
+        if (ispts(curdat) && own_box(curkey, mpirank)) {
+	    for(vector<BoxKey>::iterator vi=curdat.vndeidxvec().begin();
+		vi != curdat.vndeidxvec().end(); vi++) {
+		BoxKey neikey = (*vi);
+		BoxDat& neidat = _boxvec.access(neikey);
+		neidat.fftnum() ++;
+	    }
         }
     }
 
     //4. dirupeqndenvec, dirdnchkvalvec
     //create
-    for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin(); mi!=_boxvec.lclmap().end(); mi++) {
+    for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin();
+        mi!=_boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = width(curkey);
         if(own_box(curkey, mpirank) && W>1-eps && ispts(curdat)) {
-            if(iscell(curkey)==false) {
+            if(!iscell(curkey)) {
                 BoxKey parkey = this->parkey(curkey);
                 BoxDat& pardat = boxdata(parkey);
                 for(set<Index3>::iterator si=pardat.outdirset().begin();
@@ -302,9 +305,7 @@ int Wave3d::setup_tree()
 int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
 {
     set<BoxKey> Uset, Vset, Wset, Xset;
-    //const BoxKey& curkey = curent.first;
-    //const BoxDat& curdat = curent.second;
-    iA(iscell(curkey)==false); //LEXING: DO NOT ALLOW WIDTH=1 BOXES TO BE CELLS
+    iA(!iscell(curkey)); //LEXING: DO NOT ALLOW WIDTH=1 BOXES TO BE CELLS
     Index3 curpth = curkey.second;
     BoxKey parkey = this->parkey(curkey); //the link to parent
     Index3 parpth = parkey.second;
@@ -319,8 +320,8 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
             for(int k = kl; k < ku; k++) {
                 Index3 trypth(i,j,k);
                 if ( !(trypth(0) == curpth(0)
-                       && trypth(1)==curpth(1)
-                       && trypth(2)==curpth(2)) ) {
+                       && trypth(1) == curpth(1)
+                       && trypth(2) == curpth(2)) ) {
                     BoxKey wntkey(curkey.first, trypth);
                     //LEXING: LOOK FOR IT, DO NOT EXIST IF NO CELL BOX COVERING IT
                     BoxKey reskey;
@@ -348,10 +349,10 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
                                 if(isterminal(curdat)) {
                                     queue<BoxKey> rest;
                                     rest.push(reskey);
-                                    while(rest.empty()==false) {
+                                    while(!rest.empty()) {
                                         BoxKey fntkey = rest.front(); rest.pop();
                                         BoxDat& fntdat = boxdata(fntkey);
-                                        if(setup_tree_adjacent(fntkey, curkey)==false) {
+                                        if(!setup_tree_adjacent(fntkey, curkey)) {
                                             if (ispts(fntdat)) {
                                                 Wset.insert(fntkey);
                                             }
@@ -400,9 +401,9 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
     double eps = 1e-12;
     double D = W * W + W;
     double threshold = D - eps;
-    if(iscell(curkey)==true) {
+    if (iscell(curkey)) {
         //LEXING: CHECK THE FOLLOWING
-        for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin(); iscell(mi->first)==true; mi++) {
+        for(map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin(); iscell(mi->first); mi++) {
             BoxKey othkey = mi->first;
             BoxDat& othdat = _boxvec.access(othkey);
             if (ispts(othdat)) {
@@ -461,7 +462,7 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
 bool Wave3d::setup_tree_find(BoxKey wntkey, BoxKey& trykey)
 {
     trykey = wntkey;
-    while(iscell(trykey)==false) {
+    while(!iscell(trykey)) {
         map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().find(trykey);
         if(mi!=_boxvec.lclmap().end())
             return true; //found
@@ -493,7 +494,7 @@ int Wave3d::setup_Q1(int key, Point3& pos, vector<int>& pids)
     Point3 center = ctr();
     Index3 idx;
     for(int d = 0; d < 3; d++) {
-        idx(d) = (int)floor(numC * ((pos(d) - center(d) + _K / 2) / _K));
+        idx(d) = (int) floor(numC * ((pos(d) - center(d) + _K / 2) / _K));
         iA(idx(d) >= 0 && idx(d) < numC);
     }
     pids.clear();
