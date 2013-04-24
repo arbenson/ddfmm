@@ -238,7 +238,7 @@ public:
     return _K/tmp;
   }
   bool iscell(const BoxKey& curkey) {
-    return curkey.first == celllevel();
+    return curkey.first == cell_level();
   }
   BoxKey parkey(BoxKey& curkey) {
     return BoxKey(curkey.first - 1, curkey.second / 2);
@@ -262,7 +262,7 @@ public:
   //simple functions
   int dim() { return 3; }
   int unitlevel() { return int(round(log(_K)/log(2))); } //the level such that the box has width 1
-  int celllevel() { int numC = _geomprtn.m(); return int(round(log(numC)/log(2))); }
+  int cell_level() { int numC = _geomprtn.m(); return int(round(log(numC)/log(2))); }
   Index3 nml2dir(Point3 nml, double W);
   Index3 predir(Index3 dir);
   vector<Index3> chddir(Index3 dir);
@@ -285,10 +285,16 @@ public:
   int eval_upward_low(double W, vector<BoxKey>&, set<BoxKey>& reqboxset); //may be we can make it to be local index
   int eval_dnward_low(double W, vector<BoxKey>&);
   //
-  int eval_upward_hgh_recursive(double W, Index3 nowdir, map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap, set<BndKey>& reqbndset);
-  int eval_dnward_hgh_recursive(double W, Index3 nowdir, map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
-  int eval_upward_hgh(double W, Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset);
-  int eval_dnward_hgh(double W, Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs);
+  int eval_upward_hgh_recursive(double W, Index3 nowdir, map< Index3,
+                                pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
+                                set<BndKey>& reqbndset);
+  int eval_dnward_hgh_recursive(double W, Index3 nowdir,
+                                map< Index3, pair< vector<BoxKey>,
+                                vector<BoxKey> > >& hdmap);
+  int eval_upward_hgh(double W, Index3 dir, pair< vector<BoxKey>,
+                      vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset);
+  int eval_dnward_hgh(double W, Index3 dir, pair< vector<BoxKey>,
+                      vector<BoxKey> >& hdvecs);
   //
   int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
   int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
