@@ -22,7 +22,6 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
         chkkeyvec.push_back( chkkeys(i) );
     }
     pos.getBegin(chkkeyvec, all);  pos.getEnd(all);
-    //pos.get(chkkeyvec, all);
     vector<Point3> tmpsrcpos;
     for(map<int,Point3>::iterator mi = pos.lclmap().begin();
         mi!=pos.lclmap().end(); mi++) {
@@ -61,7 +60,6 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
   
     //2. get val
     val.getBegin(chkkeyvec, all);  val.getEnd(all);
-    //val.get(chkkeyvec, all);
     CpxNumVec truval(chkkeyvec.size());
     for(int i=0; i<chkkeyvec.size(); i++)
         truval(i) = val.access(chkkeyvec[i]);
