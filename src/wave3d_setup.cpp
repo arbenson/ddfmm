@@ -180,7 +180,7 @@ int Wave3d::setup_tree()
                 }
             }
             //LEXING: VERY IMPORTANT
-            curdat.tag() = curdat.tag() | WAVE3D_TERMINAL;
+            curdat.tag() |= WAVE3D_TERMINAL;
         }
         //add my self into _tree
         _boxvec.insert(curkey, curdat); //LEXING: CHECK
