@@ -19,53 +19,49 @@ template <class Key, class Data, class Partition>
 class ParVec
 {
 public:
-  map<Key,Data> _lclmap;
-  Partition _prtn; //has function owner:Key->pid
-  //temporary data
-  vector<int> snbvec;
-  vector<int> rnbvec;
-  vector< vector<char> > sbufvec;
-  vector< vector<char> > rbufvec;
-  //vector<MPI_Request> reqs;
-  //vector<MPI_Status> stats;
-  MPI_Request *reqs;
-  MPI_Status  *stats;
+    map<Key,Data> _lclmap;
+    Partition _prtn; //has function owner:Key->pid
+    //temporary data
+    vector<int> snbvec;
+    vector<int> rnbvec;
+    vector< vector<char> > sbufvec;
+    vector< vector<char> > rbufvec;
+    //vector<MPI_Request> reqs;
+    //vector<MPI_Status> stats;
+    MPI_Request *reqs;
+    MPI_Status  *stats;
 public:
-  ParVec() {;}
-  ~ParVec() {;}
-  //
-  map<Key,Data>& lclmap() { return _lclmap; }
-  Partition& prtn() { return _prtn; }
-  //
-  int setup(); //setup, basically do nothing
-  int insert(Key, Data&);
-  Data& access(Key);
-  bool exist(Key);
-  //
-  //int get(int (*e2ps)(Key, Data& ,vector<int>&), const vector<int>& mask); //gather all entries st pid contains this proc
-  //int get(vector<Key>& keyvec, const vector<int>& mask); //gather all entries with key in keyvec
-  //int put(vector<Key>& keyvec, const vector<int>& mask); //put data for all entries with key in keyvec
-  //
-  int getBegin(int (*e2ps)(Key, Data& ,vector<int>&), const vector<int>& mask); //gather all entries st pid contains this proc
-  int getBegin(vector<Key>& keyvec, const vector<int>& mask); //gather all entries with key in keyvec
-  int getEnd(const vector<int>& mask);
-  int putBegin(vector<Key>& keyvec, const vector<int>& mask); //put data for all entries with key in keyvec
-  int putEnd(const vector<int>& mask);
-  //
-  int expand( vector<Key>& keyvec); //allocate space for not-owned entries
-  int discard(vector<Key>& keyvec); //remove non-owned entries
-  //int setnewprtn(Partition& newprtn); //set new partition ..., not sure whether useful here
-  int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
-  int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
+    ParVec() {;}
+    ~ParVec() {;}
+    //
+    map<Key,Data>& lclmap() { return _lclmap; }
+    Partition& prtn() { return _prtn; }
+    int insert(Key, Data&);
+    
+    // Get the data associated with Key from the local map
+    Data& access(Key);
 
+    // gather all entries st pid contains this proc
+    // e2ps is a function that takes as input a Key-Data pair, and a vector of ints to be filled
+    // with processor IDs.
+    int getBegin(int (*e2ps)(Key, Data& ,vector<int>&), const vector<int>& mask);
+
+    // gather all entries with key in keyvec
+    int getBegin(vector<Key>& keyvec, const vector<int>& mask);
+    
+    int getEnd(const vector<int>& mask);
+    
+    //put data for all entries with key in keyvec
+    int putBegin(vector<Key>& keyvec, const vector<int>& mask);
+    
+    int putEnd(const vector<int>& mask);
+    //
+    int expand( vector<Key>& keyvec); //allocate space for not-owned entries
+    int discard(vector<Key>& keyvec); //remove non-owned entries
+    //int setnewprtn(Partition& newprtn); //set new partition ..., not sure whether useful here
+    int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
+    int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
 };
-
-//--------------------------------------------
-template <class Key, class Data, class Partition>
-int ParVec<Key,Data,Partition>::setup()
-{
-  return 0;
-}
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
@@ -84,8 +80,8 @@ template <class Key, class Data, class Partition>
 Data& ParVec<Key,Data,Partition>::access(Key key)
 {
   typename map<Key,Data>::iterator mi=_lclmap.find(key);
-  iA(mi!=_lclmap.end());
-  return (*mi).second;
+  iA(mi != _lclmap.end());
+  return mi->second;
 }
 
 
@@ -108,14 +104,15 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&), c
   vector<ostringstream*> ossvec(mpisize);  for(int k=0; k<mpisize; k++)	ossvec[k] = new ostringstream();
   //1. serialize
   for(typename map<Key,Data>::iterator mi=_lclmap.begin(); mi!=_lclmap.end(); mi++) {
-    Key key = (*mi).first;
-    const Data& dat = (*mi).second;
-    if(_prtn.owner(key)==mpirank) {
+    Key key = mi->first;
+    const Data& dat = mi->second;
+    if(_prtn.owner(key) == mpirank) {
       //ASK QUESTIONS
-      vector<int> pids;	  int res = (*e2ps)((*mi).first, (*mi).second, pids);
+      vector<int> pids;
+      int res = (*e2ps)(mi->first, mi->second, pids);
       for(int i=0; i<pids.size(); i++) {
 	int k = pids[i];
-	if(k!=mpirank) { //DO NOT SEND TO MYSELF
+        if(k!=mpirank) { //DO NOT SEND TO MYSELF
 	  iC( serialize(key, *(ossvec[k]), mask) );
 	  iC( serialize(dat, *(ossvec[k]), mask) );
 	  snbvec[k]++; //LEXING: VERY IMPORTANT
@@ -282,11 +279,14 @@ int ParVec<Key,Data,Partition>::getEnd( const vector<int>& mask )
 	Data dat;		deserialize(dat, *(issvec[k]), mask);
 	_lclmap[key] = dat;
       } else { //exist already
-	deserialize((*mi).second, *(issvec[k]), mask);
+	deserialize(mi->second, *(issvec[k]), mask);
       }
     }
   }
-  for(int k=0; k<mpisize; k++) {	delete issvec[k];	issvec[k] = NULL;  }
+  for(int k=0; k<mpisize; k++) {
+    delete issvec[k];
+    issvec[k] = NULL;
+  }
   iC( MPI_Barrier(MPI_COMM_WORLD) );
   return 0;
 }
