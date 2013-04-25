@@ -429,9 +429,9 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
         for(int k=0; k<pardata.endeidxvec().size(); k++) {
             BoxKey trykey = pardata.endeidxvec()[k];
             BoxDat& trydata = boxdata(trykey);
-            for(int a=0; a<2; a++) {
-                for(int b=0; b<2; b++) {
-                    for(int c=0; c<2; c++) {
+            for(int a = 0; a < 2; a++) {
+                for(int b = 0; b < 2; b++) {
+                    for(int c = 0; c < 2; c++) {
                         BoxKey othkey = chdkey(trykey, Index3(a,b,c));
                         BoxDat& othdat = _boxvec.access(othkey);
                         if(ispts(othdat)) {
