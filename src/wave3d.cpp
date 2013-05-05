@@ -62,21 +62,21 @@ Index3 Wave3d::predir(Index3 dir)
 vector<Index3> Wave3d::chddir(Index3 dir)
 {
   int C = dir.linfty();
-  int midx = -1;
   vector<int> oidx;
-  for(int d=0; d<3; d++)
-	if(abs(dir(d))==C)
-	  midx = d;
-	else
+  for(int d=0; d<3; d++) {
+      if(abs(dir(d)) != C) {
 	  oidx.push_back(d);
+      }
+  }
   vector<Index3> res;
-  for(int a=0; a<2; a++)
-	for(int b=0; b<2; b++) {
+  for(int a=0; a<2; a++) {
+      for(int b=0; b<2; b++) {
 	  Index3 tmp = 2*dir;
 	  tmp(oidx[0]) += 2*a-1;
 	  tmp(oidx[1]) += 2*b-1;
 	  res.push_back(tmp);
-	}
+      }
+  }
   return res;
 }
 
