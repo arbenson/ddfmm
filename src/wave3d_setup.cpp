@@ -13,7 +13,6 @@ int Wave3d::setup(map<string,string>& opts)
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     _self = this;
     int mpirank = this->mpirank();
-    int mpisize = this->mpisize();
     //read optional data
     map<string,string>::iterator mi;
     mi = opts.find("-" + prefix() + "ACCU");
@@ -89,7 +88,6 @@ int Wave3d::setup(map<string,string>& opts)
 int Wave3d::setup_tree()
 {
     int mpirank = this->mpirank();
-    int mpisize = this->mpisize();
     double eps = 1e-12;
     double K = this->K();
     // pos contains all data read by this processor
@@ -387,7 +385,6 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
 {
     Point3 curctr = center(curkey);
     double W = width(curkey);
-    int C = _NPQ*int(round(W));
     double eps = 1e-12;
     double D = W * W + W;
     double threshold = D - eps;
@@ -412,7 +409,6 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
         BoxDat& pardata = boxdata(parkey);
         for(int k=0; k<pardata.endeidxvec().size(); k++) {
             BoxKey trykey = pardata.endeidxvec()[k];
-            BoxDat& trydata = boxdata(trykey);
             for(int a = 0; a < 2; a++) {
                 for(int b = 0; b < 2; b++) {
                     for(int c = 0; c < 2; c++) {
