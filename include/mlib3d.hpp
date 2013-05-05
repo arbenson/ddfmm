@@ -70,14 +70,16 @@ public:
   
   int setup(map<string,string>& opts);
   
-  int upward_lowfetch(double W, DblNumMat& uep, DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
-					  NumTns<CpxNumMat>& ue2uc);
-  int dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp, NumVec<CpxNumMat>& dc2de,
-					  NumTns<CpxNumMat>& de2dc, NumTns<CpxNumTns>& ue2dc, DblNumMat& uep);
-  int upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
-					  NumTns<CpxNumMat>& ue2uc);
-  int dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp, NumVec<CpxNumMat>& dc2de,
-					  NumTns<CpxNumMat>& de2dc, DblNumMat& uep);
+  int upward_lowfetch(double W, DblNumMat& uep, DblNumMat& ucp,
+                      NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
+  int dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
+                      NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+                      NumTns<CpxNumTns>& ue2dc, DblNumMat& uep);
+  int upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
+                      NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
+  int dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp,
+                      NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+                      DblNumMat& uep);
   
   int hghfetch_shuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& res);
   int hghfetch_index3sort(Index3 val, Index3& srt, Index3& sgn, Index3& prm);
