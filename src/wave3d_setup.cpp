@@ -155,7 +155,8 @@ int Wave3d::setup_tree()
                 for(int d=0; d<3; d++) {
 		    idx(d) = (tmp(d) >= curctr(d));
 		}
-                chdboxtns(idx(0),idx(1),idx(2)).ptidxvec().push_back(tmpidx); //put points to children
+		// put points to children
+                chdboxtns(idx(0),idx(1),idx(2)).ptidxvec().push_back(tmpidx);
             }
             //2. put non-empty ones into queue
             for(int a=0; a<2; a++) {
@@ -308,65 +309,65 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
         for(int j = jl; j < ju; j++) {
             for(int k = kl; k < ku; k++) {
                 Index3 trypth(i,j,k);
-                if ( !(trypth(0) == curpth(0)
-                       && trypth(1) == curpth(1)
-                       && trypth(2) == curpth(2)) ) {
-                    BoxKey wntkey(curkey.first, trypth);
-                    //LEXING: LOOK FOR IT, DO NOT EXIST IF NO CELL BOX COVERING IT
-                    BoxKey reskey;
-                    bool found = setup_tree_find(wntkey, reskey);
-                    BoxDat& resdat = _boxvec.access(reskey);
-                    if(found) {
-                        bool adj = setup_tree_adjacent(reskey, curkey);
-                        if( reskey.first<curkey.first ) {
-                            if(adj) {
-                                if(isterminal(curdat) && ispts(resdat)) {
-                                    Uset.insert(reskey);
-                                }
-                            } else if (ispts(resdat)) {
-                                Xset.insert(reskey);
-                            }
-                        }
-                        if( reskey.first==curkey.first ) {
-                            if(!adj) {
-                                Index3 bb = reskey.second - curkey.second;
-                                iA( bb.linfty()<=3 );
-                                if (ispts(resdat)) {
-                                    Vset.insert(reskey);
-                                }
-                            } else {
-                                if(isterminal(curdat)) {
-                                    queue<BoxKey> rest;
-                                    rest.push(reskey);
-                                    while(!rest.empty()) {
-                                        BoxKey fntkey = rest.front(); rest.pop();
-                                        BoxDat& fntdat = boxdata(fntkey);
-                                        if(!setup_tree_adjacent(fntkey, curkey)) {
-                                            if (ispts(fntdat)) {
-                                                Wset.insert(fntkey);
-                                            }
-                                        } else {
-                                            if(isterminal(fntdat)) {
-                                                if(ispts(fntdat)) {
-                                                    Uset.insert(fntkey);
-                                                }
-                                            } else {
-                                                for(int a=0; a<2; a++)
-                                                    for(int b=0; b<2; b++)
-                                                        for(int c=0; c<2; c++)
-                                                            rest.push( chdkey(fntkey, Index3(a,b,c)) );
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+                if (trypth(0) == curpth(0)
+                    && trypth(1) == curpth(1)
+                    && trypth(2) == curpth(2)) {
+		    continue;
+		}
+		BoxKey wntkey(curkey.first, trypth);
+		//LEXING: LOOK FOR IT, DO NOT EXIST IF NO CELL BOX COVERING IT
+		BoxKey reskey;
+		bool found = setup_tree_find(wntkey, reskey);
+		BoxDat& resdat = _boxvec.access(reskey);
+		if (!found) {
+		    continue;
+		}
+		bool adj = setup_tree_adjacent(reskey, curkey);
+		if( reskey.first<curkey.first ) {
+		    if(adj) {
+			if(isterminal(curdat) && ispts(resdat)) {
+			    Uset.insert(reskey);
+			}
+		    } else if (ispts(resdat)) {
+			Xset.insert(reskey);
+		    }
+		}
+		if( reskey.first==curkey.first ) {
+		    if(!adj) {
+			Index3 bb = reskey.second - curkey.second;
+			iA( bb.linfty()<=3 );
+			if (ispts(resdat)) {
+			    Vset.insert(reskey);
+			}
+		    } else if(isterminal(curdat)) {
+			queue<BoxKey> rest;
+			rest.push(reskey);
+			while(!rest.empty()) {
+			    BoxKey fntkey = rest.front(); rest.pop();
+			    BoxDat& fntdat = boxdata(fntkey);
+			    if(!setup_tree_adjacent(fntkey, curkey)) {
+				if (ispts(fntdat)) {
+				    Wset.insert(fntkey);
+				}
+			    } else {
+				if(isterminal(fntdat)) {
+				    if(ispts(fntdat)) {
+					Uset.insert(fntkey);
+				    }
+				} else {
+				    for(int a=0; a<2; a++)
+					for(int b=0; b<2; b++)
+					    for(int c=0; c<2; c++)
+						rest.push( chdkey(fntkey, Index3(a,b,c)) );
+				}
+			    }
+			}
+		    }
+		}
+	    }
+	}
     }
-    if(isterminal(curdat) && ispts(curdat)) {
+    if (isterminal(curdat) && ispts(curdat)) {
         Uset.insert(curkey);
     }
     //
