@@ -11,8 +11,6 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
   
     _self = this;
     int mpirank = this->mpirank();
-    int mpisize = this->mpisize();
-  
     ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
   
     //1. get pos
