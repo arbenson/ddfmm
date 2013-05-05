@@ -10,9 +10,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     _self = this;
     time_t t0, t1;
     int mpirank = this->mpirank();
-    int mpisize = this->mpisize();
     double eps = 1e-12;
-    double K = this->K();
     ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
     // 1. Go through posptr to get nonlocal points
     vector<int> reqpts;
@@ -35,7 +33,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
             vector<int>& curpis = curdat.ptidxvec();
             CpxNumVec& extden = curdat.extden();
             extden.resize(curpis.size());
-            for(int k=0; k<curpis.size(); k++) {
+            for(int k = 0; k < curpis.size(); k++) {
                 int poff = curpis[k];
                 extden(k) = den.access(poff);
             }
@@ -43,7 +41,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     }
     iC( den.discard(reqpts) );
 
-    //3. gather maps, low frequency level by level, high frequency dir by dir
+    // 3. gather maps, low frequency level by level, high frequency dir by dir
+    // ldmap maps box widths to a list of BoxKeys which correspond
+    // to boxes that are owned by this processor
     map< double, vector<BoxKey> > ldmap;
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > > hdmap;
     for(map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
@@ -52,7 +52,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         BoxDat& curdat = mi->second;
         double W = width(curkey);
         if(ispts(curdat) && own_box(curkey, mpirank)) {
-            // Boxes of width less than one go in the low frequency map
+            // Boxes of width less than one that are nonempty and are owned
+            // by this processor get put in the low-frequency map.
             if(W < 1 - eps) {
                 ldmap[W].push_back(curkey);
             } else {
@@ -79,7 +80,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 	cout<<"LOW UP"<<endl;
     }
     t0 = time(0);
-    for(map< double, vector<BoxKey> >::iterator mi=ldmap.begin(); mi!=ldmap.end(); mi++) {
+    // For each box width in the low frequency regime, evaluate upward
+    for(map< double, vector<BoxKey> >::iterator mi = ldmap.begin();
+        mi!=ldmap.end(); mi++) {
         iC( eval_upward_low(mi->first, mi->second, reqboxset) );
     }
     iC( MPI_Barrier(MPI_COMM_WORLD) );
@@ -163,18 +166,22 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     if(mpirank==0) {
 	cout << "HGH " << difftime(t1,t0) << "secs " << endl;
     }
-    //LOW COMM
+    // LOW COMM
     vector<BoxKey> reqbox;
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
     vector<int> mask(BoxDat_Number,0);
     mask[BoxDat_extden] = 1;  mask[BoxDat_upeqnden] = 1;
     t0 = time(0);
-    iC( _boxvec.getBegin(reqbox, mask) );  iC( _boxvec.getEnd(mask) );
-    t1 = time(0);  if(mpirank==0) {     cout<<"LOW COMM "<<difftime(t1,t0)<<"secs "<<endl;  }
-    //
-    //LOW DOWN
+    iC( _boxvec.getBegin(reqbox, mask) );
+    iC( _boxvec.getEnd(mask) );
+    t1 = time(0);
     if(mpirank==0) {
-	cout<<"LOW DN"<<endl;
+	cout << "LOW COMM " << difftime(t1,t0) << "secs " <<endl;
+    }
+    //
+    // LOW DOWN
+    if(mpirank==0) {
+	cout << "LOW DN" << endl;
     }
     t0 = time(0);
     for(map< double, vector<BoxKey> >::reverse_iterator mi=ldmap.rbegin();
@@ -224,8 +231,8 @@ int Wave3d::eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqbo
     NumTns<CpxNumMat> ue2uc;
     iC( _mlibptr->upward_lowfetch(W, uep, ucp, uc2ue, ue2uc) );
     //---------------
-    int sdof = 1;  int tdof = 1;
-    for(int k=0; k<srcvec.size(); k++) {
+    int tdof = 1;
+    for(int k = 0; k < srcvec.size(); k++) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
         // If there are no points, continue to the next Box
@@ -301,9 +308,8 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
     DblNumMat uep;
     iC( _mlibptr->dnward_lowfetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
     //------------------
-    int sdof = 1;  int tdof = 1;
     int _P = P();
-    for(int k=0; k<trgvec.size(); k++) {
+    for(int k = 0; k < trgvec.size(); k++) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
         // If there are no points, continue to the next box.
@@ -355,7 +361,7 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
 	    for(int d=0; d<dim(); d++) {
 		idx(d) = int(round( (trgctr[d]-neictr[d])/W )); //LEXING:CHECK
 	    }
-	    //creat if it is missing
+	    //create if it is missing
 	    if(neidat.fftcnt()==0) {
 		setvalue(_denfft, cpx(0,0));
 		CpxNumVec& neiden = neidat.upeqnden();
@@ -529,7 +535,6 @@ int Wave3d::eval_upward_hgh(double W, Index3 dir,
     iC( _mlibptr->upward_hghfetch(W, dir, uep, ucp, uc2ue, ue2uc) );
     //---------------
     vector<BoxKey>& srcvec = hdvecs.first;
-    int sdof = 1;  int tdof = 1;
     for(int k = 0; k < srcvec.size(); k++) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
@@ -577,7 +582,7 @@ int Wave3d::eval_upward_hgh(double W, Index3 dir,
 	CpxNumMat& E1 = uc2ue(0);
 	CpxNumMat& E2 = uc2ue(1);
 	CpxNumMat& E3 = uc2ue(2);
-	cpx dat0[DVMAX], dat1[DVMAX], dat2[DVMAX];
+	cpx dat0[DVMAX], dat1[DVMAX];
 	CpxNumVec tmp0(E3.m(), false, dat0);          iA(DVMAX>=E3.m());
 	CpxNumVec tmp1(E2.m(), false, dat1);          iA(DVMAX>=E2.m());
 	upeqnden.resize(E1.m());      setvalue(upeqnden,cpx(0,0));
@@ -612,7 +617,6 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir, pair< vector<BoxKey>, vector<B
     iC( _mlibptr->dnward_hghfetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     //LEXING: IMPORTANT
     vector<BoxKey>& trgvec = hdvecs.second;
-    int sdof = 1;  int tdof = 1;
     for(int k = 0; k < trgvec.size(); k++) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
@@ -636,7 +640,6 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir, pair< vector<BoxKey>, vector<B
 	vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
 	for(int i=0; i<tmpvec.size(); i++) {
 	    BoxKey srckey = tmpvec[i];
-	    BoxDat& srcdat = _boxvec.access(srckey);
 	    Point3 srcctr = center(srckey);
 	    //difference vector
 	    Point3 diff = trgctr - srcctr;
@@ -739,7 +742,6 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir, pair< vector<BoxKey>, vector<B
 	vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
 	for(int i=0; i<tmpvec.size(); i++) {
 	    BoxKey srckey = tmpvec[i];
-	    BoxDat& srcdat = _boxvec.access(srckey);
 	    BndKey bndkey(srckey, dir);
 	    BndDat& bnddat = _bndvec.access(bndkey);
 	    bnddat.dirupeqnden().resize(0);
