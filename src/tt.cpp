@@ -48,7 +48,8 @@ int main(int argc, char** argv)
     return 0;
   }
 
-  istringstream piss;  iC( Separate_Read(opt, piss) );
+  istringstream piss;
+  iC( Separate_Read(opt, piss) );
   iC( deserialize(pos, piss, all) );
   vector<int>& tmpinfo = pos.prtn().ownerinfo();
   int numpts = tmpinfo[tmpinfo.size()-1]; //LEXING: THIS CONTAINS THE TOTAL NUMBER OF POINTS
@@ -116,9 +117,8 @@ int main(int argc, char** argv)
   iC( wave.setup(opts) );
   t1 = time(0);
   if (mpirank == 0) {
-      cout << "wave setup used " <<difftime(t1,t0) << "secs " << endl;
+      cout << "wave setup used " << difftime(t1,t0) << "secs " << endl;
   }
-  double time_setup = difftime(t1,t0);
 
   //3. eval
   double time_eval;
