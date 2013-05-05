@@ -11,13 +11,9 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos, const Dbl
 {
   int M = trgpos.n();
   int N = srcpos.n();
-  int sdof = this->sdof();
-  int tdof = this->tdof();
   double K = 2*M_PI;
   cpx I(0,1);
-  
   double mindif2 = _mindif*_mindif;
-  int TTL = M*N;
 
   if(_type == KNL_HELM) {
     //-------------------------------
