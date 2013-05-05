@@ -66,9 +66,7 @@ template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::insert(Key key, Data& dat)
 {
   int mpirank = this->mpirank();
-  int mpisize = this->mpisize();
   iA( _prtn.owner(key)==mpirank); //LEXING: VERY IMPORTANT
-  //typename map<Key,Data>::iterator mi=_lclmap.find(key);  //iA(mi==_lclmap.end()); //LEXING: doesn't exist
   _lclmap[key] = dat;
   return 0;
 }
@@ -106,9 +104,9 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&), c
       //ASK QUESTIONS
       vector<int> pids;
       int res = (*e2ps)(mi->first, mi->second, pids);
-      for(int i=0; i<pids.size(); i++) {
+      for(int i = 0; i < pids.size(); i++) {
 	int k = pids[i];
-        if(k!=mpirank) { //DO NOT SEND TO MYSELF
+        if(k != mpirank) { //DO NOT SEND TO MYSELF
 	  iC( serialize(key, *(ossvec[k]), mask) );
 	  iC( serialize(dat, *(ossvec[k]), mask) );
 	  snbvec[k]++; //LEXING: VERY IMPORTANT
@@ -166,7 +164,7 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
 
   //1. go thrw the keyvec to partition them among other procs
   vector< vector<Key> > skeyvec(mpisize);
-  for(int i=0; i<keyvec.size(); i++) {
+  for(int i = 0; i < keyvec.size(); i++) {
     Key key = keyvec[i];
     int owner = _prtn.owner(key);
     if(owner!=mpirank)
@@ -201,8 +199,8 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
   skeyvec.clear(); //save space
   //4. prepare the streams
   vector<ostringstream*> ossvec(mpisize);  for(int k=0; k<mpisize; k++)	ossvec[k] = new ostringstream();
-  for(int k=0; k<mpisize; k++) {
-    for(int g=0; g<rkeyvec[k].size(); g++) {
+  for(int k = 0; k < mpisize; k++) {
+    for(int g = 0; g < rkeyvec[k].size(); g++) {
       Key curkey = rkeyvec[k][g];
       typename map<Key,Data>::iterator mi = _lclmap.find(curkey);	  iA( mi!=_lclmap.end() );
       iA( _prtn.owner(curkey)==mpirank );
@@ -242,7 +240,6 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
     iC( MPI_Isend( (void*)&(sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0, MPI_COMM_WORLD, &reqs[2*k+1] ) );
   }
   iC( MPI_Barrier(MPI_COMM_WORLD) );
-  //if(mpirank==0)	for(int k=0; k<mpisize; k++)	  cerr<<"rnbvec "<<k<<" "<<rnbvec[k]<<endl;
   return 0;
 }
 
@@ -250,7 +247,6 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::getEnd( const vector<int>& mask )
 {
-  int mpirank = this->mpirank();
   int mpisize = this->mpisize();
   //LEXING: SEPARATE HERE
   iC( MPI_Waitall(2*mpisize, &(reqs[0]), &(stats[0])) );
@@ -386,8 +382,6 @@ int ParVec<Key,Data,Partition>::putEnd( const vector<int>& mask )
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::expand(vector<Key>& keyvec)
 {
-  int mpirank = this->mpirank();
-  int mpisize = this->mpisize();
   Data dummy;
   for(int i=0; i<keyvec.size(); i++) {
     Key key = keyvec[i];
@@ -404,8 +398,6 @@ template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::discard(vector<Key>& keyvec)
 {
   int mpirank = this->mpirank();
-  int mpisize = this->mpisize();
-
   for(int i=0; i<keyvec.size(); i++) {
     Key key = keyvec[i];
     if(_prtn.owner(key)!=mpirank) {
