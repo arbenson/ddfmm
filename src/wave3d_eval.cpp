@@ -622,15 +622,9 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir, pair< vector<BoxKey>, vector<B
                 BoxDat& srcdat = _boxvec.access(srckey);
                 Point3 srcctr = center(srckey);
                 //difference vector
-                // TODO (Austin) Same computation?
-                Point3 diff;
-                if(trgkey > srckey) {
-                    diff = trgctr - srcctr;
-                } else {
-                    diff = -(srcctr - trgctr);
-                }
-                diff = diff/diff.l2(); //LEXING: see wave3d_setup.cpp
-                iA( nml2dir(diff,W)==dir );             //Index3 dir = nml2dir(tmp, W);
+                Point3 diff = trgctr - srcctr;
+                diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
+                iA( nml2dir(diff,W) == dir );  //Index3 dir = nml2dir(tmp, W);
                 //get source
                 DblNumMat tmpuep(uep.m(),uep.n());
                 for(int k=0; k<tmpuep.n(); k++) {

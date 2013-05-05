@@ -52,15 +52,15 @@ public:
     vector<BoxKey> _vndeidxvec;  // V List
     vector<BoxKey> _wndeidxvec;  // W List
     vector<BoxKey> _xndeidxvec;  // X List
-    vector<BoxKey> _endeidxvec;  
-    map< Index3, vector<BoxKey> > _fndeidxvec;
+    vector<BoxKey> _endeidxvec;  // close directions
+    map< Index3, vector<BoxKey> > _fndeidxvec; // far away directions
     //
-    DblNumMat _extpos;
-    CpxNumVec _extden;    
+    DblNumMat _extpos;  // positions of exact points (leaf level)
+    CpxNumVec _extden;  // Exact densities  
     CpxNumVec _upeqnden;  // Upward equivalent density
-    CpxNumVec _extval;
-    CpxNumVec _dnchkval;
-    //
+    CpxNumVec _extval;  // Exact potential value
+    CpxNumVec _dnchkval; // Sownward check potential
+    // aux. data structures for FFT
     CpxNumTns _upeqnden_fft;
     set<Index3> _incdirset;
     set<Index3> _outdirset;

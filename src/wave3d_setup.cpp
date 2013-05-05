@@ -269,27 +269,16 @@ int Wave3d::setup_tree()
             for(map< Index3,vector<BoxKey> >::iterator mi=curdat.fndeidxvec().begin();
                 mi!=curdat.fndeidxvec().end(); mi++) {
                 vector<BoxKey>& tmplist = mi->second;
-                for(int k=0; k < tmplist.size(); k++) {
+                for(int k = 0; k < tmplist.size(); k++) {
                     BoxKey othkey = tmplist[k];
                     //BoxDat& othdat = _boxvec.access(othkey);
-
                     Point3 othctr = center(othkey);
-                    Point3 tmp;
-                    // TODO (Austin): this seems incorrect.  Computations are identitical?
-                    if(othkey > curkey) {
-                        tmp = othctr - curctr;
-                    } else {
-                        tmp = -(curctr - othctr);
-                    }
+                    Point3 tmp = othctr - curctr;
                     tmp /= tmp.l2();
                     Index3 dir = nml2dir(tmp, W);
                     curdat.outdirset().insert(dir);
-                    // TODO (Austin): this seems incorrect.  Computations are identitical?
-                    if(curkey > othkey) {
-                        tmp = curctr - othctr;
-                    } else {
-                        tmp = -(othctr - curctr);
-                    }
+
+		    tmp = curctr - othctr;
                     tmp /= tmp.l2();
                     dir = nml2dir(tmp, W);
                     curdat.incdirset().insert(dir);
@@ -408,13 +397,7 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
             BoxDat& othdat = _boxvec.access(othkey);
             if (ispts(othdat)) {
                 //LEXING: ALWAYS target - source //Point3 diff = curctr - center(othkey);
-                Point3 diff;
-                // TODO (Austin): this seems incorrect.  Computations are identitical?
-                if(curkey>othkey) {
-                    diff = curctr - center(othkey);
-                } else {
-                    diff = -(center(othkey) - curctr);
-                }
+                Point3 diff = curctr - center(othkey);
                 if(diff.l2() >= threshold) {
                     Index3 dir = nml2dir(diff/diff.l2(), W);
                     curdat.fndeidxvec()[dir].push_back(othkey);
@@ -436,13 +419,7 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
                         BoxDat& othdat = _boxvec.access(othkey);
                         if(ispts(othdat)) {
                             //LEXING: ALWAYS target - source
-                            Point3 diff;
-                            // TODO (Austin): this seems incorrect.  Computations are identitical?
-                            if(curkey > othkey) {
-                                diff = curctr - center(othkey);
-                            } else {
-                                diff = -(center(othkey) - curctr);
-                            }
+                            Point3 diff = curctr - center(othkey);
                             if(diff.l2() >= threshold) {
                                 Index3 dir = nml2dir(diff/diff.l2(), W);
                                 curdat.fndeidxvec()[dir].push_back(othkey);

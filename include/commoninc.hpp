@@ -56,6 +56,3 @@ ostream& operator<<(ostream& os, const pair<T,S>& a)
 }
 
 #endif
-
-
-
