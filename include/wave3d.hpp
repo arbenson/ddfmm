@@ -183,7 +183,7 @@ public:
     Kernel3d _knl;
     int _ACCU;
     int _NPQ;
-    Mlib3d* _mlibptr; //read data in parallel and then send to other processors
+    Mlib3d* _mlibptr; // Read data in parallel and then send to other processors
     IntNumTns _geomprtn;
     //
     double _K;
@@ -211,13 +211,14 @@ public:
     //
     int P() {
         assert(_ACCU >= 1 && _ACCU <= 3);
-        if (_ACCU==1) {
-            return 4;
-        } else if (_ACCU==2) {
-            return 6;
-        } else {
-            return 8;
-        }
+	switch (_ACCU) {
+            case 1:
+		return 4;
+            case 2:
+		return 6;
+            default:
+	        return 8;
+	}
     }
     double& K() { return _K; }
     Point3& ctr() { return _ctr; }
@@ -306,10 +307,18 @@ public:
     int setup_tree_calhghlist( BoxKey, BoxDat& );
     bool setup_tree_find(BoxKey wntkey, BoxKey& reskey);
     bool setup_tree_adjacent(BoxKey me, BoxKey yo);
+
+    // Travel up the octree and visit the boxes in the low frequency regime.
+    // Compute outgoing non-directional equivalent densities using M2M.
     //
-    // maybe we can make it to be local index
-    int eval_upward_low(double W, vector<BoxKey>&, set<BoxKey>& reqboxset);
-    int eval_dnward_low(double W, vector<BoxKey>&);
+    // W is the width of the box
+    // srcvec is the list of all boxes owned by this processor of width W
+    // reqboxset is filled with all boxes whose information this processor needs
+    // for the low-frequency downward pass
+    int eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqboxset);
+
+    // Travel down the octree and visit the boxes in the low frequency regime.     
+    int eval_dnward_low(double W, vector<BoxKey>& trgvec);
     //
     int eval_upward_hgh_recursive(double W, Index3 nowdir,
             map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
