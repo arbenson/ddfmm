@@ -228,18 +228,16 @@ public:
     double width() { return _K; }
     //access information from BoxKey
     Point3 center(BoxKey& curkey) {
-        int depth = curkey.first;
         Index3 path = curkey.second;
-        int tmp = pow2(depth);
+        int tmp = pow2(curkey.first);
         Point3 t;
-        for(int d=0; d<3; d++) {
+        for (int d = 0; d < 3; d++) {
             t(d) = _ctr(d) - _K / 2 + (path(d) + 0.5) / tmp * _K;
         }
         return t;
     }
     double width(BoxKey& curkey) {
-        int depth = curkey.first;
-        return _K / pow2(depth);
+        return _K / pow2(curkey.first);
     }
     bool iscell(const BoxKey& curkey) {
         return curkey.first == cell_level();
@@ -319,8 +317,11 @@ public:
     // for the low-frequency downward pass
     int eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqboxset);
 
-    // Travel down the octree and visit the boxes in the low frequency regime.     
+    // Travel down the octree and visit the boxes in the low frequency regime.
+    //
+    // W is the width of the box
     int eval_dnward_low(double W, vector<BoxKey>& trgvec);
+
     //
     int eval_upward_hgh_recursive(double W, Index3 nowdir,
             map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
@@ -333,12 +334,21 @@ public:
     int eval_dnward_hgh(double W, Index3 dir,
                         pair< vector<BoxKey>, vector<BoxKey> >& hdvecs);
 
+    int U_list_compute(BoxDat& trgdat);
+    int X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
+                       CpxNumVec& dnchkval);
+    int W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep);
+    int V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr,
+                       DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
+                       NumTns<CpxNumTns>& ue2dc);
+
     int get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
 		 set<BndKey>& reqbndset);
 
     //
     int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
     int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
+
 };
 
 //-------------------
