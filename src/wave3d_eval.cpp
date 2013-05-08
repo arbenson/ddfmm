@@ -3,6 +3,13 @@
 
 #define DVMAX 400
 
+// Type of communication pattern for high-frequency domain
+// 
+// 0: All communication between ipward and downwards passes
+// 1: Overlap communication with upward pass computations
+// 2: Overlap communication with upward and downward passes
+#define HGH_COMMUNICATION_PATTERN 2
+
 //---------------------------------------------------------------------
 int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 {
@@ -30,7 +37,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 	cout << "Density communication: " << difftime(t1, t0)
 	     << " secs" << endl;
     }
-
 
     // 3. compute extden using ptidxvec
     for(map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
@@ -120,8 +126,81 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         basedirs[i] = tmpdirs[off];
     }
     int TTL = basedirs.size();
+    // Directions per group
     int DPG = 4;
+    // Number of groups
     int NG = (TTL-1) / DPG + 1;
+
+#if HGH_COMMUNICATION_PATTERN == 0
+    set<BndKey> reqbndset;
+    for(int cur = 0; cur < NG; cur++) {
+        for(int i= cur * DPG; i < min((cur + 1) * DPG,TTL); i++) {
+            Index3 dir = basedirs[i];
+            iC( eval_upward_hgh_recursive(1, dir, hdmap, reqbndset) );
+        }
+    }
+
+    {
+        vector<int> mask(BndDat_Number,0);
+        mask[BndDat_dirupeqnden] = 1;
+        vector<BndKey> reqbnd;
+        reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
+
+        t2 = time(0);
+        iC( _bndvec.getBegin(reqbnd, mask) );
+        iC( _bndvec.getEnd(mask) );
+	t3 = time(0);
+	if(mpirank==0) {
+	    cout << "High frequency communication: " << difftime(t3, t2)
+		 << " secs" << endl;
+	}
+    }
+
+    for (int cur = 0; cur < NG; cur++) {
+        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
+            Index3 dir = basedirs[i]; //LEXING: PRE HERE
+            iC( eval_dnward_hgh_recursive(1, dir, hdmap) );
+        }
+    }
+#endif
+
+#if HGH_COMMUNICATION_PATTERN == 1
+    for(int cur = 0; cur < NG; cur++) {
+        vector<int> mask(BndDat_Number,0);
+        mask[BndDat_dirupeqnden] = 1;
+        //Ucur
+        set<BndKey> reqbndset;
+        for(int i= cur * DPG; i < min((cur + 1) * DPG,TTL); i++) {
+            Index3 dir = basedirs[i];
+            iC( eval_upward_hgh_recursive(1, dir, hdmap, reqbndset) );
+        }
+        //Rpre
+	if (cur != 0) {
+	    iC( _bndvec.getEnd(mask) );
+	}
+        //Scur
+        vector<BndKey> reqbnd;
+        reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
+        iC( _bndvec.getBegin(reqbnd, mask) );
+        //Dpre
+    }
+
+    {
+        vector<int> mask(BndDat_Number,0);
+        mask[BndDat_dirupeqnden] = 1;
+        //Rcur
+        iC( _bndvec.getEnd(mask) );
+    }
+
+    for (int cur = 0; cur < NG; cur++) {
+        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
+            Index3 dir = basedirs[i]; //LEXING: PRE HERE
+            iC( eval_dnward_hgh_recursive(1, dir, hdmap) );
+        }
+    }
+#endif
+
+#if HGH_COMMUNICATION_PATTERN == 2
     {
         int cur = 0;
         vector<int> mask(BndDat_Number,0);
@@ -172,6 +251,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
             iC( eval_dnward_hgh_recursive(1, dir, hdmap) );
         }
     }
+#endif
+
     t1 = time(0);
     if(mpirank==0) {
 	cout << "End high frequency pass: " << difftime(t1,t0)
@@ -343,116 +424,12 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
 		dnchkpos(d,k) = dcp(d,k) + trgctr(d);
 	    }
 	}
-	//lists
-	//-------------
-	// U list computations
-	for(vector<BoxKey>::iterator vi = trgdat.undeidxvec().begin();
-	    vi != trgdat.undeidxvec().end(); vi++) {
-	    BoxKey neikey = (*vi);
-	    BoxDat& neidat = _boxvec.access(neikey);
-	    //mul
-	    CpxNumMat mat;
-	    iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
-	    iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
-	}
-	//-------------
-	// V list computations
-	double step = W/(_P-1);
-	setvalue(_valfft,cpx(0,0));
-	//LEXING: SPECIAL
-	for(vector<BoxKey>::iterator vi=trgdat.vndeidxvec().begin();
-            vi!=trgdat.vndeidxvec().end(); vi++) {
-	    BoxKey neikey = (*vi);
-	    BoxDat& neidat = _boxvec.access(neikey);
-	    //mul
-	    Point3 neictr = center(neikey);         //double DD = neinde.width();
-	    Index3 idx;
-	    for(int d=0; d<dim(); d++) {
-		idx(d) = int(round( (trgctr[d]-neictr[d])/W )); //LEXING:CHECK
-	    }
-	    //create if it is missing
-	    if(neidat.fftcnt()==0) {
-		setvalue(_denfft, cpx(0,0));
-		CpxNumVec& neiden = neidat.upeqnden();
-		for(int k=0; k<uep.n(); k++) {
-		    int a = int( round((uep(0,k)+W/2)/step) ) + _P;
-		    int b = int( round((uep(1,k)+W/2)/step) ) + _P;
-		    int c = int( round((uep(2,k)+W/2)/step) ) + _P;
-		    _denfft(a,b,c) = neiden(k);
-		}
-		fftw_execute(_fplan);
-		neidat.upeqnden_fft() = _denfft; //COPY to the right place
-	    }
-	    CpxNumTns& neidenfft = neidat.upeqnden_fft();
-	    //TODO: LEXING GET THE INTERACTION TENSOR
-	    CpxNumTns& inttns = ue2dc(idx[0]+3,idx[1]+3,idx[2]+3);
-	    for(int a = 0; a < 2 * _P; a++) {
-		for(int b = 0; b < 2 * _P; b++) {
-		    for(int c = 0; c < 2 * _P; c++) {
-			_valfft(a,b,c) += (neidenfft(a,b,c)*inttns(a,b,c));
-		    }
-		}
-	    }
-	    //clean if necessary
-	    neidat.fftcnt()++;
-	    if(neidat.fftcnt()==neidat.fftnum()) {
-		neidat.upeqnden_fft().resize(0,0,0);
-		neidat.fftcnt() = 0;//reset, LEXING
-	    }
-	}
-	fftw_execute(_bplan);
-	//add back
-	double coef = 1.0/(2*_P * 2*_P * 2*_P);
-	for(int k=0; k<dcp.n(); k++) {
-	    int a = int( round((dcp(0,k)+W/2)/step) ) + _P;
-	    int b = int( round((dcp(1,k)+W/2)/step) ) + _P;
-	    int c = int( round((dcp(2,k)+W/2)/step) ) + _P;
-	    dnchkval(k) += (_valfft(a,b,c)*coef); //LEXING: VERY IMPORTANT
-	}
-	//-------------
-	// W list computations
-	for(vector<BoxKey>::iterator vi = trgdat.wndeidxvec().begin();
-	    vi != trgdat.wndeidxvec().end(); vi++) {
-	    BoxKey neikey = (*vi);
-	    BoxDat& neidat = _boxvec.access(neikey);
-	    Point3 neictr = center(neikey);
-	    //upchkpos
-	    if(isterminal(neidat) && neidat.extpos().n()<uep.n()) {
-		CpxNumMat mat;
-		iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
-		iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
-	    } else {
-		double coef = width(neikey)/W; //LEXING: SUPER IMPORTANT
-		DblNumMat upeqnpos(uep.m(), uep.n()); //local version
-		for(int k=0; k<uep.n(); k++) {
-		    for(int d=0; d<dim(); d++) {
-			upeqnpos(d,k) = coef*uep(d,k) + neictr(d);
-		    }
-		}
-		//mul
-		CpxNumMat mat;
-		iC( _knl.kernel(trgdat.extpos(), upeqnpos, upeqnpos, mat) );
-		iC( zgemv(1.0, mat, neidat.upeqnden(), 1.0, trgdat.extval()) );
-	    }
-	}
-	//-------------
-	// X list computations
-	for(vector<BoxKey>::iterator vi = trgdat.xndeidxvec().begin();
-	    vi != trgdat.xndeidxvec().end(); vi++) {
-	    BoxKey neikey = (*vi);
-	    BoxDat& neidat = _boxvec.access(neikey);
-	    Point3 neictr = center(neikey);
-	    if(isterminal(trgdat) && trgdat.extpos().n()<dcp.n()) {
-		CpxNumMat mat;
-		iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
-		iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
-	    } else {
-		//mul
-		CpxNumMat mat;
-		iC( _knl.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
-		iC( zgemv(1.0, mat, neidat.extden(), 1.0, dnchkval) );
-	    }
-	}
+	// List computations
+        iC( U_list_compute(trgdat) );
+	iC( V_list_compute(trgdat, W, _P, trgctr, uep, dcp, dnchkval, ue2dc) );
+	iC( W_list_compute(trgdat, W, uep) );
+	iC( X_list_compute(trgdat, dcp, dnchkpos, dnchkval) );
+
 	//-------------
 	//dnchkval to dneqnden
 	CpxNumMat& v  = dc2de(0);
@@ -471,8 +448,8 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
 	//to children or to exact points
 	if(isterminal(trgdat)) {
 	    DblNumMat dneqnpos(dep.m(), dep.n());
-	    for(int k=0; k<dep.n(); k++) {
-		for(int d=0; d<dim(); d++) {
+	    for(int k = 0; k < dep.n(); k++) {
+		for(int d = 0; d < dim(); d++) {
 		    dneqnpos(d,k) = dep(d,k) + trgctr(d);
 		}
 	    }
@@ -499,6 +476,129 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
 		    }
 		}
 	    }
+	}
+    }
+    return 0;
+}
+
+int Wave3d::U_list_compute(BoxDat& trgdat)
+{
+    for(vector<BoxKey>::iterator vi = trgdat.undeidxvec().begin();
+	vi != trgdat.undeidxvec().end(); vi++) {
+	BoxKey neikey = (*vi);
+	BoxDat& neidat = _boxvec.access(neikey);
+	//mul
+	CpxNumMat mat;
+	iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+	iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
+    }
+    return 0;
+}
+
+int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNumMat& uep,
+			   DblNumMat& dcp, CpxNumVec& dnchkval, NumTns<CpxNumTns>& ue2dc)
+{
+    double step = W/(_P-1);
+    setvalue(_valfft,cpx(0,0));
+    //LEXING: SPECIAL
+    for(vector<BoxKey>::iterator vi=trgdat.vndeidxvec().begin();
+	vi!=trgdat.vndeidxvec().end(); vi++) {
+	BoxKey neikey = (*vi);
+	BoxDat& neidat = _boxvec.access(neikey);
+	//mul
+	Point3 neictr = center(neikey);         //double DD = neinde.width();
+	Index3 idx;
+	for(int d=0; d<dim(); d++) {
+	    idx(d) = int(round( (trgctr[d]-neictr[d])/W )); //LEXING:CHECK
+	}
+	//create if it is missing
+	if(neidat.fftcnt()==0) {
+	    setvalue(_denfft, cpx(0,0));
+	    CpxNumVec& neiden = neidat.upeqnden();
+	    for(int k=0; k<uep.n(); k++) {
+		int a = int( round((uep(0,k)+W/2)/step) ) + _P;
+		int b = int( round((uep(1,k)+W/2)/step) ) + _P;
+		int c = int( round((uep(2,k)+W/2)/step) ) + _P;
+		_denfft(a,b,c) = neiden(k);
+	    }
+	    fftw_execute(_fplan);
+	    neidat.upeqnden_fft() = _denfft; //COPY to the right place
+	}
+	CpxNumTns& neidenfft = neidat.upeqnden_fft();
+	//TODO: LEXING GET THE INTERACTION TENSOR
+	CpxNumTns& inttns = ue2dc(idx[0]+3,idx[1]+3,idx[2]+3);
+	for(int a = 0; a < 2 * _P; a++) {
+	    for(int b = 0; b < 2 * _P; b++) {
+		for(int c = 0; c < 2 * _P; c++) {
+		    _valfft(a,b,c) += (neidenfft(a,b,c)*inttns(a,b,c));
+		}
+	    }
+	}
+	//clean if necessary
+	neidat.fftcnt()++;
+	if(neidat.fftcnt()==neidat.fftnum()) {
+	    neidat.upeqnden_fft().resize(0,0,0);
+	    neidat.fftcnt() = 0;//reset, LEXING
+	}
+    }
+    fftw_execute(_bplan);
+    //add back
+    double coef = 1.0/(2*_P * 2*_P * 2*_P);
+    for(int k=0; k<dcp.n(); k++) {
+	int a = int( round((dcp(0,k)+W/2)/step) ) + _P;
+	int b = int( round((dcp(1,k)+W/2)/step) ) + _P;
+	int c = int( round((dcp(2,k)+W/2)/step) ) + _P;
+	dnchkval(k) += (_valfft(a,b,c)*coef); //LEXING: VERY IMPORTANT
+    }
+    return 0;
+}
+
+int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
+			   CpxNumVec& dnchkval)
+{
+    for(vector<BoxKey>::iterator vi = trgdat.xndeidxvec().begin();
+	vi != trgdat.xndeidxvec().end(); vi++) {
+	BoxKey neikey = (*vi);
+	BoxDat& neidat = _boxvec.access(neikey);
+	Point3 neictr = center(neikey);
+	if(isterminal(trgdat) && trgdat.extpos().n() < dcp.n()) {
+	    CpxNumMat mat;
+	    iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+	    iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
+	} else {
+	    //mul
+	    CpxNumMat mat;
+	    iC( _knl.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
+	    iC( zgemv(1.0, mat, neidat.extden(), 1.0, dnchkval) );
+	}
+    }
+    return 0;
+}
+
+int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep)
+{
+    for(vector<BoxKey>::iterator vi = trgdat.wndeidxvec().begin();
+	vi != trgdat.wndeidxvec().end(); vi++) {
+	BoxKey neikey = (*vi);
+	BoxDat& neidat = _boxvec.access(neikey);
+	Point3 neictr = center(neikey);
+	//upchkpos
+	if(isterminal(neidat) && neidat.extpos().n()<uep.n()) {
+	    CpxNumMat mat;
+	    iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+	    iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
+	} else {
+	    double coef = width(neikey) / W; //LEXING: SUPER IMPORTANT
+	    DblNumMat upeqnpos(uep.m(), uep.n()); //local version
+	    for(int k=0; k<uep.n(); k++) {
+		for(int d=0; d<dim(); d++) {
+		    upeqnpos(d,k) = coef*uep(d,k) + neictr(d);
+		}
+	    }
+	    //mul
+	    CpxNumMat mat;
+	    iC( _knl.kernel(trgdat.extpos(), upeqnpos, upeqnpos, mat) );
+	    iC( zgemv(1.0, mat, neidat.upeqnden(), 1.0, trgdat.extval()) );
 	}
     }
     return 0;
@@ -534,6 +634,7 @@ int Wave3d::eval_dnward_hgh_recursive(double W, Index3 nowdir,
     }
     return 0;
 }
+
 
 //---------------------------------------------------------------------
 int Wave3d::eval_upward_hgh(double W, Index3 dir,
