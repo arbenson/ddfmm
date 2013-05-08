@@ -52,15 +52,16 @@ public:
     vector<BoxKey> _vndeidxvec;  // V List
     vector<BoxKey> _wndeidxvec;  // W List
     vector<BoxKey> _xndeidxvec;  // X List
-    vector<BoxKey> _endeidxvec;  // close directions
-    map< Index3, vector<BoxKey> > _fndeidxvec; // far away directions
+    vector<BoxKey> _endeidxvec;  // Close directions
+    map< Index3, vector<BoxKey> > _fndeidxvec; // Far away directions
     //
     DblNumMat _extpos;  // positions of exact points (leaf level)
     CpxNumVec _extden;  // Exact densities  
     CpxNumVec _upeqnden;  // Upward equivalent density
     CpxNumVec _extval;  // Exact potential value
-    CpxNumVec _dnchkval; // Sownward check potential
-    // aux. data structures for FFT
+    CpxNumVec _dnchkval; // Downward check potential
+
+    // Auxiliarly data structures for FFT
     CpxNumTns _upeqnden_fft;
     set<Index3> _incdirset;
     set<Index3> _outdirset;
@@ -249,8 +250,8 @@ public:
         return BoxKey(curkey.first - 1, curkey.second / 2);
     }
 
-    // Return the key of the child box of the box corresponding to curkey.
-    // TODO (Austin): isn't there more than one child?
+    // Return the key of a child box of the box corresponding to curkey.
+    // The index into the 8 children is given by idx
     BoxKey chdkey(BoxKey& curkey, Index3 idx) {
         return BoxKey(curkey.first + 1, 2 * curkey.second + idx);
     }
@@ -262,7 +263,8 @@ public:
         return curdat.tag() & WAVE3D_TERMINAL;
     }
 
-    bool ispts(BoxDat& curdat) {
+    // Returns true iff curdat contains points.
+    bool has_pts(BoxDat& curdat) {
         return curdat.tag() & WAVE3D_PTS;
     }
 
@@ -325,10 +327,15 @@ public:
             set<BndKey>& reqbndset);
     int eval_dnward_hgh_recursive(double W, Index3 nowdir,
             map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
+    
     int eval_upward_hgh(double W, Index3 dir,
             pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset);
     int eval_dnward_hgh(double W, Index3 dir,
                         pair< vector<BoxKey>, vector<BoxKey> >& hdvecs);
+
+    int get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
+		 set<BndKey>& reqbndset);
+
     //
     int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
     int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
