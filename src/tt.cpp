@@ -54,7 +54,7 @@ int main(int argc, char** argv)
   vector<int>& tmpinfo = pos.prtn().ownerinfo();
   int numpts = tmpinfo[tmpinfo.size()-1]; //LEXING: THIS CONTAINS THE TOTAL NUMBER OF POINTS
   if(mpirank==0) {
-    cout<<"Done reading pos "<<pos.lclmap().size()<<" "<<pos.prtn().ownerinfo().size()<<endl;
+    cerr<<"Done reading pos "<<pos.lclmap().size()<<" "<<pos.prtn().ownerinfo().size()<<endl;
   }
   ParVec<int, cpx, PtPrtn> den;
 
@@ -66,12 +66,12 @@ int main(int argc, char** argv)
   istringstream diss; iC( Separate_Read(opt, diss) );
   iC( deserialize(den, diss, all) );
   if(mpirank==0) {
-    cout<<"Done reading den "<<den.lclmap().size()<<" "<<den.prtn().ownerinfo().size()<<endl;
+    cerr<<"Done reading den "<<den.lclmap().size()<<" "<<den.prtn().ownerinfo().size()<<endl;
   }
   ParVec<int, cpx, PtPrtn> val; //preset val to be the same as den
   val = den;  //val.lclmap() = den.lclmap();  val.prtn() = den.prtn();
   if(mpirank==0) {
-	cout<<"Done setting val "<<val.lclmap().size()<<" "<<val.prtn().ownerinfo().size()<<endl;
+	cerr<<"Done setting val "<<val.lclmap().size()<<" "<<val.prtn().ownerinfo().size()<<endl;
   }
   Kernel3d knl(KNL_HELM);
   mi = opts.find("-knl");
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
   mlib.NPQ() = 4;
   iC( mlib.setup(opts) );
   if(mpirank==0) {
-    cout<<"Done reading mlib "<<mlib.w2ldmap().size()<<" "<<mlib.w2hdmap().size()<<endl;
+    cerr<<"Done reading mlib "<<mlib.w2ldmap().size()<<" "<<mlib.w2hdmap().size()<<endl;
   }
   IntNumTns geomprtn;
   opt = findOption(opts, "-geomprtn");
@@ -98,8 +98,8 @@ int main(int argc, char** argv)
   istringstream giss;  iC( Shared_Read(opt, giss) );
   iC( deserialize(geomprtn, giss, all) );
   if(mpirank==0) {
-    cout<<"Done reading geomprtn "<<geomprtn.m()<<" "<<geomprtn.n()<<" "<<geomprtn.p()<<endl;
-    cout<<geomprtn<<endl;
+    cerr<<"Done reading geomprtn "<<geomprtn.m()<<" "<<geomprtn.n()<<" "<<geomprtn.p()<<endl;
+    cerr<<geomprtn<<endl;
   }
   Wave3d wave("wave3d_");
   wave.posptr() = &pos;
