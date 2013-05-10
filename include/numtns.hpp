@@ -11,64 +11,98 @@ public:
   bool _owndata;
   F* _data;
 public:
-  NumTns(int m=0, int n=0, int p=0): _m(m), _n(n), _p(p), _owndata(true) {
-	if(_m>0 && _n>0 && _p>0) { _data = new F[_m*_n*_p]; assert( _data!=NULL ); } else _data=NULL;
-  }
-  NumTns(int m, int n, int p, bool owndata, F* data): _m(m), _n(n), _p(p), _owndata(owndata) {
+    NumTns(int m=0, int n=0, int p=0): _m(m), _n(n), _p(p), _owndata(true) {
+	allocate();
+    }
+
+    NumTns(int m, int n, int p, bool owndata, F* data): _m(m), _n(n), _p(p), _owndata(owndata) {
 	if(_owndata) {
-	  if(_m>0 && _n>0 && _p>0) { _data = new F[_m*_n*_p]; assert( _data!=NULL ); } else _data=NULL;
-	  if(_m>0 && _n>0 && _p>0) { for(int i=0; i<_m*_n*_p; i++) _data[i] = data[i]; }
+	    allocate();
+	    if(dimensions_check()) {
+		for(int i=0; i<_m*_n*_p; i++) _data[i] = data[i];
+	    }
 	} else {
-	  _data = data;
+	    _data = data;
 	}
-  }
-  NumTns(const NumTns& C): _m(C._m), _n(C._n), _p(C._p), _owndata(C._owndata) {
+    }
+
+    NumTns(const NumTns& C): _m(C._m), _n(C._n), _p(C._p), _owndata(C._owndata) {
 	if(_owndata) {
-	  if(_m>0 && _n>0 && _p>0) { _data = new F[_m*_n*_p]; assert( _data!=NULL ); } else _data=NULL;
-	  if(_m>0 && _n>0 && _p>0) { for(int i=0; i<_m*_n*_p; i++) _data[i] = C._data[i]; }
+	    allocate();
+	    if(dimensions_check()) {
+		for(int i = 0; i < _m * _n * _p; i++) {
+		    _data[i] = C._data[i];
+		}
+	    }
 	} else {
-	  _data = C._data;
+	    _data = C._data;
 	}
-  }
-  ~NumTns() { 
+    }
+
+    ~NumTns() { 
+	// TODO (Austin): should this include p > 0 here?
+	if(_owndata && _m>0 && _n>0) {
+	    delete[] _data; _data = NULL;
+	} 
+    }
+    NumTns& operator=(const NumTns& C) {
 	if(_owndata) { 
-	  if(_m>0 && _n>0) { delete[] _data; _data = NULL; } 
+	    deallocate();
 	}
-  }
-  NumTns& operator=(const NumTns& C) {
-	if(_owndata) { 
-	  if(_m>0 && _n>0 && _p>0) { delete[] _data; _data = NULL; } 
-	}
-	_m = C._m; _n=C._n; _p=C._p; _owndata=C._owndata;
+	_m = C._m; _n = C._n; _p = C._p; _owndata = C._owndata;
 	if(_owndata) {
-	  if(_m>0 && _n>0 && _p>0) { _data = new F[_m*_n*_p]; assert( _data!=NULL ); } else _data=NULL;
-	  if(_m>0 && _n>0 && _p>0) { for(int i=0; i<_m*_n*_p; i++) _data[i] = C._data[i]; }
+	    allocate();
+	    if(dimensions_check()) {
+		for(int i = 0; i < _m * _n * _p; i++) _data[i] = C._data[i]; 
+	    }
 	} else {
-	  _data = C._data;
+	    _data = C._data;
 	}
 	return *this;
-  }
-  void resize(int m, int n, int p)  {
-	assert( _owndata==true );
+    }
+
+    void resize(int m, int n, int p)  {
+	assert( _owndata );
 	if(_m!=m || _n!=n || _p!=p) {
-	  if(_m>0 && _n>0 && _p>0) { delete[] _data; _data = NULL; } 
-	  _m = m; _n = n; _p=p;
-	  if(_m>0 && _n>0 && _p>0) { _data = new F[_m*_n*_p]; assert( _data!=NULL ); } else _data=NULL;
+	    deallocate();
+	    _m = m; _n = n; _p=p;
+	    allocate();
 	}
-  }
-  const F& operator()(int i, int j, int k) const  {
+    }
+
+    inline bool dimensions_check() {
+	return _m > 0 && _n > 0 && _p > 0;
+    }
+    
+    void allocate() {
+	if(dimensions_check()) {
+	    _data = new F[_m * _n * _p];
+	    assert( _data != NULL );
+	} else {
+	    _data = NULL;
+	}
+    }
+
+    void deallocate() {
+	if(dimensions_check()) {
+	    delete[] _data;
+	    _data = NULL;
+	}
+    }
+
+    const F& operator()(int i, int j, int k) const  {
 	assert( i>=0 && i<_m && j>=0 && j<_n && k>=0 && k<_p);
-	return _data[i+j*_m+k*_m*_n];
-  }
-  F& operator()(int i, int j, int k)  {
-	assert( i>=0 && i<_m && j>=0 && j<_n && k>=0 && k<_p);
-	return _data[i+j*_m+k*_m*_n];
-  }
-  
-  F* data() const { return _data; }
-  int m() const { return _m; }
-  int n() const { return _n; }
-  int p() const { return _p; }
+	return _data[i + j * _m + k * _m * _n];
+    }
+    F& operator()(int i, int j, int k)  {
+        assert( i>=0 && i<_m && j>=0 && j<_n && k>=0 && k<_p);
+        return _data[i + j * _m + k * _m * _n];
+    }
+    
+    F* data() const { return _data; }
+    int m() const { return _m; }
+    int n() const { return _n; }
+    int p() const { return _p; }
 };
 
 template <class F> inline ostream& operator<<( ostream& os, const NumTns<F>& tns)
@@ -76,13 +110,13 @@ template <class F> inline ostream& operator<<( ostream& os, const NumTns<F>& tns
   os<<tns.m()<<" "<<tns.n()<<" "<<tns.p()<<endl;
   os.setf(ios_base::scientific, ios_base::floatfield);
   for(int i=0; i<tns.m(); i++) {
-	 for(int j=0; j<tns.n(); j++) {
-		for(int k=0; k<tns.p(); k++) {
-		  os<<" "<<tns(i,j,k);
-		}
-		os<<endl;
-	 }
-	 os<<endl;
+      for(int j=0; j<tns.n(); j++) {
+	  for(int k=0; k<tns.p(); k++) {
+	      os<<" "<<tns(i,j,k);
+	  }
+	  os<<endl;
+      }
+      os<<endl;
   }
   return os;
 }
@@ -104,7 +138,4 @@ typedef NumTns<double> DblNumTns;
 typedef NumTns<cpx>    CpxNumTns;
 
 #endif
-
-
-
 
