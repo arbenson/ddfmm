@@ -95,7 +95,10 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&), c
   reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
   stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
   //---------
-  vector<ostringstream*> ossvec(mpisize);  for(int k=0; k<mpisize; k++)	ossvec[k] = new ostringstream();
+  vector<ostringstream*> ossvec(mpisize);
+  for(int k=0; k<mpisize; k++)	{
+      ossvec[k] = new ostringstream();
+  }
   //1. serialize
   for(typename map<Key,Data>::iterator mi=_lclmap.begin(); mi!=_lclmap.end(); mi++) {
     Key key = mi->first;
@@ -261,7 +264,6 @@ int ParVec<Key,Data,Partition>::getEnd( const vector<int>& mask )
     issvec[k]->str(tmp);
   }
   rbufvec.clear(); //save space
-  //if(mpirank==0)	for(int k=0; k<mpisize; k++)	  cerr<<"rnbvec "<<k<<" "<<rnbvec[k]<<endl;
   
   for(int k=0; k<mpisize; k++) {
     for(int i=0; i<rnbvec[k]; i++) {
