@@ -167,7 +167,10 @@ int Mlib3d::dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
 int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
                             NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
 {
-  { map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W);  iA(mi!=_w2hdmap.end());}
+  {
+      map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W);
+      iA(mi!=_w2hdmap.end());
+  }
   map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
   Index3 srt, sgn, prm;  iC( hghfetch_index3sort(dir, srt, sgn, prm) );
@@ -191,11 +194,15 @@ int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
 	LowFreqEntry& le = _w2ldmap[W/2];
 	uepchd = le.uep();
   } else { //large box
-	{ map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W/2);  iA(mi!=_w2hdmap.end());}
+	{ 
+	    map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W/2);
+	    iA(mi!=_w2hdmap.end());
+	}
 	map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
 	
-	Index3 pdr = predir(dir);	//cerr<<" 0 "<<dir<<" "<<pdr<<endl;
-	Index3 srt, sgn, prm;  iC( hghfetch_index3sort(pdr, srt, sgn, prm) );
+	Index3 pdr = predir(dir);
+	Index3 srt, sgn, prm;
+	iC( hghfetch_index3sort(pdr, srt, sgn, prm) );
 	{
 	    map<Index3,HghFreqDirEntry>::iterator mi = curmap.find(srt);
 	    iA(mi!=curmap.end());
@@ -224,8 +231,9 @@ int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
 }
 
 //-----------------------------------
-int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp, NumVec<CpxNumMat>& dc2de,
-							NumTns<CpxNumMat>& de2dc, DblNumMat& uep)
+int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp,
+                            NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+                            DblNumMat& uep)
 {
   { map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W);  iA(mi!=_w2hdmap.end());}
   map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
