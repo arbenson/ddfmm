@@ -1,6 +1,8 @@
 #include "wave3d.hpp"
 #include "vecmatop.hpp"
 
+#include <algorithm>
+
 #define DVMAX 400
 
 // Type of communication pattern for high-frequency domain
@@ -120,11 +122,12 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
             tmpdirs.push_back(dir);
         }
     }
-    vector<Index3> basedirs(tmpdirs.size());
-    for(int i=0; i<tmpdirs.size(); i++) {
-        int off = (i*149)%(tmpdirs.size());
-        basedirs[i] = tmpdirs[off];
-    }
+
+    // basedirs is a pseudo-randomly rearranged copy of tmpdirs, used
+    // for load blancing in the communication    
+    vector<Index3> basedirs = tmpdirs;
+    std::random_shuffle(basedirs.begin(), basedirs.end());
+
     int TTL = basedirs.size();
     // Directions per group
     int DPG = 4;
@@ -366,7 +369,8 @@ int Wave3d::eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqbo
 	CpxNumMat& v  = uc2ue(0);
 	CpxNumMat& is = uc2ue(1); //LEXING: it is stored as a matrix
 	CpxNumMat& up = uc2ue(2);
-	CpxNumVec mid(up.m());        setvalue(mid,cpx(0,0));
+	CpxNumVec mid(up.m());
+	setvalue(mid,cpx(0,0));
 	iC( zgemv(1.0, up, upchkval, 0.0, mid) );
 	for (int k=0; k<mid.m(); k++) {
 	    mid(k) = mid(k) * is(k,0);
@@ -663,19 +667,21 @@ int Wave3d::eval_upward_hgh(double W, Index3 dir,
 	//eval
 	CpxNumVec upchkval(ue2uc(0,0,0).m());
 	setvalue(upchkval,cpx(0,0));
+        // High-frequency M2M
 	if(abs(W-1) < eps) {
+	    // The children boxes only have non-directional equivalent densities
 	    for(int a = 0; a < 2; a++)
 		for(int b = 0; b < 2; b++)
 		    for(int c = 0; c < 2; c++) {
 			BoxKey chdkey = this->chdkey(srckey, Index3(a,b,c));
-			BoxDat& chddat = _boxvec.access(chdkey);
+                        BoxDat& chddat = _boxvec.access(chdkey);
 			if(has_pts(chddat)) {
 			    CpxNumVec& chdued = chddat.upeqnden();
 			    iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
 			}
 		    }
 	} else {
-	    Index3 pdir = predir(dir); //parent direction
+	    Index3 pdir = predir(dir); // parent direction
 	    for(int a = 0; a < 2; a++) {
 		for(int b = 0; b < 2; b++) {
 		    for(int c = 0; c < 2; c++) {
@@ -691,7 +697,7 @@ int Wave3d::eval_upward_hgh(double W, Index3 dir,
 		}
 	    }
 	}
-	//uc2ue
+	// uc2ue (Upward check to upward equivalency)
 	CpxNumMat& E1 = uc2ue(0);
 	CpxNumMat& E2 = uc2ue(1);
 	CpxNumMat& E3 = uc2ue(2);
@@ -729,7 +735,8 @@ int Wave3d::get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
 }
 
 //---------------------------------------------------------------------
-int Wave3d::eval_dnward_hgh(double W, Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs)
+int Wave3d::eval_dnward_hgh(double W, Index3 dir,
+                            pair< vector<BoxKey>, vector<BoxKey> >& hdvecs)
 {
     double eps = 1e-12;
     DblNumMat dep;
