@@ -257,19 +257,15 @@ public:
         return _boxvec.access(curkey);
     }
 
-    bool isterminal(BoxDat& curdat) {
-        return curdat.tag() & WAVE3D_TERMINAL;
-    }
+    bool isterminal(BoxDat& curdat) { return curdat.tag() & WAVE3D_TERMINAL; }
 
     // Returns true iff curdat contains points.
-    bool has_pts(BoxDat& curdat) {
-        return curdat.tag() & WAVE3D_PTS;
-    }
+    bool has_pts(BoxDat& curdat) { return curdat.tag() & WAVE3D_PTS; }
 
     // Determine whether the box corresponding to curkey is owned
     // by this processor.
     bool own_box(BoxKey& curkey, int mpirank) {
-        return _boxvec.prtn().owner(curkey) == mpirank;
+	return _boxvec.prtn().owner(curkey) == mpirank;
     }
   
 
@@ -279,9 +275,15 @@ public:
     int dim() { return 3; }
 
     //the level such that the box has width 1
-    int unitlevel() { return int(round(log(_K)/log(2))); } 
-    int cell_level() { int numC = _geomprtn.m(); return int(round(log(numC)/log(2))); }
+    int unitlevel() { return int(round(log(_K) / log(2))); } 
+    int cell_level() { return int(round(log(_geomprtn.m()) / log(2))); }
     Index3 nml2dir(Point3 nml, double W);
+
+    // Compute the parent direction given the child direction.  If the child
+    // direction is for a box B, then the parent direction is a direction
+    // associated with all children boxes C of B.
+    //
+    // dir is the child direction
     Index3 predir(Index3 dir);
     vector<Index3> chddir(Index3 dir);
     double dir2width(Index3 dir);
@@ -348,7 +350,6 @@ public:
     //
     int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
     int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
-
 };
 
 //-------------------
