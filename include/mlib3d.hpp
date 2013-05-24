@@ -57,8 +57,9 @@ public:
   map<double, map<Index3, HghFreqDirEntry> > _w2hdmap;
   
 public:
-  Mlib3d(const string& p);
-  ~Mlib3d();
+    Mlib3d(const string& p): ComObject(p) {}
+    ~Mlib3d() {}
+
   
   Kernel3d& knl() { return _knl; }
   int& NPQ() { return _NPQ; }

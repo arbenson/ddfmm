@@ -2,20 +2,16 @@
 #include "parallel.hpp"
 #include "serialize.hpp"
 
-
 using std::istringstream;
 using std::ifstream;
 using std::ofstream;
 using std::cerr;
 
-//-----------------------------------
-Mlib3d::Mlib3d(const string& p): ComObject(p)
-{
-}
-
-//-----------------------------------
-Mlib3d::~Mlib3d()
-{
+Point3 shifted_point(int dir_ind, double W) {
+    int a = DIR_1(dir_ind);
+    int b = DIR_2(dir_ind);
+    int c = DIR_3(dir_ind);
+    return Point3((a - 0.5) * W / 2, (b - 0.5) * W / 2, (c - 0.5) * W / 2);
 }
 
 //-----------------------------------
@@ -25,17 +21,17 @@ int Mlib3d::setup(map<string,string>& opts)
   map<string,string>::iterator mi;
   mi = opts.find("-" + prefix() + "NPQ");
   if(mi!=opts.end()) {
-	istringstream ss((*mi).second);
-	ss>>_NPQ;
+      istringstream ss(mi->second);
+      ss>>_NPQ;
   }
   mi = opts.find("-" + prefix() + "ldname");
   if(mi!=opts.end()) {
-	istringstream ss((*mi).second);
+	istringstream ss(mi->second);
 	ss>>_ldname;
   }
   mi = opts.find("-" + prefix() + "hdname");
   if(mi!=opts.end()) {
-	istringstream ss((*mi).second);
+	istringstream ss(mi->second);
 	ss>>_hdname;
   }
   
@@ -72,19 +68,15 @@ int Mlib3d::upward_lowfetch(double W, DblNumMat& uep, DblNumMat& ucp,
       uepchd = le.uep();
   }
   ue2uc.resize(2,2,2);
-  for(int a=0; a<2; a++) {
-      for(int b=0; b<2; b++) {
-	  for(int c=0; c<2; c++) {
-	      Point3 shift( (a-0.5)*W/2, (b-0.5)*W/2, (c-0.5)*W/2 );
-	      DblNumMat tmp(uepchd.m(), uepchd.n());
-	      for(int k=0; k<uepchd.n(); k++) {
-		  for(int d=0; d<3; d++) {
-		      tmp(d,k) = uepchd(d,k) + shift(d);
-		  }
-	      }
-	      iC( _knl.kernel(ucp, tmp, tmp, ue2uc(a,b,c)) );
+  for (int ind = 0; ind < NUM_DIRS; ind++) {
+      Point3 shift = shifted_point(ind, W);
+      DblNumMat tmp(uepchd.m(), uepchd.n());
+      for(int k=0; k<uepchd.n(); k++) {
+	  for(int d=0; d<3; d++) {
+	      tmp(d,k) = uepchd(d,k) + shift(d);
 	  }
       }
+      iC( _knl.kernel(ucp, tmp, tmp, ue2uc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
   }
   
   return 0;
@@ -135,25 +127,21 @@ int Mlib3d::dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
   }
   
   de2dc.resize(2,2,2);
-  for(int a=0; a<2; a++) {
-      for(int b=0; b<2; b++) {
-	  for(int c=0; c<2; c++) {
-	      Point3 shift( (a-0.5)*W/2, (b-0.5)*W/2, (c-0.5)*W/2 );
-	      DblNumMat tmp(dcpchd.m(), dcpchd.n());
-	      for(int k=0; k<dcpchd.n(); k++) {
-		  for(int d=0; d<3; d++) {
-		      tmp(d,k) = dcpchd(d,k) + shift(d);
-		  }
-	      }
-	      iC( _knl.kernel(tmp, dep, dep, de2dc(a,b,c)) );
+  for (int ind = 0; ind < NUM_DIRS; ind++) {
+      Point3 shift = shifted_point(ind, W);
+      DblNumMat tmp(dcpchd.m(), dcpchd.n());
+      for(int k=0; k<dcpchd.n(); k++) {
+	  for(int d=0; d<3; d++) {
+	      tmp(d,k) = dcpchd(d,k) + shift(d);
 	  }
       }
+      iC( _knl.kernel(tmp, dep, dep, de2dc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
   }
   
   ue2dc.resize(7,7,7);
-  for(int a=0; a<7; a++) {
-      for(int b=0; b<7; b++) {
-	  for(int c=0; c<7; c++) {
+  for(int a = 0; a < 7; a++) {
+      for(int b = 0; b < 7; b++) {
+	  for(int c = 0; c < 7; c++) {
 	      if(abs(a-3)>1 || abs(b-3)>1 || abs(c-3)>1) {
 		  ue2dc(a,b,c) = le.ue2dc()(a,b,c);
 	      }
@@ -212,19 +200,15 @@ int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
 	iC( hghfetch_shuffle(prm, sgn, ueptmp, uepchd) );
   }
   ue2uc.resize(2,2,2);
-  for(int a=0; a<2; a++) {
-      for(int b=0; b<2; b++) {
-	  for(int c=0; c<2; c++) {
-	      Point3 shift( (a-0.5)*W/2, (b-0.5)*W/2, (c-0.5)*W/2 );
-	      DblNumMat tmp(uepchd.m(), uepchd.n());
-	      for(int k=0; k<uepchd.n(); k++) {
-		  for(int d=0; d<3; d++) {
-		      tmp(d,k) = uepchd(d,k) + shift(d);
-		  }
-	      }
-	      iC( _knl.kernel(ucp, tmp, tmp, ue2uc(a,b,c)) );
+  for (int ind = 0; ind < NUM_DIRS; ind++) {
+      Point3 shift = shifted_point(ind, W);
+      DblNumMat tmp(uepchd.m(), uepchd.n());
+      for(int k=0; k<uepchd.n(); k++) {
+	  for(int d=0; d<3; d++) {
+	      tmp(d,k) = uepchd(d,k) + shift(d);
 	  }
       }
+      iC( _knl.kernel(ucp, tmp, tmp, ue2uc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
   }
   
   return 0;
@@ -235,11 +219,17 @@ int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp
                             NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
                             DblNumMat& uep)
 {
-  { map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W);  iA(mi!=_w2hdmap.end());}
+  { 
+      map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W);
+      iA(mi!=_w2hdmap.end());
+  }
   map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
   Index3 srt, sgn, prm;  iC( hghfetch_index3sort(dir, srt, sgn, prm) );
-  { map<Index3,HghFreqDirEntry>::iterator mi = curmap.find(srt);  iA(mi!=curmap.end()); }
+  {
+      map<Index3,HghFreqDirEntry>::iterator mi = curmap.find(srt);
+      iA(mi!=curmap.end());
+  }
   HghFreqDirEntry& he = curmap[srt];
   
   DblNumMat ueptmp( he.uep() );
@@ -262,37 +252,47 @@ int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp
        }
   }
   DblNumMat dcpchd;
-  if(W==1.0) { //unit box
-	{ map<double,LowFreqEntry>::iterator mi = _w2ldmap.find(W/2);	iA(mi!=_w2ldmap.end()); }
+  if(W == 1.0) { //unit box
+	{
+	    map<double,LowFreqEntry>::iterator mi = _w2ldmap.find(W/2);
+	    iA(mi!=_w2ldmap.end());
+	}
 	LowFreqEntry& le = _w2ldmap[W/2];
 	dcpchd = le.uep();
   } else { //large box
-	{ map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W/2);  iA(mi!=_w2hdmap.end());}
+	{ 
+	    map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W/2);
+	    iA(mi!=_w2hdmap.end());
+	}
 	map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
 	
 	Index3 pdr = predir(dir);
 	Index3 srt, sgn, prm;  iC( hghfetch_index3sort(pdr, srt, sgn, prm) );
-	{ map<Index3,HghFreqDirEntry>::iterator mi = curmap.find(srt);  iA(mi!=curmap.end()); }
+	{ 
+	    map<Index3,HghFreqDirEntry>::iterator mi = curmap.find(srt);
+	    iA(mi!=curmap.end());
+	}
 	HghFreqDirEntry& he = curmap[srt];
 	DblNumMat ueptmp( he.uep() );
 	iC( hghfetch_shuffle(prm, sgn, ueptmp, dcpchd) );
-	for(int i=0; i<dcpchd.n(); i++)	for(int d=0; d<3; d++)	  dcpchd(d,i) = -dcpchd(d,i); //negate
+	// negate all entries
+	for(int i = 0; i < dcpchd.n(); i++) {
+	    for(int d = 0; d < 3; d++) {
+		dcpchd(d,i) = -dcpchd(d,i);
+	    }
+	}
   }
   
   de2dc.resize(2,2,2);
-  for(int a=0; a<2; a++) {
-      for(int b=0; b<2; b++) {
-	  for(int c=0; c<2; c++) {
-		Point3 shift( (a-0.5)*W/2, (b-0.5)*W/2, (c-0.5)*W/2 );
-		DblNumMat tmp(dcpchd.m(), dcpchd.n());
-		for(int k=0; k<dcpchd.n(); k++) {
-		    for(int d=0; d<3; d++) {
-			tmp(d,k) = dcpchd(d,k) + shift(d);
-		    }
-		}
-		iC( _knl.kernel(tmp, dep, dep, de2dc(a,b,c)) );
+  for (int ind = 0; ind < NUM_DIRS; ind++) {
+      Point3 shift = shifted_point(ind, W);
+      DblNumMat tmp(dcpchd.m(), dcpchd.n());
+      for (int k = 0; k < dcpchd.n(); k++) {
+	  for (int d = 0; d < 3; d++) {
+	      tmp(d,k) = dcpchd(d,k) + shift(d);
 	  }
       }
+      iC( _knl.kernel(tmp, dep, dep, de2dc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
   }
   
   return 0;
@@ -341,20 +341,19 @@ int Mlib3d::hghfetch_index3sort(Index3 val, Index3& srt, Index3& sgn, Index3& pr
 {
   //make it positive
   for(int d=0; d<3; d++) {
-      if (val(d) >= 0) {
-	  sgn(d) = 1;
-      } else {
- 	  sgn(d) = -1;
+      sgn(d) = 1;
+      if (val(d) < 0) {
+	  sgn(d) = -1;
       }
       val(d) = abs(val(d));
   }
   //sort
   int upp = val.linfty() + 1;
-  for(int d=0; d<3; d++) {
+  for(int d = 0; d < 3; d++) {
       int minidx = d;
       int minval = val[d];
-      for(int e=0; e<3; e++) {
-          if(val[e]<minval) {
+      for(int e = 0; e < 3; e++) {
+          if(val[e] < minval) {
 	      minval = val[e];
 	      minidx = e;
 	  }
