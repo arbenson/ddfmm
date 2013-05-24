@@ -345,26 +345,28 @@ int Wave3d::eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqbo
 	//ue2dc
 	if(isterminal(srcdat)) {
 	    DblNumMat upchkpos(ucp.m(), ucp.n());
-	    for(int k=0; k<ucp.n(); k++)
-		for(int d=0; d<dim(); d++)
+	    for(int k=0; k<ucp.n(); k++) {
+		for(int d=0; d<dim(); d++) {
 		    upchkpos(d,k) = ucp(d,k) + srcctr(d);
+		}
+	    }
 	    //mul
 	    CpxNumMat mat;
 	    iC( _knl.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
 	    iC( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
 	} else {
-	    for(int a = 0; a < 2; a++) {
-		for(int b = 0; b < 2; b++) {
-		    for(int c = 0; c < 2; c++) {
-			BoxKey chdkey = this->chdkey(srckey, Index3(a,b,c));
-			BoxDat& chddat = _boxvec.access(chdkey);
-			if(has_pts(chddat)) {
-			    iC( zgemv(1.0, ue2uc(a,b,c), chddat.upeqnden(), 1.0, upchkval) );
-			}
-		    }
+	    for (int ind = 0; ind < NUM_DIRS; ind++) {
+		int a = DIR_1(ind);
+		int b = DIR_2(ind);
+		int c = DIR_3(ind);
+		BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
+		BoxDat& chddat = _boxvec.access(chdkey);
+		if(has_pts(chddat)) {
+		    iC( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
 		}
 	    }
 	}
+
 	//uc2ue
 	CpxNumMat& v  = uc2ue(0);
 	CpxNumMat& is = uc2ue(1); //LEXING: it is stored as a matrix
@@ -463,22 +465,21 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
 	    iC( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
 	} else {
 	    //put stuff to children
-	    for(int a = 0; a < 2; a++) {
-		for(int b = 0; b < 2; b++) {
-		    for(int c = 0; c < 2; c++) {
-			BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
-			BoxDat& chddat = _boxvec.access(chdkey);
-			if (!has_pts(chddat)) {
-			    continue;
-			}
-			//mul
-			if(chddat.dnchkval().m()==0) {
-			    chddat.dnchkval().resize(de2dc(a,b,c).m());
-			    setvalue(chddat.dnchkval(), cpx(0,0));
-			}
-			iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddat.dnchkval()) );
-		    }
+	    for (int ind = 0; ind < NUM_DIRS; ind++) {
+		int a = DIR_1(ind);
+		int b = DIR_2(ind);
+		int c = DIR_3(ind);
+		BoxKey chdkey = this->chdkey(trgkey, Index3(a, b, c));
+		BoxDat& chddat = _boxvec.access(chdkey);
+		if (!has_pts(chddat)) {
+		    continue;
 		}
+		//mul
+		if (chddat.dnchkval().m() == 0) {
+		    chddat.dnchkval().resize(de2dc(a,b,c).m());
+		    setvalue(chddat.dnchkval(), cpx(0,0));
+		}
+		iC( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddat.dnchkval()) );
 	    }
 	}
     }
@@ -587,7 +588,7 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep)
 	BoxDat& neidat = _boxvec.access(neikey);
 	Point3 neictr = center(neikey);
 	//upchkpos
-	if(isterminal(neidat) && neidat.extpos().n()<uep.n()) {
+	if (isterminal(neidat) && neidat.extpos().n()<uep.n()) {
 	    CpxNumMat mat;
 	    iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
 	    iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
@@ -670,34 +671,35 @@ int Wave3d::eval_upward_hgh(double W, Index3 dir,
         // High-frequency M2M
 	if(abs(W-1) < eps) {
 	    // The children boxes only have non-directional equivalent densities
-	    for(int a = 0; a < 2; a++)
-		for(int b = 0; b < 2; b++)
-		    for(int c = 0; c < 2; c++) {
-			BoxKey chdkey = this->chdkey(srckey, Index3(a,b,c));
-                        BoxDat& chddat = _boxvec.access(chdkey);
-			if(has_pts(chddat)) {
-			    CpxNumVec& chdued = chddat.upeqnden();
-			    iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
-			}
-		    }
+	    for (int ind = 0; ind < NUM_DIRS; ind++) {
+		int a = DIR_1(ind);
+		int b = DIR_2(ind);
+		int c = DIR_3(ind);
+		BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
+		BoxDat& chddat = _boxvec.access(chdkey);
+		if(has_pts(chddat)) {
+		    CpxNumVec& chdued = chddat.upeqnden();
+		    iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
+		}
+	    }
 	} else {
 	    Index3 pdir = predir(dir); // parent direction
-	    for(int a = 0; a < 2; a++) {
-		for(int b = 0; b < 2; b++) {
-		    for(int c = 0; c < 2; c++) {
-			BoxKey chdkey = this->chdkey(srckey, Index3(a,b,c));
-			BoxDat& chddat = _boxvec.access(chdkey);
-			if(has_pts(chddat)) {
-			    BndKey bndkey(chdkey, pdir);
-			    BndDat& bnddat = _bndvec.access(bndkey);
-			    CpxNumVec& chdued = bnddat.dirupeqnden();
-			    iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
-			}
-		    }
+	    for (int ind = 0; ind < NUM_DIRS; ind++) {
+		int a = DIR_1(ind);
+		int b = DIR_2(ind);
+		int c = DIR_3(ind);
+		BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
+		BoxDat& chddat = _boxvec.access(chdkey);
+		if(has_pts(chddat)) {
+		    BndKey bndkey(chdkey, pdir);
+		    BndDat& bnddat = _bndvec.access(bndkey);
+		    CpxNumVec& chdued = bnddat.dirupeqnden();
+		    iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
 		}
 	    }
 	}
-	// uc2ue (Upward check to upward equivalency)
+
+	// Upward check to upward equivalency (uc2ue)
 	CpxNumMat& E1 = uc2ue(0);
 	CpxNumMat& E2 = uc2ue(1);
 	CpxNumMat& E3 = uc2ue(2);
@@ -726,7 +728,7 @@ int Wave3d::get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
       BoxKey trgkey = trgvec[k];
       BoxDat& trgdat = _boxvec.access(trgkey);
       vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-      for(int i=0; i<tmpvec.size(); i++) {
+      for(int i = 0; i < tmpvec.size(); i++) {
 	  BoxKey srckey = tmpvec[i];
 	  reqbndset.insert(BndKey(srckey, dir));
       }
@@ -810,43 +812,41 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
 	dnchkval.resize(0); //LEXING: SAVE SPACE
 	//eval
 	if(abs(W-1)<eps) {
-	    for(int a=0; a<2; a++) {
-		for(int b=0; b<2; b++) {
-		    for(int c=0; c<2; c++) {
-			BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
-			BoxDat& chddat = _boxvec.access(chdkey);
-			if(!has_pts(chddat)) {
-			    continue;
-			}
-			CpxNumVec& chddcv = chddat.dnchkval();
-			if(chddcv.m()==0) {
-			    chddcv.resize(de2dc(a,b,c).m());
-			    setvalue(chddcv,cpx(0,0));
-			}
-			iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
-		    }
+	    for (int ind = 0; ind < NUM_DIRS; ind++) {
+		int a = DIR_1(ind);
+		int b = DIR_2(ind);
+		int c = DIR_3(ind);		
+		BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
+		BoxDat& chddat = _boxvec.access(chdkey);
+		if(!has_pts(chddat)) {
+		    continue;
 		}
+		CpxNumVec& chddcv = chddat.dnchkval();
+		if(chddcv.m()==0) {
+		    chddcv.resize(de2dc(a,b,c).m());
+		    setvalue(chddcv,cpx(0,0));
+		}
+		iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
 	    }
 	} else {
 	    Index3 pdir = predir(dir); //LEXING: CHECK
-	    for(int a=0; a<2; a++) {
-		for(int b=0; b<2; b++) {
-		    for(int c=0; c<2; c++) {
-			BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
-			BoxDat& chddat = _boxvec.access(chdkey);
-			if (!has_pts(chddat)) {
-			    continue;
-			}
-			BndKey bndkey(chdkey, pdir);
-			BndDat& bnddat = _bndvec.access(bndkey);
-			CpxNumVec& chddcv = bnddat.dirdnchkval();
-			if(chddcv.m()==0) {
-			    chddcv.resize(de2dc(a,b,c).m());
-			    setvalue(chddcv,cpx(0,0));
-			}
-			iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
-		    }
+	    for (int ind = 0; ind < NUM_DIRS; ind++) {
+		int a = DIR_1(ind);
+		int b = DIR_2(ind);
+		int c = DIR_3(ind);		
+		BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
+		BoxDat& chddat = _boxvec.access(chdkey);
+		if (!has_pts(chddat)) {
+		    continue;
 		}
+		BndKey bndkey(chdkey, pdir);
+		BndDat& bnddat = _bndvec.access(bndkey);
+		CpxNumVec& chddcv = bnddat.dirdnchkval();
+		if(chddcv.m()==0) {
+		    chddcv.resize(de2dc(a,b,c).m());
+		    setvalue(chddcv,cpx(0,0));
+		}
+		iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
 	    }
 	}
     }
