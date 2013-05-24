@@ -16,6 +16,11 @@ using std::set;
 using std::cerr;
 using std::cout;
 
+#define NUM_DIRS (8)
+#define DIR_1(x) ((x & 4) >> 2)
+#define DIR_2(x) ((x & 2) >> 1)
+#define DIR_3(x) ((x & 1))
+
 enum {
     WAVE3D_PTS = 1,
     WAVE3D_TERMINAL = 2,
@@ -45,6 +50,16 @@ typedef pair<int,Index3> BoxKey; //level, offset_in_level
 class BoxDat
 {
 public:
+    // TODO (Austin): Some of these should be private
+    int _fftnum;
+    int _fftcnt;
+    //
+    DblNumMat _extpos;  // positions of exact points (leaf level)
+    CpxNumVec _extden;  // Exact densities  
+    CpxNumVec _upeqnden;  // Upward equivalent density
+    CpxNumVec _extval;  // Exact potential value
+    CpxNumVec _dnchkval; // Downward check potential
+
     int _tag;
     vector<int> _ptidxvec;
     //
@@ -54,20 +69,13 @@ public:
     vector<BoxKey> _xndeidxvec;  // X List
     vector<BoxKey> _endeidxvec;  // Close directions
     map< Index3, vector<BoxKey> > _fndeidxvec; // Far away directions
-    //
-    DblNumMat _extpos;  // positions of exact points (leaf level)
-    CpxNumVec _extden;  // Exact densities  
-    CpxNumVec _upeqnden;  // Upward equivalent density
-    CpxNumVec _extval;  // Exact potential value
-    CpxNumVec _dnchkval; // Downward check potential
 
     // Auxiliarly data structures for FFT
     CpxNumTns _upeqnden_fft;
     set<Index3> _incdirset;
     set<Index3> _outdirset;
-    int _fftnum;
-    int _fftcnt;
-public:
+
+
     BoxDat(): _tag(0), _fftnum(0), _fftcnt(0) {;} //by default, no children
     ~BoxDat() {;}
     //
@@ -120,7 +128,7 @@ enum {
     BoxDat_fftcnt = 17,
 };
 
-class BoxPrtn{
+class BoxPrtn {
 public:
     IntNumTns _ownerinfo;
 public:
@@ -140,7 +148,7 @@ public:
 typedef pair<BoxKey,Index3> BndKey;
 
 // Boundary data
-class BndDat{
+class BndDat {
 public:
     CpxNumVec _dirupeqnden;
     CpxNumVec _dirdnchkval;
@@ -209,43 +217,33 @@ public:
     int& NPQ() { return _NPQ; }
     Mlib3d*& mlibptr() { return _mlibptr; }
     IntNumTns& geomprtn() { return _geomprtn; }
-    //
-    int P() {
-        assert(_ACCU >= 1 && _ACCU <= 3);
-	switch (_ACCU) {
-            case 1:
-		return 4;
-            case 2:
-		return 6;
-            default:
-	        return 8;
-	}
-    }
     double& K() { return _K; }
     Point3& ctr() { return _ctr; }
     int& ptsmax() { return _ptsmax; }
     int& maxlevel() { return _maxlevel; }
+
+    //main functions
+    int setup(map<string,string>& opts);
+
+    // Compute the potentials at the target points.
+    // den contains the density information
+    // TODO (Austin): what is val here?
+    int eval( ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val);
+
+    // Compute the true solution and store the relative err in relerr.
+    int check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
+              IntNumVec& chkkeyvec, double& relerr);
+
+private:
     double width() { return _K; }
     //access information from BoxKey
-    Point3 center(BoxKey& curkey) {
-        Index3 path = curkey.second;
-        int tmp = pow2(curkey.first);
-        Point3 t;
-        for (int d = 0; d < 3; d++) {
-            t(d) = _ctr(d) - _K / 2 + (path(d) + 0.5) / tmp * _K;
-        }
-        return t;
-    }
-    double width(BoxKey& curkey) {
-        return _K / pow2(curkey.first);
-    }
-    bool iscell(const BoxKey& curkey) {
-        return curkey.first == cell_level();
-    }
+    Point3 center(BoxKey& curkey);
+    double width(BoxKey& curkey) { return _K / pow2(curkey.first); }
+    bool iscell(const BoxKey& curkey) { return curkey.first == cell_level(); }
 
     // Return the key of the parent box of the box corresponding to curkey.
     BoxKey parkey(BoxKey& curkey) {
-        return BoxKey(curkey.first - 1, curkey.second / 2);
+	return BoxKey(curkey.first - 1, curkey.second / 2);
     }
 
     // Return the key of a child box of the box corresponding to curkey.
@@ -253,9 +251,8 @@ public:
     BoxKey chdkey(BoxKey& curkey, Index3 idx) {
         return BoxKey(curkey.first + 1, 2 * curkey.second + idx);
     }
-    BoxDat& boxdata(BoxKey& curkey) {
-        return _boxvec.access(curkey);
-    }
+
+    BoxDat& boxdata(BoxKey& curkey) { return _boxvec.access(curkey); }
 
     bool isterminal(BoxDat& curdat) { return curdat.tag() & WAVE3D_TERMINAL; }
 
@@ -264,12 +261,7 @@ public:
 
     // Determine whether the box corresponding to curkey is owned
     // by this processor.
-    bool own_box(BoxKey& curkey, int mpirank) {
-	return _boxvec.prtn().owner(curkey) == mpirank;
-    }
-  
-
-    // Simple functions
+    bool own_box(BoxKey& curkey, int mpirank) { return _boxvec.prtn().owner(curkey) == mpirank; }
 
     // Return dimension of this problem.    
     int dim() { return 3; }
@@ -287,19 +279,10 @@ public:
     Index3 predir(Index3 dir);
     vector<Index3> chddir(Index3 dir);
     double dir2width(Index3 dir);
-    //main functions
-    int setup(map<string,string>& opts);
 
-    // Compute the potentials at the target points.
-    // den contains the density information
-    // TODO (Austin): what is val here?
-    int eval( ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val);
+    int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
+    int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
 
-    // Compute the true solution and store the relative err in relerr.
-    int check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
-              IntNumVec& chkkeyvec, double& relerr);
-
-    // Auxiliary functions
     int setup_tree();
     static int setup_Q1_wrapper(int key, Point3& dat, vector<int>& pids);
     static int setup_Q2_wrapper(BoxKey key, BoxDat& dat, vector<int>& pids);
@@ -309,6 +292,11 @@ public:
     int setup_tree_calhghlist( BoxKey, BoxDat& );
     bool setup_tree_find(BoxKey wntkey, BoxKey& reskey);
     bool setup_tree_adjacent(BoxKey me, BoxKey yo);
+
+    int P();
+
+
+    // Functions for evaluation
 
     // Travel up the octree and visit the boxes in the low frequency regime.
     // Compute outgoing non-directional equivalent densities using M2M.
@@ -335,7 +323,7 @@ public:
             pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset);
     int eval_dnward_hgh(double W, Index3 dir,
                         pair< vector<BoxKey>, vector<BoxKey> >& hdvecs);
-
+    
     int U_list_compute(BoxDat& trgdat);
     int X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
                        CpxNumVec& dnchkval);
@@ -346,10 +334,6 @@ public:
 
     int get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
 		 set<BndKey>& reqbndset);
-
-    //
-    int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
-    int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
 };
 
 //-------------------
