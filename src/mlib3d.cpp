@@ -21,6 +21,16 @@ int transpose(CpxNumMat& trg, CpxNumMat& src) {
 	    trg(i,j) = src(j,i);
 	}
     }
+    return 0;
+}
+
+int apply_shift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
+    for(int k = 0; k < src.n(); k++) {
+	for(int d = 0; d < 3; d++) {
+	    trg(d,k) = src(d,k) + shift(d);
+	}
+    }
+    return 0;
 }
 
 //-----------------------------------
@@ -78,13 +88,8 @@ int Mlib3d::upward_lowfetch(double W, DblNumMat& uep, DblNumMat& ucp,
     }
     ue2uc.resize(2,2,2);
     for (int ind = 0; ind < NUM_DIRS; ind++) {
-        Point3 shift = shifted_point(ind, W);
         DblNumMat tmp(uepchd.m(), uepchd.n());
-        for(int k=0; k<uepchd.n(); k++) {
-            for(int d=0; d<3; d++) {
-                tmp(d,k) = uepchd(d,k) + shift(d);
-            }
-        }
+	apply_shift(tmp, uepchd, shifted_point(ind, W));
         iC( _knl.kernel(ucp, tmp, tmp, ue2uc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
     }
   
@@ -119,13 +124,8 @@ int Mlib3d::dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
   
     de2dc.resize(2,2,2);
     for (int ind = 0; ind < NUM_DIRS; ind++) {
-        Point3 shift = shifted_point(ind, W);
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
-        for(int k=0; k<dcpchd.n(); k++) {
-            for(int d=0; d<3; d++) {
-                tmp(d,k) = dcpchd(d,k) + shift(d);
-            }
-        }
+	apply_shift(tmp, dcpchd, shifted_point(ind, W));
         iC( _knl.kernel(tmp, dep, dep, de2dc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
     }
   
@@ -195,13 +195,8 @@ int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
     }
     ue2uc.resize(2,2,2);
     for (int ind = 0; ind < NUM_DIRS; ind++) {
-        Point3 shift = shifted_point(ind, W);
         DblNumMat tmp(uepchd.m(), uepchd.n());
-        for(int k=0; k<uepchd.n(); k++) {
-            for(int d=0; d<3; d++) {
-                tmp(d,k) = uepchd(d,k) + shift(d);
-            }
-        }
+	apply_shift(tmp, uepchd, shifted_point(ind, W));
         iC( _knl.kernel(ucp, tmp, tmp, ue2uc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
     }
   
@@ -272,13 +267,8 @@ int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp
   
     de2dc.resize(2,2,2);
     for (int ind = 0; ind < NUM_DIRS; ind++) {
-        Point3 shift = shifted_point(ind, W);
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
-        for (int k = 0; k < dcpchd.n(); k++) {
-            for (int d = 0; d < 3; d++) {
-                tmp(d,k) = dcpchd(d,k) + shift(d);
-            }
-        }
+	apply_shift(tmp, dcpchd, shifted_point(ind, W));
         iC( _knl.kernel(tmp, dep, dep, de2dc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
     }
   
