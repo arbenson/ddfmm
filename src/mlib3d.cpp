@@ -33,6 +33,15 @@ int apply_shift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
     return 0;
 }
 
+int negate(DblNumMat& src) {
+    for (int i = 0; i < src.n(); i++) {
+        for (int d = 0; d < 3; d++) {
+	    src(d,i) = -src(d,i);
+	}
+    }
+    return 0;
+}
+
 //-----------------------------------
 int Mlib3d::setup(map<string,string>& opts)
 {
@@ -68,10 +77,7 @@ int Mlib3d::setup(map<string,string>& opts)
 int Mlib3d::upward_lowfetch(double W, DblNumMat& uep, DblNumMat& ucp,
                             NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
 {
-    {
-        map<double,LowFreqEntry>::iterator mi = _w2ldmap.find(W);
-        iA(mi!=_w2ldmap.end());
-    }
+    iA(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
   
     uep = le.uep();
@@ -101,10 +107,7 @@ int Mlib3d::dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
                             NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
                             NumTns<CpxNumTns>& ue2dc, DblNumMat& uep)
 {
-    {
-        map<double,LowFreqEntry>::iterator mi = _w2ldmap.find(W);
-        iA(mi!=_w2ldmap.end());
-    }
+    iA(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
   
     dep = le.ucp();
@@ -146,17 +149,12 @@ int Mlib3d::dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
 int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
                             NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
 {
-    {
-        map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W);
-        iA(mi!=_w2hdmap.end());
-    }
+    iA(_w2hdmap.find(W) != _w2hdmap.end());
     map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
     Index3 srt, sgn, prm;  iC( hghfetch_index3sort(dir, srt, sgn, prm) );
-    {
-	map<Index3,HghFreqDirEntry>::iterator mi = curmap.find(srt);
-	iA(mi!=curmap.end());
-    }
+    iA(curmap.count(srt) != 0);
+
     HghFreqDirEntry& he = curmap[srt];
     DblNumMat ueptmp( he.uep() );
     DblNumMat ucptmp( he.ucp() );
@@ -169,26 +167,17 @@ int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
   
     DblNumMat uepchd;
     if(W==1.0) { //unit box
-        {
-            map<double,LowFreqEntry>::iterator mi = _w2ldmap.find(W/2);
-            iA(mi!=_w2ldmap.end());
-        }
+	iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
         LowFreqEntry& le = _w2ldmap[W/2];
         uepchd = le.uep();
     } else { //large box
-        { 
-            map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W/2);
-            iA(mi!=_w2hdmap.end());
-        }
+	iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
         map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;
         iC( hghfetch_index3sort(pdr, srt, sgn, prm) );
-        {
-            map<Index3,HghFreqDirEntry>::iterator mi = curmap.find(srt);
-            iA(mi!=curmap.end());
-        }
+	iA(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
         iC( hghfetch_shuffle(prm, sgn, ueptmp, uepchd) );
@@ -208,25 +197,20 @@ int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp
                             NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
                             DblNumMat& uep)
 {
-    { 
-        map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W);
-        iA(mi!=_w2hdmap.end());
-    }
+    iA(_w2hdmap.find(W) != _w2hdmap.end());
     map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
-    Index3 srt, sgn, prm;  iC( hghfetch_index3sort(dir, srt, sgn, prm) );
-    {
-        map<Index3,HghFreqDirEntry>::iterator mi = curmap.find(srt);
-        iA(mi!=curmap.end());
-    }
+    Index3 srt, sgn, prm;
+    iC( hghfetch_index3sort(dir, srt, sgn, prm) );
+    iA(curmap.find(srt) != curmap.end());
     HghFreqDirEntry& he = curmap[srt];
   
     DblNumMat ueptmp( he.uep() );
     DblNumMat ucptmp( he.ucp() );
     iC( hghfetch_shuffle(prm, sgn, ucptmp, dep) ); //ucp->dep
-    for(int i=0; i<dep.n(); i++)        for(int d=0; d<3; d++)    dep(d,i) = -dep(d,i); //negate
+    negate(dep);
     iC( hghfetch_shuffle(prm, sgn, ueptmp, dcp) ); //uep->dcp
-    for(int i=0; i<dcp.n(); i++)        for(int d=0; d<3; d++)    dcp(d,i) = -dcp(d,i); //negate
+    negate(dcp);
     iC( hghfetch_shuffle(prm, sgn, ueptmp, uep) ); //uep->uep
     dc2de.resize(3);
     for (int k = 0; k < 3; k++) {
@@ -235,34 +219,20 @@ int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp
     }
     DblNumMat dcpchd;
     if(W == 1.0) { //unit box
-        {
-            map<double,LowFreqEntry>::iterator mi = _w2ldmap.find(W/2);
-            iA(mi!=_w2ldmap.end());
-        }
+	iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
         LowFreqEntry& le = _w2ldmap[W/2];
         dcpchd = le.uep();
     } else { //large box
-        { 
-            map< double, map<Index3,HghFreqDirEntry> >::iterator mi = _w2hdmap.find(W/2);
-            iA(mi!=_w2hdmap.end());
-        }
+	iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
         map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;  iC( hghfetch_index3sort(pdr, srt, sgn, prm) );
-        { 
-            map<Index3,HghFreqDirEntry>::iterator mi = curmap.find(srt);
-            iA(mi!=curmap.end());
-        }
+	iA(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
         iC( hghfetch_shuffle(prm, sgn, ueptmp, dcpchd) );
-        // negate all entries
-        for(int i = 0; i < dcpchd.n(); i++) {
-            for(int d = 0; d < 3; d++) {
-                dcpchd(d,i) = -dcpchd(d,i);
-            }
-        }
+	negate(dcpchd);
     }
   
     de2dc.resize(2,2,2);
