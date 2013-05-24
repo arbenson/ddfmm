@@ -7,7 +7,7 @@
 
 // Type of communication pattern for high-frequency domain
 // 
-// 0: All communication between ipward and downwards passes
+// 0: All communication between upward and downwards passes
 // 1: Overlap communication with upward pass computations
 // 2: Overlap communication with upward and downward passes
 #define HGH_COMMUNICATION_PATTERN 2
