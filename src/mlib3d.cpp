@@ -65,9 +65,11 @@ int Mlib3d::setup(map<string,string>& opts)
   
     //LEXING: read data in a shared way
     vector<int> all(1,1);
-    istringstream liss;  iC( Shared_Read(_ldname, liss) );
+    istringstream liss;
+    iC( Shared_Read(_ldname, liss) );
     iC( deserialize(_w2ldmap, liss, all) );
-    istringstream hiss;  iC( Shared_Read(_hdname, hiss) );
+    istringstream hiss;
+    iC( Shared_Read(_hdname, hiss) );
     iC( deserialize(_w2hdmap, hiss, all) );
   
     return 0;
@@ -161,12 +163,12 @@ int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
     iC( hghfetch_shuffle(prm, sgn, ueptmp, uep) );
     iC( hghfetch_shuffle(prm, sgn, ucptmp, ucp) );
     uc2ue.resize(3);
-    uc2ue(0) = he.uc2ue()(0); 
-    uc2ue(1) = he.uc2ue()(1);
-    uc2ue(2) = he.uc2ue()(2);
+    for (int i = 0; i < 3; i++) {
+	uc2ue(i) = he.uc2ue()(i);
+    }
   
     DblNumMat uepchd;
-    if(W==1.0) { //unit box
+    if (W == 1.0) { //unit box
 	iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
         LowFreqEntry& le = _w2ldmap[W/2];
         uepchd = le.uep();
@@ -249,7 +251,7 @@ int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp
 Index3 Mlib3d::predir(Index3 dir)
 {
     int C = dir.linfty();
-    int B = C/2;
+    int B = C / 2;
     int midx = -1;
     for(int d=0; d<3; d++) {
         if(abs(dir(d))==C) midx = d;
