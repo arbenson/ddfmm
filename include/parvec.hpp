@@ -61,8 +61,8 @@ private:
     int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
     int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
     int reset_vecs();
-    int format_size_request(vector<int>& sszvec, vector<int>& sifvec);
     int get_sizes(vector<int>& rszvec, vector<int>& sifvec);
+    int make_buf_reqs(vector<int>& rszvec, vector<int>& sszvec);
 };
 
 //--------------------------------------------
@@ -83,26 +83,18 @@ int ParVec<Key,Data,Partition>::reset_vecs()
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
-int ParVec<Key,Data,Partition>::format_size_request(vector<int>& sszvec, vector<int>& sifvec)
+int ParVec<Key,Data,Partition>::get_sizes(vector<int>& rszvec, vector<int>& sszvec)
 {
     int mpisize = this->mpisize();
     sszvec.resize(mpisize, 0);
-    sifvec.resize(2 * mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
 	sszvec[k] = sbufvec[k].size();
     }
+    vector<int> sifvec(2 * mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
 	sifvec[2 * k] = snbvec[k];
 	sifvec[2 * k + 1] = sszvec[k];
     }
-    return 0;
-}
-
-//--------------------------------------------
-template <class Key, class Data, class Partition>
-int ParVec<Key,Data,Partition>::get_sizes(vector<int>& rszvec, vector<int>& sifvec)
-{
-    int mpisize = this->mpisize();
     vector<int> rifvec(2 * mpisize, 0);
     iC( MPI_Alltoall( (void*)&(sifvec[0]), 2, MPI_INT, (void*)&(rifvec[0]), 2,
 		      MPI_INT, MPI_COMM_WORLD ) );
@@ -110,6 +102,24 @@ int ParVec<Key,Data,Partition>::get_sizes(vector<int>& rszvec, vector<int>& sifv
     for(int k = 0; k < mpisize; k++) {
 	rnbvec[k] = rifvec[2 * k];
 	rszvec[k] = rifvec[2 * k + 1];
+    }
+    return 0;
+}
+
+//--------------------------------------------
+template <class Key, class Data, class Partition>
+int ParVec<Key,Data,Partition>::make_buf_reqs(vector<int>& rszvec, vector<int>& sszvec)
+{
+    int mpisize = this->mpisize();
+    reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
+    for(int k = 0; k < mpisize; k++) {
+	rbufvec[k].resize(rszvec[k]);
+    }
+    for(int k = 0; k < mpisize; k++) {
+	iC( MPI_Irecv( (void *)&(rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0,
+                       MPI_COMM_WORLD, &reqs[2 * k] ) );
+	iC( MPI_Isend( (void *)&(sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
+                        MPI_COMM_WORLD, &reqs[2 * k + 1] ) );
     }
     return 0;
 }
@@ -132,7 +142,6 @@ Data& ParVec<Key,Data,Partition>::access(Key key)
   iA(mi != _lclmap.end());
   return mi->second;
 }
-
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
@@ -184,20 +193,11 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&),
 
   //2. all th sendsize of the message
   vector<int> sszvec;
-  vector<int> sifvec;
-  format_size_request(sszvec, sifvec);
-
   vector<int> rszvec;
-  get_sizes(rszvec, sifvec);
+  get_sizes(rszvec, sszvec);
 
   //3. allocate space, send and receive
-  for(int k=0; k<mpisize; k++) {
-    rbufvec[k].resize(rszvec[k]);
-  }
-  for(int k=0; k<mpisize; k++) {
-    iC( MPI_Irecv( (void*)&(rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0, MPI_COMM_WORLD, &reqs[2*k] ) );
-    iC( MPI_Isend( (void*)&(sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0, MPI_COMM_WORLD, &reqs[2*k+1] ) );
-  }
+  make_buf_reqs(rszvec, sszvec);
   iC( MPI_Barrier(MPI_COMM_WORLD) );
   return 0;
 }
@@ -285,18 +285,10 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
   }
 
   //5. all the sendsize of the message
-  vector<int> sifvec;
-  format_size_request(sszvec, sifvec);
-  get_sizes(rszvec, sifvec);
+  get_sizes(rszvec, sszvec);
 
   //6. allocate space, send and receive
-  for(int k=0; k<mpisize; k++) {
-    rbufvec[k].resize(rszvec[k]);
-  }
-  for(int k=0; k<mpisize; k++) {
-    iC( MPI_Irecv( (void*)&(rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0, MPI_COMM_WORLD, &reqs[2*k] ) );
-    iC( MPI_Isend( (void*)&(sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0, MPI_COMM_WORLD, &reqs[2*k+1] ) );
-  }
+  make_buf_reqs(rszvec, sszvec);
   iC( MPI_Barrier(MPI_COMM_WORLD) );
   return 0;
 }
@@ -386,28 +378,12 @@ int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>&
 
   //3. get size
   vector<int> sszvec;
-  vector<int> sifvec;
-  format_size_request(sszvec, sifvec);
-
   vector<int> rszvec;
-  get_sizes(rszvec, sifvec);
-
-//  vector<int> rifvec(2*mpisize, 0);
-//  iC( MPI_Alltoall( (void*)&(sifvec[0]), 2, MPI_INT, (void*)&(rifvec[0]), 2, MPI_INT, MPI_COMM_WORLD ) );
-//  vector<int> rszvec(mpisize,0);
-//  for(int k=0; k<mpisize; k++) {
-//    rnbvec[k] = rifvec[2*k  ];
-//    rszvec[k] = rifvec[2*k+1];
-//  }
+  get_sizes(rszvec, sszvec);
 
   //4. allocate space, send and receive
-  for(int k=0; k<mpisize; k++) {
-    rbufvec[k].resize(rszvec[k]);
-  }
-  for(int k=0; k<mpisize; k++) {
-    iC( MPI_Irecv( (void*)&(rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0, MPI_COMM_WORLD, &reqs[2*k] ) );
-    iC( MPI_Isend( (void*)&(sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0, MPI_COMM_WORLD, &reqs[2*k+1] ) );
-  }
+  make_buf_reqs(rszvec, sszvec);
+
   iC( MPI_Barrier(MPI_COMM_WORLD) );
   return 0;
 }
