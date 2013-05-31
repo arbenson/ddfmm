@@ -57,9 +57,11 @@ public:
     int expand( vector<Key>& keyvec); //allocate space for not-owned entries
     int discard(vector<Key>& keyvec); //remove non-owned entries
 
+private:
     int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
     int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
     int reset_vecs();
+    int format_size_request(vector<int>& sszvec, vector<int>& sifvec);
 };
 
 //--------------------------------------------
@@ -78,6 +80,22 @@ int ParVec<Key,Data,Partition>::reset_vecs()
     return 0;
 }
 
+//--------------------------------------------
+template <class Key, class Data, class Partition>
+int ParVec<Key,Data,Partition>::format_size_request(vector<int>& sszvec, vector<int>& sifvec)
+{
+    int mpisize = this->mpisize();
+    sszvec.resize(mpisize, 0);
+    sifvec.resize(2 * mpisize, 0);
+    for(int k = 0; k < mpisize; k++) {
+	sszvec[k] = sbufvec[k].size();
+    }
+    for(int k = 0; k < mpisize; k++) {
+	sifvec[2 * k] = snbvec[k];
+	sifvec[2 * k + 1] = sszvec[k];
+    }
+    return 0;
+}
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
@@ -148,15 +166,10 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&),
   }
 
   //2. all th sendsize of the message
-  vector<int> sszvec(mpisize,0);
-  for(int k=0; k<mpisize; k++) {
-    sszvec[k] = sbufvec[k].size();
-  }
-  vector<int> sifvec(2*mpisize,0);
-  for(int k=0; k<mpisize; k++) {
-    sifvec[2*k  ] = snbvec[k];
-    sifvec[2*k+1] = sszvec[k];
-  }
+  vector<int> sszvec;
+  vector<int> sifvec;
+  format_size_request(sszvec, sifvec);
+
   vector<int> rifvec(2*mpisize, 0);
   iC( MPI_Alltoall( (void*)&(sifvec[0]), 2, MPI_INT, (void*)&(rifvec[0]), 2, MPI_INT, MPI_COMM_WORLD ) );
   vector<int> rszvec(mpisize,0);
@@ -260,14 +273,9 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
   }
 
   //5. all th sendsize of the message
-  for(int k=0; k<mpisize; k++) {
-    sszvec[k] = sbufvec[k].size();
-  }
-  vector<int> sifvec(2*mpisize,0);
-  for(int k=0; k<mpisize; k++) {
-    sifvec[2*k  ] = snbvec[k];
-    sifvec[2*k+1] = sszvec[k];
-  }
+  vector<int> sifvec;
+  format_size_request(sszvec, sifvec);
+
   vector<int> rifvec(2*mpisize, 0);
   iC( MPI_Alltoall( (void*)&(sifvec[0]), 2, MPI_INT, (void*)&(rifvec[0]), 2, MPI_INT, MPI_COMM_WORLD ) );
   for(int k=0; k<mpisize; k++) {
@@ -371,15 +379,10 @@ int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>&
   }
 
   //3. get size
-  vector<int> sszvec(mpisize);
-  for(int k=0; k<mpisize; k++) {
-    sszvec[k] = sbufvec[k].size();
-  }
-  vector<int> sifvec(2*mpisize,0);
-  for(int k=0; k<mpisize; k++) {
-    sifvec[2*k  ] = snbvec[k];
-    sifvec[2*k+1] = sszvec[k];
-  }
+  vector<int> sszvec;
+  vector<int> sifvec;
+  format_size_request(sszvec, sifvec);
+
   vector<int> rifvec(2*mpisize, 0);
   iC( MPI_Alltoall( (void*)&(sifvec[0]), 2, MPI_INT, (void*)&(rifvec[0]), 2, MPI_INT, MPI_COMM_WORLD ) );
   vector<int> rszvec(mpisize,0);
