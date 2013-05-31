@@ -21,14 +21,7 @@ class ParVec
 public:
     map<Key,Data> _lclmap;
     Partition _prtn; //has function owner:Key->pid
-    //temporary data
-    vector<int> snbvec;
-    vector<int> rnbvec;
-    vector< vector<char> > sbufvec;
-    vector< vector<char> > rbufvec;
-    MPI_Request *reqs;
-    MPI_Status  *stats;
-public:
+
     ParVec() {;}
     ~ParVec() {;}
     //
@@ -63,6 +56,15 @@ private:
     int reset_vecs();
     int get_sizes(vector<int>& rszvec, vector<int>& sifvec);
     int make_buf_reqs(vector<int>& rszvec, vector<int>& sszvec);
+    int strs2vec(vector<ostringstream*>& ossvec);
+
+    //temporary data
+    vector<int> _snbvec;
+    vector<int> _rnbvec;
+    vector< vector<char> > _sbufvec;
+    vector< vector<char> > _rbufvec;
+    MPI_Request *_reqs;
+    MPI_Status  *_stats;
 };
 
 //--------------------------------------------
@@ -70,13 +72,13 @@ template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::reset_vecs()
 {
     int mpisize = this->mpisize();
-    snbvec.resize(mpisize, 0);
+    _snbvec.resize(mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
-	snbvec[k] = 0;
+        _snbvec[k] = 0;
     }
-    rnbvec.resize(mpisize, 0);
+    _rnbvec.resize(mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
-	rnbvec[k] = 0;
+        _rnbvec[k] = 0;
     }
     return 0;
 }
@@ -88,20 +90,20 @@ int ParVec<Key,Data,Partition>::get_sizes(vector<int>& rszvec, vector<int>& sszv
     int mpisize = this->mpisize();
     sszvec.resize(mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
-	sszvec[k] = sbufvec[k].size();
+        sszvec[k] = _sbufvec[k].size();
     }
     vector<int> sifvec(2 * mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
-	sifvec[2 * k] = snbvec[k];
-	sifvec[2 * k + 1] = sszvec[k];
+        sifvec[2 * k] = _snbvec[k];
+        sifvec[2 * k + 1] = sszvec[k];
     }
     vector<int> rifvec(2 * mpisize, 0);
     iC( MPI_Alltoall( (void*)&(sifvec[0]), 2, MPI_INT, (void*)&(rifvec[0]), 2,
-		      MPI_INT, MPI_COMM_WORLD ) );
+                      MPI_INT, MPI_COMM_WORLD ) );
     rszvec.resize(mpisize,0);
     for(int k = 0; k < mpisize; k++) {
-	rnbvec[k] = rifvec[2 * k];
-	rszvec[k] = rifvec[2 * k + 1];
+        _rnbvec[k] = rifvec[2 * k];
+        rszvec[k] = rifvec[2 * k + 1];
     }
     return 0;
 }
@@ -111,36 +113,53 @@ template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::make_buf_reqs(vector<int>& rszvec, vector<int>& sszvec)
 {
     int mpisize = this->mpisize();
-    reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
     for(int k = 0; k < mpisize; k++) {
-	rbufvec[k].resize(rszvec[k]);
+        _rbufvec[k].resize(rszvec[k]);
     }
     for(int k = 0; k < mpisize; k++) {
-	iC( MPI_Irecv( (void *)&(rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0,
-                       MPI_COMM_WORLD, &reqs[2 * k] ) );
-	iC( MPI_Isend( (void *)&(sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
-                        MPI_COMM_WORLD, &reqs[2 * k + 1] ) );
+        iC( MPI_Irecv( (void *)&(_rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0,
+                       MPI_COMM_WORLD, &_reqs[2 * k] ) );
+        iC( MPI_Isend( (void *)&(_sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
+                       MPI_COMM_WORLD, &_reqs[2 * k + 1] ) );
     }
     return 0;
 }
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
+int ParVec<Key,Data,Partition>::strs2vec(vector<ostringstream *>& ossvec)
+{
+    int mpisize = this->mpisize();
+    for (int k = 0; k < mpisize; k++) {
+        string tmp( ossvec[k]->str() );
+        _sbufvec[k].clear();
+        _sbufvec[k].insert(_sbufvec[k].end(), tmp.begin(), tmp.end());
+    }
+    for(int k = 0; k < mpisize; k++) {
+        delete ossvec[k];
+        ossvec[k] = NULL;
+    }
+    return 0;
+}
+
+
+//--------------------------------------------
+template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::insert(Key key, Data& dat)
 {
-  int mpirank = this->mpirank();
-  iA( _prtn.owner(key)==mpirank); //LEXING: VERY IMPORTANT
-  _lclmap[key] = dat;
-  return 0;
+    int mpirank = this->mpirank();
+    iA( _prtn.owner(key) == mpirank); //LEXING: VERY IMPORTANT
+    _lclmap[key] = dat;
+    return 0;
 }
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
 Data& ParVec<Key,Data,Partition>::access(Key key)
 {
-  typename map<Key,Data>::iterator mi=_lclmap.find(key);
-  iA(mi != _lclmap.end());
-  return mi->second;
+    typename map<Key,Data>::iterator mi=_lclmap.find(key);
+    iA(mi != _lclmap.end());
+    return mi->second;
 }
 
 //--------------------------------------------
@@ -148,329 +167,308 @@ template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&),
                                           const vector<int>& mask )
 {
-  int mpirank = this->mpirank();
-  int mpisize = this->mpisize();
-  //---------
-  reset_vecs();
-  sbufvec.resize(mpisize);
-  rbufvec.resize(mpisize);
-  reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
-  stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
-  //---------
-  vector<ostringstream*> ossvec(mpisize);
-  for(int k=0; k<mpisize; k++)	{
-      ossvec[k] = new ostringstream();
-  }
-
-  //1. serialize
-  for(typename map<Key,Data>::iterator mi=_lclmap.begin(); mi!=_lclmap.end(); mi++) {
-    Key key = mi->first;
-    const Data& dat = mi->second;
-    if(_prtn.owner(key) == mpirank) {
-      //ASK QUESTIONS
-      vector<int> pids;
-      int res = (*e2ps)(mi->first, mi->second, pids);
-      for(int i = 0; i < pids.size(); i++) {
-	int k = pids[i];
-        if(k != mpirank) { //DO NOT SEND TO MYSELF
-	  iC( serialize(key, *(ossvec[k]), mask) );
-	  iC( serialize(dat, *(ossvec[k]), mask) );
-	  snbvec[k]++; //LEXING: VERY IMPORTANT
-	}
-      }
+    int mpirank = this->mpirank();
+    int mpisize = this->mpisize();
+    //---------
+    reset_vecs();
+    _sbufvec.resize(mpisize);
+    _rbufvec.resize(mpisize);
+    _reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
+    _stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
+    //---------
+    vector<ostringstream*> ossvec(mpisize);
+    for(int k=0; k<mpisize; k++)        {
+        ossvec[k] = new ostringstream();
     }
-  }
-  // to vector
-  for(int k=0; k<mpisize; k++) {
-    string tmp( ossvec[k]->str() );
-    sbufvec[k].clear();
-    sbufvec[k].insert(sbufvec[k].end(), tmp.begin(), tmp.end());
-  }
-  for(int k=0; k<mpisize; k++) {
-      delete ossvec[k];
-      ossvec[k] = NULL;
-  }
 
-  //2. all th sendsize of the message
-  vector<int> sszvec;
-  vector<int> rszvec;
-  get_sizes(rszvec, sszvec);
+    //1. serialize
+    for(typename map<Key,Data>::iterator mi=_lclmap.begin(); mi!=_lclmap.end(); mi++) {
+        Key key = mi->first;
+        const Data& dat = mi->second;
+        if(_prtn.owner(key) == mpirank) {
+            //ASK QUESTIONS
+            vector<int> pids;
+            int res = (*e2ps)(mi->first, mi->second, pids);
+            for(int i = 0; i < pids.size(); i++) {
+                int k = pids[i];
+                if(k != mpirank) { //DO NOT SEND TO MYSELF
+                    iC( serialize(key, *(ossvec[k]), mask) );
+                    iC( serialize(dat, *(ossvec[k]), mask) );
+                    _snbvec[k]++; //LEXING: VERY IMPORTANT
+                }
+            }
+        }
+    }
 
-  //3. allocate space, send and receive
-  make_buf_reqs(rszvec, sszvec);
-  iC( MPI_Barrier(MPI_COMM_WORLD) );
-  return 0;
+    // to vector
+    strs2vec(ossvec);
+
+    //2. all th sendsize of the message
+    vector<int> sszvec;
+    vector<int> rszvec;
+    get_sizes(rszvec, sszvec);
+
+    //3. allocate space, send and receive
+    make_buf_reqs(rszvec, sszvec);
+    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    return 0;
 }
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>& mask)
 {
-  int mpirank = this->mpirank();
-  int mpisize = this->mpisize();
-  //---------
-  reset_vecs();
-  sbufvec.resize(mpisize);
-  rbufvec.resize(mpisize);
-  reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
-  stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
+    int mpirank = this->mpirank();
+    int mpisize = this->mpisize();
+    //---------
+    reset_vecs();
+    _sbufvec.resize(mpisize);
+    _rbufvec.resize(mpisize);
+    _reqs = (MPI_Request *) malloc(2 * mpisize * sizeof(MPI_Request));
+    _stats = (MPI_Status *) malloc(2 * mpisize * sizeof(MPI_Status));
 
-  //1. go thrw the keyvec to partition them among other procs
-  vector< vector<Key> > skeyvec(mpisize);
-  for(int i = 0; i < keyvec.size(); i++) {
-    Key key = keyvec[i];
-    int owner = _prtn.owner(key);
-    if(owner != mpirank) {
-      skeyvec[owner].push_back(key);
+    //1. go thrw the keyvec to partition them among other procs
+    vector< vector<Key> > skeyvec(mpisize);
+    for(int i = 0; i < keyvec.size(); i++) {
+        Key key = keyvec[i];
+        int owner = _prtn.owner(key);
+        if(owner != mpirank) {
+            skeyvec[owner].push_back(key);
+        }
     }
-  }
 
-  //2. setdn receive size of keyvec
-  vector<int> sszvec(mpisize);
-  vector<int> rszvec(mpisize);
-  for(int k=0; k<mpisize; k++) {
-    sszvec[k] = skeyvec[k].size();
-  }
-  iC( MPI_Alltoall( (void*)&(sszvec[0]), 1, MPI_INT, (void*)&(rszvec[0]), 1, MPI_INT, MPI_COMM_WORLD ) );
-
-  //3. allocate space for the keys, send and receive
-  vector< vector<Key> > rkeyvec(mpisize);
-  for(int k=0; k<mpisize; k++) {
-    rkeyvec[k].resize(rszvec[k]);
-  }
-
-  {
-    MPI_Request *reqs;
-    MPI_Status  *stats;
-    reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
-    stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
+    //2. setdn receive size of keyvec
+    vector<int> sszvec(mpisize);
+    vector<int> rszvec(mpisize);
     for(int k=0; k<mpisize; k++) {
-      iC( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k]*sizeof(Key), MPI_BYTE, k, 0, MPI_COMM_WORLD, &reqs[2*k] ) );
-      iC( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k]*sizeof(Key), MPI_BYTE, k, 0, MPI_COMM_WORLD, &reqs[2*k+1] ) );
+        sszvec[k] = skeyvec[k].size();
     }
-    iC( MPI_Waitall(2*mpisize, &(reqs[0]), &(stats[0])) );
+    iC( MPI_Alltoall( (void*)&(sszvec[0]), 1, MPI_INT, (void*)&(rszvec[0]), 1, MPI_INT, MPI_COMM_WORLD ) );
+
+    //3. allocate space for the keys, send and receive
+    vector< vector<Key> > rkeyvec(mpisize);
+    for(int k=0; k<mpisize; k++) {
+        rkeyvec[k].resize(rszvec[k]);
+    }
+
+    MPI_Request *reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
+    MPI_Status  *stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
+    for(int k = 0; k < mpisize; k++) {
+	iC( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k]*sizeof(Key), MPI_BYTE,
+                        k, 0, MPI_COMM_WORLD, &reqs[2 * k] ) );
+	iC( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k]*sizeof(Key), MPI_BYTE,
+                       k, 0, MPI_COMM_WORLD, &reqs[2 * k + 1] ) );
+    }
+    iC( MPI_Waitall(2 * mpisize, &(reqs[0]), &(stats[0])) );
     free(reqs);
     free(stats);
-  }
 
-  skeyvec.clear(); //save space
+    skeyvec.clear(); //save space
 
-  //4. prepare the streams
-  vector<ostringstream*> ossvec(mpisize);
-  for(int k=0; k<mpisize; k++) {
-      ossvec[k] = new ostringstream();
-  }
-  for(int k = 0; k < mpisize; k++) {
-    for(int g = 0; g < rkeyvec[k].size(); g++) {
-      Key curkey = rkeyvec[k][g];
-      typename map<Key,Data>::iterator mi = _lclmap.find(curkey);
-      iA( mi!=_lclmap.end() );
-      iA( _prtn.owner(curkey) == mpirank );
-      Key key = mi->first;
-      const Data& dat = mi->second;
-      iC( serialize(key, *(ossvec[k]), mask) );
-      iC( serialize(dat, *(ossvec[k]), mask) );
-      snbvec[k]++; //LEXING: VERY IMPORTANT
+    //4. prepare the streams
+    vector<ostringstream*> ossvec(mpisize);
+    for(int k=0; k<mpisize; k++) {
+        ossvec[k] = new ostringstream();
     }
-  }
-  // to vector
-  for(int k=0; k<mpisize; k++) {
-    string tmp( ossvec[k]->str() );
-    sbufvec[k].clear();
-    sbufvec[k].insert(sbufvec[k].end(), tmp.begin(), tmp.end());
-  }
-  for(int k=0; k<mpisize; k++) {
-      delete ossvec[k];
-      ossvec[k] = NULL;
-  }
+    for(int k = 0; k < mpisize; k++) {
+        for(int g = 0; g < rkeyvec[k].size(); g++) {
+            Key curkey = rkeyvec[k][g];
+            typename map<Key,Data>::iterator mi = _lclmap.find(curkey);
+            iA( mi!=_lclmap.end() );
+            iA( _prtn.owner(curkey) == mpirank );
+            Key key = mi->first;
+            const Data& dat = mi->second;
+            iC( serialize(key, *(ossvec[k]), mask) );
+            iC( serialize(dat, *(ossvec[k]), mask) );
+            _snbvec[k]++; //LEXING: VERY IMPORTANT
+        }
+    }
+    // to vector
+    strs2vec(ossvec);
 
-  //5. all the sendsize of the message
-  get_sizes(rszvec, sszvec);
+    //5. all the sendsize of the message
+    get_sizes(rszvec, sszvec);
 
-  //6. allocate space, send and receive
-  make_buf_reqs(rszvec, sszvec);
-  iC( MPI_Barrier(MPI_COMM_WORLD) );
-  return 0;
+    //6. allocate space, send and receive
+    make_buf_reqs(rszvec, sszvec);
+    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    return 0;
 }
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::getEnd( const vector<int>& mask )
 {
-  int mpisize = this->mpisize();
-  //LEXING: SEPARATE HERE
-  iC( MPI_Waitall(2*mpisize, &(reqs[0]), &(stats[0])) );
-  free(reqs);
-  free(stats);
-  sbufvec.clear(); //save space
-  //4. write back
-  //to stream
-  vector<istringstream*> issvec(mpisize);  for(int k=0; k<mpisize; k++)	issvec[k] = new istringstream();
-  for(int k=0; k<mpisize; k++) {
-    string tmp(rbufvec[k].begin(), rbufvec[k].end());
-    issvec[k]->str(tmp);
-  }
-  rbufvec.clear(); //save space
-  
-  for (int k = 0; k < mpisize; k++) {
-    for (int i = 0; i < rnbvec[k]; i++) {
-      Key key;  deserialize(key, *(issvec[k]), mask);
-      typename map<Key,Data>::iterator mi=_lclmap.find(key);
-      if (mi == _lclmap.end()) { //do not exist
-	Data dat;
-	deserialize(dat, *(issvec[k]), mask);
-	_lclmap[key] = dat;
-      } else { //exist already
-	deserialize(mi->second, *(issvec[k]), mask);
-      }
+    int mpisize = this->mpisize();
+    //LEXING: SEPARATE HERE
+    iC( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
+    free(_reqs);
+    free(_stats);
+    _sbufvec.clear(); //save space
+    //4. write back
+    //to stream
+    vector<istringstream*> issvec(mpisize);
+    for(int k=0; k<mpisize; k++) {
+        issvec[k] = new istringstream();
     }
-  }
-  for (int k = 0; k < mpisize; k++) {
-    delete issvec[k];
-    issvec[k] = NULL;
-  }
-  iC( MPI_Barrier(MPI_COMM_WORLD) );
-  return 0;
+    for(int k=0; k<mpisize; k++) {
+        string tmp(_rbufvec[k].begin(), _rbufvec[k].end());
+        issvec[k]->str(tmp);
+    }
+    _rbufvec.clear(); //save space
+  
+    for (int k = 0; k < mpisize; k++) {
+        for (int i = 0; i < _rnbvec[k]; i++) {
+            Key key;  deserialize(key, *(issvec[k]), mask);
+            typename map<Key,Data>::iterator mi=_lclmap.find(key);
+            if (mi == _lclmap.end()) { //do not exist
+                Data dat;
+                deserialize(dat, *(issvec[k]), mask);
+                _lclmap[key] = dat;
+            } else { //exist already
+                deserialize(mi->second, *(issvec[k]), mask);
+            }
+        }
+    }
+    for (int k = 0; k < mpisize; k++) {
+        delete issvec[k];
+        issvec[k] = NULL;
+    }
+    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    return 0;
 }
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>& mask)
 {
-  int mpirank = this->mpirank();
-  int mpisize = this->mpisize();
-  //---------
-  reset_vecs();
-  sbufvec.resize(mpisize);
-  rbufvec.resize(mpisize);
-  reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
-  stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
-  //1.
-  vector<ostringstream*> ossvec(mpisize);
-  for (int k = 0; k < mpisize; k++) {
-      ossvec[k] = new ostringstream();
-  }
-
-  //1. go thrw the keyvec to partition them among other procs
-  for (int i=0; i<keyvec.size(); i++) {
-    Key key = keyvec[i];
-    int k = _prtn.owner(key); //the owner
-    if (k != mpirank) {
-      typename map<Key,Data>::iterator mi = _lclmap.find(key);
-      iA( mi!=_lclmap.end() );	  iA( key == mi->first );
-      Data& dat = mi->second;
-      iC( serialize(key, *(ossvec[k]), mask) );
-      iC( serialize(dat, *(ossvec[k]), mask) );
-      snbvec[k]++;
+    int mpirank = this->mpirank();
+    int mpisize = this->mpisize();
+    //---------
+    reset_vecs();
+    _sbufvec.resize(mpisize);
+    _rbufvec.resize(mpisize);
+    _reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
+    _stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
+    //1.
+    vector<ostringstream*> ossvec(mpisize);
+    for (int k = 0; k < mpisize; k++) {
+        ossvec[k] = new ostringstream();
     }
-  }
 
-  //2. to vector
-  for(int k=0; k<mpisize; k++) {
-    string tmp( ossvec[k]->str() );
-    sbufvec[k].clear();
-    sbufvec[k].insert(sbufvec[k].end(), tmp.begin(), tmp.end());
-  }
-  for(int k=0; k<mpisize; k++) {
-    delete ossvec[k];
-    ossvec[k] = NULL;
-  }
+    //1. go thrw the keyvec to partition them among other procs
+    for (int i=0; i<keyvec.size(); i++) {
+        Key key = keyvec[i];
+        int k = _prtn.owner(key); //the owner
+        if (k != mpirank) {
+            typename map<Key,Data>::iterator mi = _lclmap.find(key);
+            iA( mi!=_lclmap.end() );
+	    iA( key == mi->first );
+            Data& dat = mi->second;
+            iC( serialize(key, *(ossvec[k]), mask) );
+            iC( serialize(dat, *(ossvec[k]), mask) );
+            _snbvec[k]++;
+        }
+    }
 
-  //3. get size
-  vector<int> sszvec;
-  vector<int> rszvec;
-  get_sizes(rszvec, sszvec);
+    //2. to vector
+    strs2vec(ossvec);
 
-  //4. allocate space, send and receive
-  make_buf_reqs(rszvec, sszvec);
+    //3. get size
+    vector<int> sszvec;
+    vector<int> rszvec;
+    get_sizes(rszvec, sszvec);
 
-  iC( MPI_Barrier(MPI_COMM_WORLD) );
-  return 0;
+    //4. allocate space, send and receive
+    make_buf_reqs(rszvec, sszvec);
+
+    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    return 0;
 }
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::putEnd( const vector<int>& mask )
 {
-  int mpirank = this->mpirank();
-  int mpisize = this->mpisize();
-  //LEXING: SEPARATE HERE
-  iC( MPI_Waitall(2*mpisize, &(reqs[0]), &(stats[0])) );
-  free(reqs);
-  free(stats);
-  sbufvec.clear(); //save space
-  //5. go thrw the messages and write back
-  vector<istringstream*> issvec(mpisize);
-  for(int k=0; k<mpisize; k++) {
-      issvec[k] = new istringstream();
-  }
-  for(int k=0; k<mpisize; k++) {
-    string tmp(rbufvec[k].begin(), rbufvec[k].end());
-    issvec[k]->str(tmp);
-  }
-  rbufvec.clear(); //save space
-  for(int k=0; k<mpisize; k++) {
-    for(int i=0; i<rnbvec[k]; i++) {
-      Key key;
-      deserialize(key, *(issvec[k]), mask);
-      iA( _prtn.owner(key) == mpirank );
-      typename map<Key,Data>::iterator mi=_lclmap.find(key);
-      iA( mi!=_lclmap.end() );
-      deserialize(mi->second, *(issvec[k]), mask);
+    int mpirank = this->mpirank();
+    int mpisize = this->mpisize();
+    //LEXING: SEPARATE HERE
+    iC( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
+    free(_reqs);
+    free(_stats);
+    _sbufvec.clear(); //save space
+    //5. go thrw the messages and write back
+    vector<istringstream*> issvec(mpisize);
+    for(int k=0; k<mpisize; k++) {
+        issvec[k] = new istringstream();
     }
-  }
-  for(int k=0; k<mpisize; k++) {
-      delete issvec[k];
-      issvec[k] = NULL;
-  }
-  iC( MPI_Barrier(MPI_COMM_WORLD) );
-  return 0;
+    for(int k=0; k<mpisize; k++) {
+        string tmp(_rbufvec[k].begin(), _rbufvec[k].end());
+        issvec[k]->str(tmp);
+    }
+    _rbufvec.clear(); //save space
+    for(int k=0; k<mpisize; k++) {
+        for(int i=0; i<_rnbvec[k]; i++) {
+            Key key;
+            deserialize(key, *(issvec[k]), mask);
+            iA( _prtn.owner(key) == mpirank );
+            typename map<Key,Data>::iterator mi=_lclmap.find(key);
+            iA( mi!=_lclmap.end() );
+            deserialize(mi->second, *(issvec[k]), mask);
+        }
+    }
+    for(int k=0; k<mpisize; k++) {
+        delete issvec[k];
+        issvec[k] = NULL;
+    }
+    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    return 0;
 }
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::expand(vector<Key>& keyvec)
 {
-  Data dummy;
-  for(int i=0; i<keyvec.size(); i++) {
-    Key key = keyvec[i];
-    typename map<Key,Data>::iterator mi=_lclmap.find(key);
-    if(mi == _lclmap.end()) {
-      _lclmap[key] = dummy;
+    Data dummy;
+    for(int i=0; i<keyvec.size(); i++) {
+        Key key = keyvec[i];
+        typename map<Key,Data>::iterator mi=_lclmap.find(key);
+        if(mi == _lclmap.end()) {
+            _lclmap[key] = dummy;
+        }
     }
-  }
-  return 0;
+    return 0;
 }
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::discard(vector<Key>& keyvec)
 {
-  int mpirank = this->mpirank();
-  for(int i=0; i<keyvec.size(); i++) {
-      Key key = keyvec[i];
-      if(_prtn.owner(key) != mpirank) {
-	  _lclmap.erase(key);
-      }
-  }
-  return 0;
+    int mpirank = this->mpirank();
+    for(int i=0; i<keyvec.size(); i++) {
+        Key key = keyvec[i];
+        if(_prtn.owner(key) != mpirank) {
+            _lclmap.erase(key);
+        }
+    }
+    return 0;
 }
 
 //-------------------
 template<class Key, class Data, class Partition>
 int serialize(const ParVec<Key,Data,Partition>& pv, ostream& os, const vector<int>& mask)
 {
-  serialize(pv._lclmap, os, mask);
-  serialize(pv._prtn, os, mask);
-  return 0;
+    serialize(pv._lclmap, os, mask);
+    serialize(pv._prtn, os, mask);
+    return 0;
 }
 
 template<class Key, class Data, class Partition>
 int deserialize(ParVec<Key,Data,Partition>& pv, istream& is, const vector<int>& mask)
 {
-  deserialize(pv._lclmap, is, mask);
-  deserialize(pv._prtn, is, mask);
-  return 0;
+    deserialize(pv._lclmap, is, mask);
+    deserialize(pv._prtn, is, mask);
+    return 0;
 }
 
 #endif
