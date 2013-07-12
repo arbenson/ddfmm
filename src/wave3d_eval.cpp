@@ -143,11 +143,13 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 	cout << "Beginning high frequency pass..." << endl;
     }
     t0 = time(0);
+
+    // Find all directions on the first level (width = 1)
     vector<Index3> tmpdirs;
-    for(map<Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.begin();
-        mi != hdmap.end(); mi++) {
+    for (map<Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.begin();
+         mi != hdmap.end(); mi++) {
         Index3 dir = mi->first;
-        if(dir2width(dir)==1) {
+        if (dir2width(dir) == 1) {
             tmpdirs.push_back(dir);
         }
     }
@@ -166,7 +168,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 #if HGH_COMMUNICATION_PATTERN == 0
     set<BndKey> reqbndset;
     for(int cur = 0; cur < NG; cur++) {
-        for(int i= cur * DPG; i < min((cur + 1) * DPG,TTL); i++) {
+        for(int i= cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
             Index3 dir = basedirs[i];
             iC( eval_upward_hgh_recursive(1, dir, hdmap, reqbndset) );
         }
@@ -202,7 +204,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         mask[BndDat_dirupeqnden] = 1;
         //Ucur
         set<BndKey> reqbndset;
-        for(int i= cur * DPG; i < min((cur + 1) * DPG,TTL); i++) {
+        for(int i= cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
             Index3 dir = basedirs[i];
             iC( eval_upward_hgh_recursive(1, dir, hdmap, reqbndset) );
         }
@@ -316,7 +318,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     t1 = time(0);
     cout << "End low frequency downward pass: " << difftime(t1,t0)
 	 << " secs on proc " << mpirank << endl;
-    int mpisize = this->mpisize();
 
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     //set val from extval
