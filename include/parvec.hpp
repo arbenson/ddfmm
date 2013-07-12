@@ -157,7 +157,7 @@ int ParVec<Key,Data,Partition>::insert(Key key, Data& dat)
 template <class Key, class Data, class Partition>
 Data& ParVec<Key,Data,Partition>::access(Key key)
 {
-    typename map<Key,Data>::iterator mi=_lclmap.find(key);
+    typename map<Key,Data>::iterator mi = _lclmap.find(key);
     iA(mi != _lclmap.end());
     return mi->second;
 }
@@ -173,8 +173,8 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&),
     reset_vecs();
     _sbufvec.resize(mpisize);
     _rbufvec.resize(mpisize);
-    _reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
-    _stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
+    _reqs = (MPI_Request *) malloc(2 * mpisize * sizeof(MPI_Request));
+    _stats = (MPI_Status *) malloc(2 * mpisize * sizeof(MPI_Status));
     //---------
     vector<ostringstream*> ossvec(mpisize);
     for(int k=0; k<mpisize; k++)        {
@@ -247,7 +247,7 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
 
     //3. allocate space for the keys, send and receive
     vector< vector<Key> > rkeyvec(mpisize);
-    for(int k=0; k<mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         rkeyvec[k].resize(rszvec[k]);
     }
 
