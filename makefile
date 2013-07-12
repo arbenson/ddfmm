@@ -5,7 +5,7 @@ include makeinc/${HOST}
 
 # default rule
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -Iinclude -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEFINES) -Iinclude -c $< -o $@
 
 LIB_SRC = src/wave3d.cpp \
           src/kernel3d.cpp \
