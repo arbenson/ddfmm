@@ -10,7 +10,7 @@
 // 0: All communication between upward and downwards passes
 // 1: Overlap communication with upward pass computations
 // 2: Overlap communication with upward and downward passes
-#define HGH_COMMUNICATION_PATTERN 2
+#define HGH_COMMUNICATION_PATTERN 0
 
 //---------------------------------------------------------------------
 int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
@@ -58,8 +58,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     iC( den.discard(reqpts) );
 
     // 3. gather maps, low frequency level by level, high frequency dir by dir
-    // ldmap maps box widths to a list of BoxKeys which correspond
-    // to boxes that are owned by this processor
+    // ldmap (hdmap) maps box widths to a list of BoxKeys which correspond
+    // to boxes in the low-frequency (high-frequency) regime that are 
+    // owned by this processor
     map< double, vector<BoxKey> > ldmap;
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > > hdmap;
     for(map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
@@ -220,7 +221,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         iC( _bndvec.getBegin(reqbnd, mask) );
     }
 
-    for(int cur=1; cur<NG; cur++) {
+    for(int cur = 1; cur < NG; cur++) {
         int pre = cur-1;
         vector<int> mask(BndDat_Number,0);
         mask[BndDat_dirupeqnden] = 1;
@@ -280,15 +281,15 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 	cout << "Beginning low frequency downward pass..." << endl;
     }
     t0 = time(0);
-    for(map< double, vector<BoxKey> >::reverse_iterator mi=ldmap.rbegin();
-        mi!=ldmap.rend(); mi++) {
+    for(map< double, vector<BoxKey> >::reverse_iterator mi = ldmap.rbegin();
+        mi != ldmap.rend(); mi++) {
         iC( eval_dnward_low(mi->first, mi->second) );
     }
     t1 = time(0);
-    if(mpirank==0) {
-	cout << "End low frequency downward pass: " << difftime(t1,t0)
-             << " secs" << endl;
-    }
+    cout << "End low frequency downward pass: " << difftime(t1,t0)
+	 << " secs on proc " << mpirank << endl;
+    int mpisize = this->mpisize();
+
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     //set val from extval
     vector<int> wrtpts;
@@ -630,9 +631,9 @@ int Wave3d::eval_dnward_hgh_recursive(double W, Index3 nowdir,
         map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap)
 {
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
-    if(mi!=hdmap.end()) {
+    if (mi!=hdmap.end()) {
         vector<Index3> dirvec = chddir(nowdir);
-        for(int k=0; k<dirvec.size(); k++) {
+        for (int k = 0; k < dirvec.size(); k++) {
             iC( eval_dnward_hgh_recursive(2*W, dirvec[k], hdmap) );
         }
         iC( eval_dnward_hgh(W, nowdir, mi->second) );
@@ -753,7 +754,7 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
         // If there are not points, continue to the next box.
-        if(!has_pts(trgdat)) {
+        if (!has_pts(trgdat)) {
 	    continue;
 	}
 	//-----------------------------------------------------------------------------
@@ -761,8 +762,8 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
 	//1. mix
 	//get target
 	DblNumMat tmpdcp(dcp.m(),dcp.n());
-	for(int k=0; k<tmpdcp.n(); k++) {
-	    for(int d=0; d<3; d++) {
+	for (int k = 0; k < tmpdcp.n(); k++) {
+	    for (int d = 0; d < 3; d++) {
 		tmpdcp(d,k) = dcp(d,k) + trgctr(d);
 	    }
 	}
@@ -770,7 +771,7 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
 	BndDat& bnddat = _bndvec.access(bndkey);
 	CpxNumVec& dcv = bnddat.dirdnchkval();
 	vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-	for(int i=0; i<tmpvec.size(); i++) {
+	for (int i = 0; i < tmpvec.size(); i++) {
 	    BoxKey srckey = tmpvec[i];
 	    Point3 srcctr = center(srckey);
 	    //difference vector
@@ -779,8 +780,8 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
 	    iA( nml2dir(diff,W) == dir );  //Index3 dir = nml2dir(tmp, W);
 	    //get source
 	    DblNumMat tmpuep(uep.m(),uep.n());
-	    for(int k=0; k<tmpuep.n(); k++) {
-		for(int d=0; d<3; d++) {
+	    for (int k = 0; k < tmpuep.n(); k++) {
+		for (int d = 0; d < 3; d++) {
 		    tmpuep(d,k) = uep(d,k) + srcctr(d);
 		}
 	    }
