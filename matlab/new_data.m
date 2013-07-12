@@ -67,14 +67,18 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
     
     colors = 'bgrcmykbgrcmykbgrcmykbgrcmykbgrcmykbgrcmykbgrcmykbgrcmyk';
     clf; hold on;
-    for g=1:NCPU
-      gud = find(is==g);
-      tws = ws(:,gud);
-      fprintf(1, '%d %d\n', g, sum(tws));
-      view(3);      plot3(xs(1,gud), xs(2,gud), xs(3,gud), strcat(colors(g),'+'));      axis equal; 
-    end
+    %for g=1:NCPU
+    %  gud = find(is==g);
+    %  tws = ws(:,gud);
+      %fprintf(1, '%d %d\n', g, sum(tws));
+      %view(3);      plot3(xs(1,gud), xs(2,gud), xs(3,gud), strcat(colors(min(g, length(colors))),'+'));      axis equal; 
+    %end
     pause(0.2);
+
+    fprintf('iteration number %d\n', it);
   end
+
+  fprintf('end first big loop\n');
   
   %get the prtn
   prtn = cell(NCPU+1,1);
@@ -144,11 +148,20 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
     end
   end
   geom = reshape(geom, [NC,NC,NC]);
-  geom
   empty = find(geom==-1);
-  geom(empty) = 1; %all empty ones go to the first CPU
+  %geom(empty) = 1; %all empty ones go to the first CPU
+  CPU_ind = 1
+  for k = 1:length(empty)
+    geom(empty(k)) = CPU_ind;
+    CPU_ind = CPU_ind + 1;
+    if CPU_ind == NCPU + 1
+      CPU_ind = 1;
+    end
   end
-  
+  geom
+
+  end
+
   fprintf(1, 'cell weights\n');
   for g=1:NCPU
     fprintf(1, '%d %d\n', g, curwgts(g));
