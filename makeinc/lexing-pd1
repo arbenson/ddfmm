@@ -1,5 +1,6 @@
 # ----------------------------machine dependent file
 MODE = optim
+#MODE = debug
 
 # compiler and linker variable 
 #INCLUDES = -I/usr/include/mpi
