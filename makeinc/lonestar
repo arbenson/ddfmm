@@ -1,0 +1,34 @@
+# ----------------------------machine dependent file
+# module load fftw
+# module load mkl
+MODE = optim
+#MODE = debug
+
+# compiler and linker variable 
+INCLUDES = -I$(TACC_FFTW3_INC) -I$(TACC_MKL_INC)
+LIBS = -L$(TACC_FFTW3_LIB) -lfftw3 -L$(TACC_MKL_LIB) \
+       -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group \
+       -lm
+DEFINES = -DMKL=1
+
+AR = ar
+ARFLAGS = rc
+
+CC  = mpicc
+CXX = mpicxx
+
+#GPROF_FLAGS = -p -g
+GPROF_FLAGS = 
+
+# -Wall -Wno-sign-compare 
+CFLAGS   = -g -MMD -w ${INCLUDES}
+CXXFLAGS = -g -MMD -w ${INCLUDES}
+ifeq ($(MODE),debug)
+else
+  CFLAGS += -O3 ${GPROF_FLAGS} -DNDEBUG
+  CXXFLAGS += -O3 ${GPROF_FLAGS} -DNDEBUG
+endif
+
+LDFLAGS = ${LIBS} ${GPROF_FLAGS}
+
+RANLIB = ranlib
