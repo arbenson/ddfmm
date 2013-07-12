@@ -294,6 +294,8 @@ private:
 
     int P();
 
+    pair<double, double> mean_var(time_t t0, time_t t1);
+
 
     // Functions for evaluation
 

@@ -12,6 +12,34 @@
 // 2: Overlap communication with upward and downward passes
 #define HGH_COMMUNICATION_PATTERN 0
 
+
+pair<double, double> Wave3d::mean_var(time_t t0, time_t t1) {
+    int mpirank = this->mpirank();
+    int mpisize = this->mpisize();
+    double diff = difftime(t1, t0);
+    double *rbuf = (double *)malloc(mpisize * sizeof(double));
+
+    MPI_Gather((void *)&diff, 1, MPI_DOUBLE, rbuf, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    double mean = 0;
+    double var = 0;
+    if (mpirank == 0) {
+	for (int i = 0; i < mpisize; i++) {
+	    mean += rbuf[i];
+	}
+	mean /= mpisize;
+
+	for (int i = 0; i < mpisize; i++) {
+	    var += (rbuf[i] - mean) * (rbuf[i] - mean);
+	}
+	var /= (mpisize - 1);
+    }
+
+    free(rbuf);
+    return pair<double, double>(mean, var);
+}
+
+
 //---------------------------------------------------------------------
 int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 {
