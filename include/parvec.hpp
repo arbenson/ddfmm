@@ -51,8 +51,22 @@ public:
     int discard(vector<Key>& keyvec); //remove non-owned entries
 
 private:
-    int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
-    int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
+    int mpirank() const {
+#ifndef RELEASE
+	CallStackEntry entry("ParVec::mpirank");
+#endif
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	return rank;
+    }
+    int mpisize() const {
+#ifndef RELEASE
+	CallStackEntry entry("ParVec::mpisize");
+#endif
+	int size;
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	return size;
+    }
     int reset_vecs();
     int get_sizes(vector<int>& rszvec, vector<int>& sifvec);
     int make_buf_reqs(vector<int>& rszvec, vector<int>& sszvec);
@@ -71,6 +85,9 @@ private:
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::reset_vecs()
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::reset_vecs");
+#endif
     int mpisize = this->mpisize();
     _snbvec.resize(mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
@@ -87,6 +104,9 @@ int ParVec<Key,Data,Partition>::reset_vecs()
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::get_sizes(vector<int>& rszvec, vector<int>& sszvec)
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::get_sizes");
+#endif
     int mpisize = this->mpisize();
     sszvec.resize(mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
@@ -112,6 +132,9 @@ int ParVec<Key,Data,Partition>::get_sizes(vector<int>& rszvec, vector<int>& sszv
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::make_buf_reqs(vector<int>& rszvec, vector<int>& sszvec)
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::make_buf_reqs");
+#endif
     int mpisize = this->mpisize();
     for(int k = 0; k < mpisize; k++) {
         _rbufvec[k].resize(rszvec[k]);
@@ -129,6 +152,9 @@ int ParVec<Key,Data,Partition>::make_buf_reqs(vector<int>& rszvec, vector<int>& 
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::strs2vec(vector<ostringstream *>& ossvec)
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::strs2vec");
+#endif
     int mpisize = this->mpisize();
     for (int k = 0; k < mpisize; k++) {
         string tmp( ossvec[k]->str() );
@@ -147,6 +173,9 @@ int ParVec<Key,Data,Partition>::strs2vec(vector<ostringstream *>& ossvec)
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::insert(Key key, Data& dat)
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::insert");
+#endif
     int mpirank = this->mpirank();
     iA( _prtn.owner(key) == mpirank); //LEXING: VERY IMPORTANT
     _lclmap[key] = dat;
@@ -157,6 +186,9 @@ int ParVec<Key,Data,Partition>::insert(Key key, Data& dat)
 template <class Key, class Data, class Partition>
 Data& ParVec<Key,Data,Partition>::access(Key key)
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::access");
+#endif
     typename map<Key,Data>::iterator mi = _lclmap.find(key);
     iA(mi != _lclmap.end());
     return mi->second;
@@ -167,6 +199,9 @@ template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&),
                                           const vector<int>& mask )
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::getBegin");
+#endif
     int mpirank = this->mpirank();
     int mpisize = this->mpisize();
     //---------
@@ -218,6 +253,9 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&),
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::getBegin");
+#endif
     int mpirank = this->mpirank();
     int mpisize = this->mpisize();
     //---------
@@ -299,6 +337,9 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::getEnd( const vector<int>& mask )
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::getEnd");
+#endif
     int mpisize = this->mpisize();
     //LEXING: SEPARATE HERE
     iC( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
@@ -342,6 +383,9 @@ int ParVec<Key,Data,Partition>::getEnd( const vector<int>& mask )
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::putBegin");
+#endif
     int mpirank = this->mpirank();
     int mpisize = this->mpisize();
     //---------
@@ -390,6 +434,9 @@ int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>&
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::putEnd( const vector<int>& mask )
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::putEnd");
+#endif
     int mpirank = this->mpirank();
     int mpisize = this->mpisize();
     //LEXING: SEPARATE HERE
@@ -429,6 +476,9 @@ int ParVec<Key,Data,Partition>::putEnd( const vector<int>& mask )
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::expand(vector<Key>& keyvec)
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::expand");
+#endif
     Data dummy;
     for(int i=0; i<keyvec.size(); i++) {
         Key key = keyvec[i];
@@ -444,6 +494,9 @@ int ParVec<Key,Data,Partition>::expand(vector<Key>& keyvec)
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::discard(vector<Key>& keyvec)
 {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::discard");
+#endif
     int mpirank = this->mpirank();
     for(int i=0; i<keyvec.size(); i++) {
         Key key = keyvec[i];
@@ -458,6 +511,9 @@ int ParVec<Key,Data,Partition>::discard(vector<Key>& keyvec)
 template<class Key, class Data, class Partition>
 int serialize(const ParVec<Key,Data,Partition>& pv, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
     serialize(pv._lclmap, os, mask);
     serialize(pv._prtn, os, mask);
     return 0;
@@ -466,6 +522,9 @@ int serialize(const ParVec<Key,Data,Partition>& pv, ostream& os, const vector<in
 template<class Key, class Data, class Partition>
 int deserialize(ParVec<Key,Data,Partition>& pv, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
     deserialize(pv._lclmap, is, mask);
     deserialize(pv._prtn, is, mask);
     return 0;

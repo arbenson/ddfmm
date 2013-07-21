@@ -8,11 +8,17 @@ Wave3d* Wave3d::_self = NULL;
 //-----------------------------------
 Wave3d::Wave3d(const string& p): ComObject(p), _posptr(NULL), _mlibptr(NULL), _fplan(NULL), _bplan(NULL)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::Wave3d");
+#endif
     _self = this;
 }
 //-----------------------------------
 Wave3d::~Wave3d()
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::~Wave3d");
+#endif
     _self = this;
     if ( _fplan != NULL) { fftw_destroy_plan(_fplan); }
     if ( _bplan != NULL) { fftw_destroy_plan(_bplan); }
@@ -21,6 +27,9 @@ Wave3d::~Wave3d()
 //-----------------------------------
 Index3 Wave3d::nml2dir(Point3 n, double W)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::nml2dir");
+#endif
     int C = _NPQ * int(round(W));
     int B = C/2;
     int midx = 0;  double mval = abs(n(0));
@@ -45,6 +54,9 @@ Index3 Wave3d::nml2dir(Point3 n, double W)
 //-----------------------------------
 Index3 Wave3d::predir(Index3 dir)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::predir");
+#endif
     int C = dir.linfty();
     int B = C/2;
     int midx = -1;
@@ -61,6 +73,9 @@ Index3 Wave3d::predir(Index3 dir)
 //-----------------------------------
 vector<Index3> Wave3d::chddir(Index3 dir)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::chddir");
+#endif
     int C = dir.linfty();
     vector<int> oidx;
     for(int d=0; d<3; d++) {
@@ -83,12 +98,18 @@ vector<Index3> Wave3d::chddir(Index3 dir)
 //-----------------------------------
 double Wave3d::dir2width(Index3 dir)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::dir2width");
+#endif
     int C = dir.linfty();
-    return double(C/_NPQ);
+    return double(C / _NPQ);
 }
 
 //-----------------------------------------------------------
 Point3 Wave3d::center(BoxKey& curkey) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::center");
+#endif
     Index3 path = curkey.second;
     int tmp = pow2(curkey.first);
     Point3 t;
@@ -100,6 +121,9 @@ Point3 Wave3d::center(BoxKey& curkey) {
 
 //-----------------------------------------------------------
 int Wave3d::P() {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::P");
+#endif
     assert(_ACCU >= 1 && _ACCU <= 3);
     switch (_ACCU) {
     case 1:
@@ -116,6 +140,9 @@ int Wave3d::P() {
 //-----------------------------------------------------------
 int serialize(const PtPrtn& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
     serialize(val._ownerinfo, os, mask);
     return 0;
 }
@@ -123,6 +150,9 @@ int serialize(const PtPrtn& val, ostream& os, const vector<int>& mask)
 //-----------------------------------------------------------
 int deserialize(PtPrtn& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
     deserialize(val._ownerinfo, is, mask);
     return 0;
 }
@@ -130,6 +160,9 @@ int deserialize(PtPrtn& val, istream& is, const vector<int>& mask)
 //-----------------------------------------------------------
 int serialize(const BoxDat& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
     int i = 0;
   
     if(mask[i]==1) serialize(val._tag, os, mask);  i++;
@@ -162,6 +195,9 @@ int serialize(const BoxDat& val, ostream& os, const vector<int>& mask)
 //-----------------------------------------------------------
 int deserialize(BoxDat& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
     int i = 0;
   
     if(mask[i]==1) deserialize(val._tag, is, mask);  i++;
@@ -194,6 +230,9 @@ int deserialize(BoxDat& val, istream& is, const vector<int>& mask)
 //-----------------------------------------------------------
 int serialize(const BndDat& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
     int i = 0;
     if(mask[i]==1) serialize(val._dirupeqnden, os, mask);  i++;
     if(mask[i]==1) serialize(val._dirdnchkval, os, mask);  i++;
@@ -203,6 +242,9 @@ int serialize(const BndDat& val, ostream& os, const vector<int>& mask)
 //-----------------------------------------------------------
 int deserialize(BndDat& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
     int i = 0;
     if(mask[i]==1) deserialize(val._dirupeqnden, is, mask);  i++;
     if(mask[i]==1) deserialize(val._dirdnchkval, is, mask);  i++;

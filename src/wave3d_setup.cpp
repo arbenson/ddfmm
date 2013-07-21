@@ -10,6 +10,9 @@ using std::cerr;
 //---------------------------------------------------------------------
 int Wave3d::setup(map<string,string>& opts)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup");
+#endif
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     _self = this;
     int mpirank = this->mpirank();
@@ -87,6 +90,9 @@ int Wave3d::setup(map<string,string>& opts)
 //---------------------------------------------------------------------
 int Wave3d::setup_tree()
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup_tree");
+#endif
     int mpirank = this->mpirank();
     double eps = 1e-12;
     double K = this->K();
@@ -286,6 +292,9 @@ int Wave3d::setup_tree()
 //---------------------------------------------------------------------
 int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup_tree_callowlist");
+#endif
     set<BoxKey> Uset, Vset, Wset, Xset;
     iA(!iscell(curkey)); //LEXING: DO NOT ALLOW WIDTH=1 BOXES TO BE CELLS
     Index3 curpth = curkey.second;
@@ -375,6 +384,9 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
 //---------------------------------------------------------------------
 int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup_tree_calhghlist");
+#endif
     Point3 curctr = center(curkey);
     double W = width(curkey);
     double eps = 1e-12;
@@ -424,6 +436,9 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
 // ----------------------------------------------------------------------
 bool Wave3d::setup_tree_find(BoxKey wntkey, BoxKey& trykey)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup_tree_find");
+#endif
     trykey = wntkey;
     while(!iscell(trykey)) {
         map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().find(trykey);
@@ -438,6 +453,9 @@ bool Wave3d::setup_tree_find(BoxKey wntkey, BoxKey& trykey)
 // ----------------------------------------------------------------------
 bool Wave3d::setup_tree_adjacent(BoxKey meekey, BoxKey youkey)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup_tree_adjacent");
+#endif
     int md = max(meekey.first,youkey.first);
     Index3 one(1,1,1);
     Index3 meectr(  (2 * meekey.second+one) * pow2(md - meekey.first)  );
@@ -453,6 +471,9 @@ bool Wave3d::setup_tree_adjacent(BoxKey meekey, BoxKey youkey)
 //---------------------------------------------------------------------
 int Wave3d::setup_Q1(int key, Point3& pos, vector<int>& pids)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup_Q1");
+#endif
     int numC = _geomprtn.m();
     Point3 center = ctr();
     Index3 idx;
@@ -468,6 +489,9 @@ int Wave3d::setup_Q1(int key, Point3& pos, vector<int>& pids)
 //---------------------------------------------------------------------
 int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, vector<int>& pids)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup_Q2");
+#endif
     //for each ent, get all the pids that might need it
     int numC = _geomprtn.m();
     double widC = _K/numC;
@@ -505,10 +529,16 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, vector<int>& pids)
 //---------------------------------------------------------------------
 int Wave3d::setup_Q1_wrapper(int key, Point3& dat, vector<int>& pids)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup_Q1_wrapper");
+#endif
     return (Wave3d::_self)->setup_Q1(key, dat, pids);
 }
 
 int Wave3d::setup_Q2_wrapper(BoxKey key, BoxDat& dat, vector<int>& pids)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::setup_Q2_wrapper");
+#endif
     return (Wave3d::_self)->setup_Q2(key, dat, pids);
 }

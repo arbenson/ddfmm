@@ -8,6 +8,9 @@ using std::ofstream;
 using std::cerr;
 
 Point3 shifted_point(int dir_ind, double W) {
+#ifndef RELEASE
+    CallStackEntry entry("shifted_point");
+#endif
     int a = DIR_1(dir_ind);
     int b = DIR_2(dir_ind);
     int c = DIR_3(dir_ind);
@@ -15,6 +18,9 @@ Point3 shifted_point(int dir_ind, double W) {
 }
 
 int transpose(CpxNumMat& trg, CpxNumMat& src) {
+#ifndef RELEASE
+    CallStackEntry entry("transpose");
+#endif
     trg.resize(src.n(),src.m());
     for(int i = 0; i < trg.m(); i++) {
 	for(int j = 0; j < trg.n(); j++) {
@@ -25,6 +31,9 @@ int transpose(CpxNumMat& trg, CpxNumMat& src) {
 }
 
 int apply_shift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
+#ifndef RELEASE
+    CallStackEntry entry("apply_shift");
+#endif
     for(int k = 0; k < src.n(); k++) {
 	for(int d = 0; d < 3; d++) {
 	    trg(d,k) = src(d,k) + shift(d);
@@ -34,6 +43,9 @@ int apply_shift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
 }
 
 int negate(DblNumMat& src) {
+#ifndef RELEASE
+    CallStackEntry entry("negate");
+#endif
     for (int i = 0; i < src.n(); i++) {
         for (int d = 0; d < 3; d++) {
 	    src(d,i) = -src(d,i);
@@ -45,6 +57,9 @@ int negate(DblNumMat& src) {
 //-----------------------------------
 int Mlib3d::setup(map<string,string>& opts)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Mlib3d::setup");
+#endif
     //get params
     map<string,string>::iterator mi;
     mi = opts.find("-" + prefix() + "NPQ");
@@ -79,6 +94,9 @@ int Mlib3d::setup(map<string,string>& opts)
 int Mlib3d::upward_lowfetch(double W, DblNumMat& uep, DblNumMat& ucp,
                             NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Mlib3d::upward_lowfetch");
+#endif
     iA(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
   
@@ -109,6 +127,9 @@ int Mlib3d::dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
                             NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
                             NumTns<CpxNumTns>& ue2dc, DblNumMat& uep)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Mlib3d::dnward_lowfetch");
+#endif
     iA(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
   
@@ -151,6 +172,9 @@ int Mlib3d::dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
 int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
                             NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Mlib3d::upward_hghfetch");
+#endif
     iA(_w2hdmap.find(W) != _w2hdmap.end());
     map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
@@ -199,6 +223,9 @@ int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp
                             NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
                             DblNumMat& uep)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Mlib3d::dnward_hghfetch");
+#endif
     iA(_w2hdmap.find(W) != _w2hdmap.end());
     map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
@@ -250,6 +277,9 @@ int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp
 //-----------------------------------
 Index3 Mlib3d::predir(Index3 dir)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Mlib3d::predir");
+#endif
     int C = dir.linfty();
     int B = C / 2;
     int midx = -1;
@@ -271,6 +301,9 @@ Index3 Mlib3d::predir(Index3 dir)
 //---------------------------------------------------------------------
 int Mlib3d::hghfetch_shuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& res)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Mlib3d::hghfetch_shuffle");
+#endif
     res.resize(3, tmp.n());
     for(int k=0; k<res.n(); k++) {
         for(int d=0; d<3; d++) {
@@ -288,6 +321,9 @@ int Mlib3d::hghfetch_shuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& 
 //---------------------------------------------------------------------
 int Mlib3d::hghfetch_index3sort(Index3 val, Index3& srt, Index3& sgn, Index3& prm)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Mlib3d::hghfetch_index3sort");
+#endif
     //make it positive
     for(int d=0; d<3; d++) {
         sgn(d) = 1;
@@ -318,6 +354,9 @@ int Mlib3d::hghfetch_index3sort(Index3 val, Index3& srt, Index3& sgn, Index3& pr
 //-------------------
 int serialize(const LowFreqEntry& le, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
     iC( serialize(le._uep, os, mask) );
     iC( serialize(le._ucp, os, mask) );
     iC( serialize(le._uc2ue, os, mask) );
@@ -326,6 +365,9 @@ int serialize(const LowFreqEntry& le, ostream& os, const vector<int>& mask)
 }
 int deserialize(LowFreqEntry& le, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
     iC( deserialize(le._uep, is, mask) );
     iC( deserialize(le._ucp, is, mask) );
     iC( deserialize(le._uc2ue, is, mask) );
@@ -336,6 +378,9 @@ int deserialize(LowFreqEntry& le, istream& is, const vector<int>& mask)
 //-------------------
 int serialize(const HghFreqDirEntry& he, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
     iC( serialize(he._uep, os, mask) );
     iC( serialize(he._ucp, os, mask) );
     iC( serialize(he._uc2ue, os, mask) );
@@ -344,6 +389,9 @@ int serialize(const HghFreqDirEntry& he, ostream& os, const vector<int>& mask)
 
 int deserialize(HghFreqDirEntry& he, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
     iC( deserialize(he._uep, is, mask) );
     iC( deserialize(he._ucp, is, mask) );
     iC( deserialize(he._uc2ue, is, mask) );

@@ -14,6 +14,9 @@
 
 
 pair<double, double> Wave3d::mean_var(time_t t0, time_t t1) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::mean_var");
+#endif
     int mpirank = this->mpirank();
     int mpisize = this->mpisize();
     double diff = difftime(t1, t0);
@@ -43,6 +46,9 @@ pair<double, double> Wave3d::mean_var(time_t t0, time_t t1) {
 //---------------------------------------------------------------------
 int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::eval");
+#endif
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     _self = this;
     time_t t0, t1, t2, t3;
@@ -352,6 +358,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 //---------------------------------------------------------------------
 int Wave3d::eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqboxset)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::eval_upward_low");
+#endif
     DblNumMat uep;
     DblNumMat ucp;
     NumVec<CpxNumMat> uc2ue;
@@ -426,6 +435,9 @@ int Wave3d::eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqbo
 //---------------------------------------------------------------------
 int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::eval_dnward_low");
+#endif
     DblNumMat dep;
     DblNumMat dcp;
     NumVec<CpxNumMat> dc2de;
@@ -518,6 +530,9 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
 
 int Wave3d::U_list_compute(BoxDat& trgdat)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::U_list_compute");
+#endif
     for(vector<BoxKey>::iterator vi = trgdat.undeidxvec().begin();
 	vi != trgdat.undeidxvec().end(); vi++) {
 	BoxKey neikey = (*vi);
@@ -533,6 +548,9 @@ int Wave3d::U_list_compute(BoxDat& trgdat)
 int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNumMat& uep,
 			   DblNumMat& dcp, CpxNumVec& dnchkval, NumTns<CpxNumTns>& ue2dc)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::V_list_compute");
+#endif
     double step = W/(_P-1);
     setvalue(_valfft,cpx(0,0));
     //LEXING: SPECIAL
@@ -591,6 +609,9 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
 int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
 			   CpxNumVec& dnchkval)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::X_list_compute");
+#endif
     for(vector<BoxKey>::iterator vi = trgdat.xndeidxvec().begin();
 	vi != trgdat.xndeidxvec().end(); vi++) {
 	BoxKey neikey = (*vi);
@@ -612,6 +633,9 @@ int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
 
 int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::W_list_compute");
+#endif
     for(vector<BoxKey>::iterator vi = trgdat.wndeidxvec().begin();
 	vi != trgdat.wndeidxvec().end(); vi++) {
 	BoxKey neikey = (*vi);
@@ -644,6 +668,9 @@ int Wave3d::eval_upward_hgh_recursive(double W, Index3 nowdir,
         map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
         set<BndKey>& reqbndset)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::eval_upward_hgh_recursive");
+#endif
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
     if(mi!=hdmap.end()) {
         iC( eval_upward_hgh(W, nowdir, mi->second, reqbndset) );
@@ -659,6 +686,9 @@ int Wave3d::eval_upward_hgh_recursive(double W, Index3 nowdir,
 int Wave3d::eval_dnward_hgh_recursive(double W, Index3 nowdir,
         map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::eval_dnward_hgh_recursive");
+#endif
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
     if (mi!=hdmap.end()) {
         vector<Index3> dirvec = chddir(nowdir);
@@ -675,6 +705,9 @@ int Wave3d::eval_dnward_hgh_recursive(double W, Index3 nowdir,
 int Wave3d::eval_upward_hgh(double W, Index3 dir,
         pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::eval_upward_hgh");
+#endif
     double eps = 1e-12;
     DblNumMat uep;
     DblNumMat ucp;
@@ -752,6 +785,9 @@ int Wave3d::eval_upward_hgh(double W, Index3 dir,
 int Wave3d::get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
                      set<BndKey>& reqbndset)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::get_reqs");
+#endif
   // Fill reqbndset with 
   vector<BoxKey>& trgvec = hdvecs.second;
   for(int k = 0; k < trgvec.size(); k++) {
@@ -770,6 +806,9 @@ int Wave3d::get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
 int Wave3d::eval_dnward_hgh(double W, Index3 dir,
                             pair< vector<BoxKey>, vector<BoxKey> >& hdvecs)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::eval_dnward_hgh");
+#endif
     double eps = 1e-12;
     DblNumMat dep;
     DblNumMat dcp;

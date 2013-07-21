@@ -12,9 +12,15 @@ public:
   F* _data;
 public:
   NumMat(int m=0, int n=0): _m(m), _n(n), _owndata(true) {
+#ifndef RELEASE
+      CallStackEntry entry("NumMat::NumMat");
+#endif
 	if(_m>0 && _n>0) { _data = new F[_m*_n]; assert( _data!=NULL ); } else _data=NULL;
   }
   NumMat(int m, int n, bool owndata, F* data): _m(m), _n(n), _owndata(owndata) {
+#ifndef RELEASE
+      CallStackEntry entry("NumMat::NumMat");
+#endif
 	if(_owndata) {
 	  if(_m>0 && _n>0) { _data = new F[_m*_n]; assert( _data!=NULL ); } else _data=NULL;
 	  if(_m>0 && _n>0) { for(int i=0; i<_m*_n; i++) _data[i] = data[i]; }
@@ -23,6 +29,9 @@ public:
 	}
   }
   NumMat(const NumMat& C): _m(C._m), _n(C._n), _owndata(C._owndata) {
+#ifndef RELEASE
+      CallStackEntry entry("NumMat::NumMat");
+#endif
 	if(_owndata) {
 	  if(_m>0 && _n>0) { _data = new F[_m*_n]; assert( _data!=NULL ); } else _data=NULL;
 	  if(_m>0 && _n>0) { for(int i=0; i<_m*_n; i++) _data[i] = C._data[i]; }
@@ -31,11 +40,17 @@ public:
 	}
   }
   ~NumMat() {
+#ifndef RELEASE
+      CallStackEntry entry("NumMat::~NumMat");
+#endif
 	if(_owndata) {
 	  if(_m>0 && _n>0) { delete[] _data; _data = NULL; }
 	}
   }
   NumMat& operator=(const NumMat& C) {
+#ifndef RELEASE
+      CallStackEntry entry("NumMat::operator=");
+#endif
 	if(_owndata) {
 	  if(_m>0 && _n>0) { delete[] _data; _data = NULL; }
 	}
@@ -49,6 +64,9 @@ public:
 	return *this;
   }
   void resize(int m, int n)  {
+#ifndef RELEASE
+      CallStackEntry entry("NumMat::resize");
+#endif
 	assert( _owndata==true );
 	if(_m!=m || _n!=n) {
 	  if(_m>0 && _n>0) { delete[] _data; _data = NULL; }
@@ -57,22 +75,36 @@ public:
 	}
   }
   const F& operator()(int i, int j) const  { 
+#ifndef RELEASE
+      CallStackEntry entry("NumMat::operator()");
+#endif
 	assert( i>=0 && i<_m && j>=0 && j<_n );
 	return _data[i+j*_m];
   }
   F& operator()(int i, int j)  { 
+#ifndef RELEASE
+      CallStackEntry entry("NumMat::operator()");
+#endif
 	assert( i>=0 && i<_m && j>=0 && j<_n );
 	return _data[i+j*_m];
   }
-  
+
+  F* clmdata(int j) {
+#ifndef RELEASE
+      CallStackEntry entry("NumMat::clmdata");
+#endif
+      return &(_data[j*_m]);
+  }
   F* data() const { return _data; }
-  F* clmdata(int j) { return &(_data[j*_m]); }
   int m() const { return _m; }
   int n() const { return _n; }
 };
 
 template <class F> inline ostream& operator<<( ostream& os, const NumMat<F>& mat)
 {
+#ifndef RELEASE
+    CallStackEntry entry("operator<<");
+#endif
   os<<mat.m()<<" "<<mat.n()<<endl;
   os.setf(ios_base::scientific, ios_base::floatfield);
   for(int i=0; i<mat.m(); i++) {
@@ -84,12 +116,18 @@ template <class F> inline ostream& operator<<( ostream& os, const NumMat<F>& mat
 }
 template <class F> inline void setvalue(NumMat<F>& M, F val)
 {
+#ifndef RELEASE
+    CallStackEntry entry("setvalue");
+#endif
   for(int i=0; i<M.m(); i++)
 	for(int j=0; j<M.n(); j++)
 	  M(i,j) = val;
 }
 template <class F> inline double energy(NumMat<F>& M)
 {
+#ifndef RELEASE
+    CallStackEntry entry("energy");
+#endif
   double sum = 0;
   for(int i=0; i<M.m(); i++)	for(int j=0; j<M.n(); j++)	  sum += abs(M(i,j)*M(i,j));
   return sum;

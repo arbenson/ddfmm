@@ -10,6 +10,9 @@ using std::cerr;
 int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
                      const DblNumMat& srcnor, CpxNumMat& inter)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Kernel3d::kernel");
+#endif
     int M = trgpos.n();
     int N = srcpos.n();
     double K = 2*M_PI;

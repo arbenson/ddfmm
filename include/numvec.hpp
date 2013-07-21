@@ -17,9 +17,15 @@ public:
   F* _data;
 public:
   NumVec(int m=0): _m(m), _owndata(true)  {
+#ifndef RELEASE
+      CallStackEntry entry("NumVec::NumVec");
+#endif
 	if(_m>0) { _data = new F[_m]; assert(_data!=NULL); } else _data=NULL;
   }
   NumVec(int m, bool owndata, F* data): _m(m), _owndata(owndata) {
+#ifndef RELEASE
+      CallStackEntry entry("NumVec::NumVec");
+#endif
 	if(_owndata) {
 	  if(_m>0) { _data = new F[_m]; assert(_data!=NULL); } else _data=NULL;
 	  if(_m>0) { for(int i=0; i<_m; i++) _data[i] = data[i]; }
@@ -28,6 +34,9 @@ public:
 	}
   }
   NumVec(const NumVec& C): _m(C._m), _owndata(C._owndata)  {
+#ifndef RELEASE
+      CallStackEntry entry("NumVec::NumVec");
+#endif
 	if(_owndata) {
 	  if(_m>0) { _data = new F[_m]; assert(_data!=NULL); } else _data=NULL;
 	  if(_m>0) { for(int i=0; i<_m; i++) _data[i] = C._data[i]; }
@@ -36,11 +45,17 @@ public:
 	}
   }
   ~NumVec() {
+#ifndef RELEASE
+      CallStackEntry entry("NumVec::~NumVec");
+#endif
 	if(_owndata) {
 	  if(_m>0) { delete[] _data; _data = NULL; }
 	}
   }
   NumVec& operator=(const NumVec& C)  {
+#ifndef RELEASE
+      CallStackEntry entry("NumVec::operator=");
+#endif
 	if(_owndata) {
 	  if(_m>0) { delete[] _data; _data = NULL; }
 	}
@@ -54,6 +69,9 @@ public:
 	return *this;
   }
   void resize(int m)  {
+#ifndef RELEASE
+    CallStackEntry entry("NumVec::resize");
+#endif
 	assert(_owndata==true);
 	if(m !=_m) {
 	  if(_m>0) { delete[] _data; _data = NULL; }
@@ -62,10 +80,16 @@ public:
 	}
   }
   const F& operator()(int i) const  {
+#ifndef RELEASE
+    CallStackEntry entry("NumVec::operator()");
+#endif
 	assert(i>=0 && i<_m);
 	return _data[i]; 
   }
   F& operator()(int i)  {
+#ifndef RELEASE
+    CallStackEntry entry("NumVec::operator()");
+#endif
 	assert(i>=0 && i<_m);
 	return _data[i]; 
   }
@@ -76,6 +100,9 @@ public:
 
 template <class F> inline ostream& operator<<( ostream& os, const NumVec<F>& vec)
 {
+#ifndef RELEASE
+    CallStackEntry entry("operator<<");
+#endif
   os<<vec.m()<<endl;
   os.setf(ios_base::scientific, ios_base::floatfield);
   for(int i=0; i<vec.m(); i++)	 os<<" "<<vec(i);
@@ -85,11 +112,17 @@ template <class F> inline ostream& operator<<( ostream& os, const NumVec<F>& vec
 
 template <class F> inline void setvalue(NumVec<F>& vec, F val)
 {
+#ifndef RELEASE
+    CallStackEntry entry("setvalue");
+#endif
   for(int i=0; i<vec.m(); i++)
 	vec(i) = val;
 }
 template <class F> inline double energy(NumVec<F>& vec)
 {
+#ifndef RELEASE
+    CallStackEntry entry("energy");
+#endif
   double sum = 0;
   for(int i=0; i<vec.m(); i++)
 	sum += abs(vec(i)*vec(i));

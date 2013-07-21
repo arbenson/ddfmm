@@ -19,6 +19,9 @@ extern "C"
 
 int mat_dsqrt(int M, int N, DblNumMat& in, DblNumMat& out)
 {
+#ifndef RELEASE
+    CallStackEntry entry("mat_dsqrt");
+#endif
 #ifdef MKL
   int TTL = M * N;
   vdsqrt_(&TTL, in.data(), out.data());
@@ -34,6 +37,9 @@ int mat_dsqrt(int M, int N, DblNumMat& in, DblNumMat& out)
 
 int mat_dinv(int M, int N, DblNumMat& in, DblNumMat& out)
 {
+#ifndef RELEASE
+    CallStackEntry entry("mat_dinv");
+#endif
 #ifdef MKL
   int TTL = M * N;
   vdinv_(&TTL, in.data(), out.data());
@@ -51,6 +57,9 @@ int mat_dinv(int M, int N, DblNumMat& in, DblNumMat& out)
 int mat_dsincos(int M, int N, DblNumMat& in, DblNumMat& out_sin,
                  DblNumMat& out_cos)
 {
+#ifndef RELEASE
+    CallStackEntry entry("mat_dsincos");
+#endif
 #ifdef MKL
   int TTL = M * N;
   vdsincos_(&TTL, in.data(), out_sin.data(), out_cos.data());
@@ -67,6 +76,9 @@ int mat_dsincos(int M, int N, DblNumMat& in, DblNumMat& out_sin,
 
 int mat_dscale(int M, int N, DblNumMat& in, double K)
 {
+#ifndef RELEASE
+    CallStackEntry entry("mat_dscale");
+#endif
   for(int i = 0; i < M; i++) {
     for(int j = 0; j < N; j++) {
       in(i,j) *= K;

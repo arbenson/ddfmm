@@ -7,6 +7,9 @@ using std::cerr;
 int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
                   IntNumVec& chkkeys, double& relerr)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::check");
+#endif
     iC( MPI_Barrier(MPI_COMM_WORLD) );
   
     _self = this;

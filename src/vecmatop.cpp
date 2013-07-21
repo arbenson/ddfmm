@@ -12,6 +12,9 @@ using std::cerr;
 // ---------------------------------------------------------------------- 
 int dgemm(double alpha, const DblNumMat& A, const DblNumMat& B, double beta, DblNumMat& C)
 {
+#ifndef RELEASE
+    CallStackEntry entry("dgemm");
+#endif
   assert( A.m() == C.m() );  assert( A.n() == B.m() );  assert( B.n() == C.n() );
   iC( dgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
   return 0;
@@ -19,6 +22,9 @@ int dgemm(double alpha, const DblNumMat& A, const DblNumMat& B, double beta, Dbl
 // ---------------------------------------------------------------------- 
 int dgemm(int m, int n, int k, double alpha, double* A, double* B, double beta, double* C)
 {
+#ifndef RELEASE
+    CallStackEntry entry("dgemm");
+#endif
   char transa = 'N';
   char transb = 'N';
   assert(m!=0 && n!=0 && k!=0);
@@ -30,6 +36,9 @@ int dgemm(int m, int n, int k, double alpha, double* A, double* B, double beta, 
 // ---------------------------------------------------------------------- 
 int dgemv(double alpha, const DblNumMat& A, const DblNumVec& X, double beta, DblNumVec& Y)
 {
+#ifndef RELEASE
+    CallStackEntry entry("dgemv");
+#endif
   assert(Y.m() == A.m());
   assert(A.n() == X.m());
   iC( dgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
@@ -38,6 +47,9 @@ int dgemv(double alpha, const DblNumMat& A, const DblNumVec& X, double beta, Dbl
 // ---------------------------------------------------------------------- 
 int dgemv(int m, int n, double alpha, double* A, double* X, double beta, double* Y)
 {
+#ifndef RELEASE
+    CallStackEntry entry("dgemv");
+#endif
   char trans = 'N';
   assert(m!=0 && n!=0);
   int incx = 1;
@@ -52,6 +64,9 @@ int dgemv(int m, int n, double alpha, double* A, double* X, double beta, double*
 // ---------------------------------------------------------------------- 
 int zgemm(cpx alpha, const CpxNumMat& A, const CpxNumMat& B, cpx beta, CpxNumMat& C)
 {
+#ifndef RELEASE
+    CallStackEntry entry("zgemm");
+#endif
   assert( A.m() == C.m() );  assert( A.n() == B.m() );  assert( B.n() == C.n() );
   iC( zgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
   return 0;
@@ -59,6 +74,9 @@ int zgemm(cpx alpha, const CpxNumMat& A, const CpxNumMat& B, cpx beta, CpxNumMat
 // ---------------------------------------------------------------------- 
 int zgemm(int m, int n, int k, cpx alpha, cpx* A, cpx* B, cpx beta, cpx* C)
 {
+#ifndef RELEASE
+    CallStackEntry entry("zgemm");
+#endif
   char transa = 'N';
   char transb = 'N';
   assert(m!=0 && n!=0 && k!=0);
@@ -70,6 +88,9 @@ int zgemm(int m, int n, int k, cpx alpha, cpx* A, cpx* B, cpx beta, cpx* C)
 // ---------------------------------------------------------------------- 
 int zgemv(cpx alpha, const CpxNumMat& A, const CpxNumVec& X, cpx beta, CpxNumVec& Y)
 {
+#ifndef RELEASE
+    CallStackEntry entry("zgemv");
+#endif
   assert(Y.m() == A.m());
   assert(A.n() == X.m());
   iC( zgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
@@ -78,6 +99,9 @@ int zgemv(cpx alpha, const CpxNumMat& A, const CpxNumVec& X, cpx beta, CpxNumVec
 // ---------------------------------------------------------------------- 
 int zgemv(int m, int n, cpx alpha, cpx* A, cpx* X, cpx beta, cpx* Y)
 {
+#ifndef RELEASE
+    CallStackEntry entry("zgemv");
+#endif
   iA(m>0 && A!=NULL && X!=NULL);
   char trans = 'N';
   assert(m!=0 && n!=0);

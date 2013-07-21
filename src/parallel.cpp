@@ -9,6 +9,9 @@ using std::endl;
 //---------------------------------------------------------
 int Separate_Read(string name, istringstream& is)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Separate_Read");
+#endif
   iC( MPI_Barrier(MPI_COMM_WORLD) );
   int mpirank;  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   int mpisize;  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
@@ -31,6 +34,9 @@ int Separate_Read(string name, istringstream& is)
 //---------------------------------------------------------
 int Separate_Write(string name, ostringstream& os)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Separate_Write");
+#endif
   iC( MPI_Barrier(MPI_COMM_WORLD) );
   int mpirank;  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   int mpisize;  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
@@ -53,6 +59,9 @@ int Separate_Write(string name, ostringstream& os)
 //---------------------------------------------------------
 int Shared_Read(string name, istringstream& is)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Shared_Read");
+#endif
   iC( MPI_Barrier(MPI_COMM_WORLD) );
   int mpirank;  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   int mpisize;  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
@@ -90,6 +99,9 @@ int Shared_Read(string name, istringstream& is)
 //---------------------------------------------------------
 int Shared_Write(string name, ostringstream& os)
 {
+#ifndef RELEASE
+    CallStackEntry entry("Shared_Write");
+#endif
   iC( MPI_Barrier(MPI_COMM_WORLD) );
   int mpirank;  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   int mpisize;  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);

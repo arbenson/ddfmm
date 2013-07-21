@@ -36,6 +36,9 @@ public:
     ~PtPrtn() {;}
     vector<int>& ownerinfo() { return _ownerinfo; }
     int owner(int key) {
+#ifndef RELEASE
+	CallStackEntry entry("PtPrtn::owner");
+#endif
         iA(key<_ownerinfo[_ownerinfo.size()-1]);
         //get the proc which owns the current point
         vector<int>::iterator vi = lower_bound(_ownerinfo.begin(), _ownerinfo.end(), key+1);
@@ -135,6 +138,9 @@ public:
     ~BoxPrtn() {;}
     IntNumTns& ownerinfo() { return _ownerinfo; }
     int owner(BoxKey key) {
+#ifndef RELEASE
+	CallStackEntry entry("BoxPrtn::owner");
+#endif
         int lvl = key.first;
         Index3 idx = key.second;
         int COEF = pow2(lvl) / _ownerinfo.m();
@@ -174,6 +180,9 @@ public:
     ~BndPrtn() {;}
     IntNumTns& ownerinfo() { return _ownerinfo; }
     int owner(BndKey key) {
+#ifndef RELEASE
+	CallStackEntry entry("BndPrtn::owner");
+#endif
         int lvl = key.first.first;
         Index3 idx = key.first.second;
         int COEF = pow2(lvl) / _ownerinfo.m();
@@ -279,8 +288,23 @@ private:
     vector<Index3> chddir(Index3 dir);
     double dir2width(Index3 dir);
 
-    int mpirank() const { int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); return rank; }
-    int mpisize() const { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; }
+    // TODO (Austin): These should be moved to ComObject
+    int mpirank() const {
+#ifndef RELEASE
+	CallStackEntry entry("Wave3d::mpirank");
+#endif
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	return rank;
+    }
+    int mpisize() const {
+#ifndef RELEASE
+	CallStackEntry entry("Wave3d::mpisize");
+#endif
+	int size;
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	return size;
+    }
 
     int setup_tree();
     static int setup_Q1_wrapper(int key, Point3& dat, vector<int>& pids);

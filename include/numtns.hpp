@@ -12,10 +12,16 @@ public:
   F* _data;
 public:
     NumTns(int m=0, int n=0, int p=0): _m(m), _n(n), _p(p), _owndata(true) {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::NumTns");
+#endif
 	allocate();
     }
 
     NumTns(int m, int n, int p, bool owndata, F* data): _m(m), _n(n), _p(p), _owndata(owndata) {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::NumTns");
+#endif
 	if(_owndata) {
 	    allocate();
 	    if(dimensions_check()) {
@@ -27,6 +33,9 @@ public:
     }
 
     NumTns(const NumTns& C): _m(C._m), _n(C._n), _p(C._p), _owndata(C._owndata) {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::NumTns");
+#endif
 	if(_owndata) {
 	    allocate();
 	    if(dimensions_check()) {
@@ -40,12 +49,18 @@ public:
     }
 
     ~NumTns() { 
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::~NumTns");
+#endif
 	// TODO (Austin): should this include p > 0 here?
 	if(_owndata && _m>0 && _n>0) {
 	    delete[] _data; _data = NULL;
 	} 
     }
     NumTns& operator=(const NumTns& C) {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::operator=");
+#endif
 	if(_owndata) { 
 	    deallocate();
 	}
@@ -62,6 +77,9 @@ public:
     }
 
     void resize(int m, int n, int p)  {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::resize");
+#endif
 	assert( _owndata );
 	if(_m!=m || _n!=n || _p!=p) {
 	    deallocate();
@@ -71,10 +89,16 @@ public:
     }
 
     inline bool dimensions_check() {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::dimensions_check");
+#endif
 	return _m > 0 && _n > 0 && _p > 0;
     }
     
     void allocate() {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::allocate");
+#endif
 	if(dimensions_check()) {
 	    _data = new F[_m * _n * _p];
 	    assert( _data != NULL );
@@ -84,6 +108,9 @@ public:
     }
 
     void deallocate() {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::deallocate");
+#endif
 	if(dimensions_check()) {
 	    delete[] _data;
 	    _data = NULL;
@@ -91,10 +118,16 @@ public:
     }
 
     const F& operator()(int i, int j, int k) const  {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::operator()");
+#endif
 	assert( i>=0 && i<_m && j>=0 && j<_n && k>=0 && k<_p);
 	return _data[i + j * _m + k * _m * _n];
     }
     F& operator()(int i, int j, int k)  {
+#ifndef RELEASE
+	CallStackEntry entry("NumTns::operator()");
+#endif
         assert( i>=0 && i<_m && j>=0 && j<_n && k>=0 && k<_p);
         return _data[i + j * _m + k * _m * _n];
     }
@@ -107,6 +140,9 @@ public:
 
 template <class F> inline ostream& operator<<( ostream& os, const NumTns<F>& tns)
 {
+#ifndef RELEASE
+    CallStackEntry entry("operator<<");
+#endif
   os<<tns.m()<<" "<<tns.n()<<" "<<tns.p()<<endl;
   os.setf(ios_base::scientific, ios_base::floatfield);
   for(int i=0; i<tns.m(); i++) {
@@ -122,11 +158,17 @@ template <class F> inline ostream& operator<<( ostream& os, const NumTns<F>& tns
 }
 template <class F> inline void setvalue(NumTns<F>& T, F val)
 {
+#ifndef RELEASE
+    CallStackEntry entry("setvalue");
+#endif
   for(int i=0; i<T.m(); i++)	for(int j=0; j<T.n(); j++)	  for(int k=0; k<T.p(); k++)		T(i,j,k) = val;
   return;
 }
 template <class F> inline double energy(NumTns<F>& T)
 {
+#ifndef RELEASE
+    CallStackEntry entry("energy");
+#endif
   double sum = 0;
   for(int i=0; i<T.m(); i++)	for(int j=0; j<T.n(); j++)	  for(int k=0; k<T.p(); k++)		sum += abs(T(i,j,k)*T(i,j,k));
   return sum;

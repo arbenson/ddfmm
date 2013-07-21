@@ -21,12 +21,18 @@ template<class T, class S> int deserialize(pair<T,S>& val, istream& is, const ve
 //char
 inline int serialize(const char& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   os.write((char*)&val, sizeof(char));
   return 0;
 }
 
 inline int deserialize(char& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   is.read((char*)&val, sizeof(char));
   return 0;
 }
@@ -35,12 +41,18 @@ inline int deserialize(char& val, istream& is, const vector<int>& mask)
 //int
 inline int serialize(const int& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   os.write((char*)&val, sizeof(int));
   return 0;
 }
 
 inline int deserialize(int& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   is.read((char*)&val, sizeof(int));
   return 0;
 }
@@ -49,12 +61,18 @@ inline int deserialize(int& val, istream& is, const vector<int>& mask)
 //double
 inline int serialize(const double& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   os.write((char*)&val, sizeof(double));
   return 0;
 }
 
 inline int deserialize(double& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   is.read((char*)&val, sizeof(double));
   return 0;
 }
@@ -63,12 +81,18 @@ inline int deserialize(double& val, istream& is, const vector<int>& mask)
 //cpx
 inline int serialize(const cpx& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   os.write((char*)&val, sizeof(cpx));
   return 0;
 }
 
 inline int deserialize(cpx& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   is.read((char*)&val, sizeof(cpx));
   return 0;
 }
@@ -78,12 +102,18 @@ inline int deserialize(cpx& val, istream& is, const vector<int>& mask)
 //Index3
 inline int serialize(const Index3& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   os.write((char*)&(val[0]), 3*sizeof(int));
   return 0;
 }
 
 inline int deserialize(Index3& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   is.read((char*)&(val[0]), 3*sizeof(int));
   return 0;
 }
@@ -92,12 +122,18 @@ inline int deserialize(Index3& val, istream& is, const vector<int>& mask)
 //Point3
 inline int serialize(const Point3& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   os.write((char*)&(val[0]), 3*sizeof(double));
   return 0;
 }
 
 inline int deserialize(Point3& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   is.read((char*)&(val[0]), 3*sizeof(double));
   return 0;
 }
@@ -107,6 +143,9 @@ inline int deserialize(Point3& val, istream& is, const vector<int>& mask)
 template<class T>
 int serialize(const vector<T>& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int sz = val.size();
   os.write((char*)&sz, sizeof(int));
   for(int k=0; k<sz; k++)
@@ -117,6 +156,9 @@ int serialize(const vector<T>& val, ostream& os, const vector<int>& mask)
 template<class T>
 int deserialize(vector<T>& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int sz;
   is.read((char*)&sz, sizeof(int));
   val.resize(sz);
@@ -130,6 +172,9 @@ int deserialize(vector<T>& val, istream& is, const vector<int>& mask)
 template<class T>
 int serialize(const set<T>& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int sz = val.size();
   os.write((char*)&sz, sizeof(int));
   for(typename set<T>::const_iterator mi=val.begin(); mi!=val.end(); mi++) 
@@ -140,6 +185,9 @@ int serialize(const set<T>& val, ostream& os, const vector<int>& mask)
 template<class T>
 int deserialize(set<T>& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   val.clear();
   int sz;
   is.read((char*)&sz, sizeof(int));
@@ -155,6 +203,9 @@ int deserialize(set<T>& val, istream& is, const vector<int>& mask)
 template<class T, class S>
 int serialize(const map<T,S>& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int sz = val.size();
   os.write((char*)&sz, sizeof(int));
   for(typename map<T,S>::const_iterator mi=val.begin(); mi!=val.end(); mi++) {
@@ -167,6 +218,9 @@ int serialize(const map<T,S>& val, ostream& os, const vector<int>& mask)
 template<class T, class S>
 int deserialize(map<T,S>& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   val.clear();
   int sz;
   is.read((char*)&sz, sizeof(int));
@@ -183,6 +237,9 @@ int deserialize(map<T,S>& val, istream& is, const vector<int>& mask)
 template<class T, class S>
 int serialize(const pair<T,S>& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   serialize(val.first, os, mask);
   serialize(val.second, os, mask);
   return 0;
@@ -191,6 +248,9 @@ int serialize(const pair<T,S>& val, ostream& os, const vector<int>& mask)
 template<class T, class S>
 int deserialize(pair<T,S>& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   deserialize(val.first, is, mask);
   deserialize(val.second, is, mask);
   return 0;
@@ -201,6 +261,9 @@ int deserialize(pair<T,S>& val, istream& is, const vector<int>& mask)
 //BolNumVec
 inline int serialize(const BolNumVec& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   os.write((char*)&m, sizeof(int));
   os.write((char*)(val.data()), m*sizeof(bool));
@@ -209,6 +272,9 @@ inline int serialize(const BolNumVec& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(BolNumVec& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   is.read((char*)&m, sizeof(int));
   val.resize(m);
@@ -220,6 +286,9 @@ inline int deserialize(BolNumVec& val, istream& is, const vector<int>& mask)
 //BolNumMat
 inline int serialize(const BolNumMat& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   int n = val.n();
   os.write((char*)&m, sizeof(int));
@@ -230,6 +299,9 @@ inline int serialize(const BolNumMat& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(BolNumMat& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   int n;
   is.read((char*)&m, sizeof(int));
@@ -243,6 +315,9 @@ inline int deserialize(BolNumMat& val, istream& is, const vector<int>& mask)
 //BolNumTns
 inline int serialize(const BolNumTns& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();  int n = val.n();  int p = val.p();
   os.write((char*)&m, sizeof(int));
   os.write((char*)&n, sizeof(int));
@@ -253,6 +328,9 @@ inline int serialize(const BolNumTns& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(BolNumTns& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m,n,p;
   is.read((char*)&m, sizeof(int));
   is.read((char*)&n, sizeof(int));
@@ -267,6 +345,9 @@ inline int deserialize(BolNumTns& val, istream& is, const vector<int>& mask)
 //IntNumVec
 inline int serialize(const IntNumVec& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   os.write((char*)&m, sizeof(int));
   os.write((char*)(val.data()), m*sizeof(int));
@@ -275,6 +356,9 @@ inline int serialize(const IntNumVec& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(IntNumVec& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   is.read((char*)&m, sizeof(int));
   val.resize(m);
@@ -286,6 +370,9 @@ inline int deserialize(IntNumVec& val, istream& is, const vector<int>& mask)
 //IntNumMat
 inline int serialize(const IntNumMat& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   int n = val.n();
   os.write((char*)&m, sizeof(int));
@@ -296,6 +383,9 @@ inline int serialize(const IntNumMat& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(IntNumMat& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   int n;
   is.read((char*)&m, sizeof(int));
@@ -309,6 +399,9 @@ inline int deserialize(IntNumMat& val, istream& is, const vector<int>& mask)
 //IntNumTns
 inline int serialize(const IntNumTns& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();  int n = val.n();  int p = val.p();
   os.write((char*)&m, sizeof(int));
   os.write((char*)&n, sizeof(int));
@@ -319,6 +412,9 @@ inline int serialize(const IntNumTns& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(IntNumTns& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m,n,p;
   is.read((char*)&m, sizeof(int));
   is.read((char*)&n, sizeof(int));
@@ -333,6 +429,9 @@ inline int deserialize(IntNumTns& val, istream& is, const vector<int>& mask)
 //DblNumVec
 inline int serialize(const DblNumVec& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   os.write((char*)&m, sizeof(int));
   os.write((char*)(val.data()), m*sizeof(double));
@@ -341,6 +440,9 @@ inline int serialize(const DblNumVec& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(DblNumVec& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   is.read((char*)&m, sizeof(int));
   val.resize(m);
@@ -352,6 +454,9 @@ inline int deserialize(DblNumVec& val, istream& is, const vector<int>& mask)
 //DblNumMat
 inline int serialize(const DblNumMat& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   int n = val.n();
   os.write((char*)&m, sizeof(int));
@@ -362,6 +467,9 @@ inline int serialize(const DblNumMat& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(DblNumMat& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   int n;
   is.read((char*)&m, sizeof(int));
@@ -375,6 +483,9 @@ inline int deserialize(DblNumMat& val, istream& is, const vector<int>& mask)
 //DblNumTns
 inline int serialize(const DblNumTns& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();  int n = val.n();  int p = val.p();
   os.write((char*)&m, sizeof(int));
   os.write((char*)&n, sizeof(int));
@@ -385,6 +496,9 @@ inline int serialize(const DblNumTns& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(DblNumTns& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m,n,p;
   is.read((char*)&m, sizeof(int));
   is.read((char*)&n, sizeof(int));
@@ -398,6 +512,9 @@ inline int deserialize(DblNumTns& val, istream& is, const vector<int>& mask)
 //CpxNumVec
 inline int serialize(const CpxNumVec& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   os.write((char*)&m, sizeof(int));
   os.write((char*)(val.data()), m*sizeof(cpx));
@@ -406,6 +523,9 @@ inline int serialize(const CpxNumVec& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(CpxNumVec& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   is.read((char*)&m, sizeof(int));
   val.resize(m);
@@ -417,6 +537,9 @@ inline int deserialize(CpxNumVec& val, istream& is, const vector<int>& mask)
 //CpxNumMat
 inline int serialize(const CpxNumMat& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   int n = val.n();
   os.write((char*)&m, sizeof(int));
@@ -427,6 +550,9 @@ inline int serialize(const CpxNumMat& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(CpxNumMat& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   int n;
   is.read((char*)&m, sizeof(int));
@@ -440,6 +566,9 @@ inline int deserialize(CpxNumMat& val, istream& is, const vector<int>& mask)
 //CpxNumTns
 inline int serialize(const CpxNumTns& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();  int n = val.n();  int p = val.p();
   os.write((char*)&m, sizeof(int));
   os.write((char*)&n, sizeof(int));
@@ -450,6 +579,9 @@ inline int serialize(const CpxNumTns& val, ostream& os, const vector<int>& mask)
 
 inline int deserialize(CpxNumTns& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m,n,p;
   is.read((char*)&m, sizeof(int));
   is.read((char*)&n, sizeof(int));
@@ -464,6 +596,9 @@ inline int deserialize(CpxNumTns& val, istream& is, const vector<int>& mask)
 template<class T>
 int inline serialize(const NumVec<T>& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   os.write((char*)&m, sizeof(int));
   for(int i=0; i<m; i++)
@@ -473,6 +608,9 @@ int inline serialize(const NumVec<T>& val, ostream& os, const vector<int>& mask)
 template<class T>
 int inline deserialize(NumVec<T>& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   is.read((char*)&m, sizeof(int));
   val.resize(m);
@@ -486,6 +624,9 @@ int inline deserialize(NumVec<T>& val, istream& is, const vector<int>& mask)
 template<class T>
 int inline serialize(const NumMat<T>& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   int n = val.n();
   os.write((char*)&m, sizeof(int));
@@ -498,6 +639,9 @@ int inline serialize(const NumMat<T>& val, ostream& os, const vector<int>& mask)
 template<class T>
 int inline deserialize(NumMat<T>& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   int n;
   is.read((char*)&m, sizeof(int));
@@ -514,6 +658,9 @@ int inline deserialize(NumMat<T>& val, istream& is, const vector<int>& mask)
 template<class T>
 int inline serialize(const NumTns<T>& val, ostream& os, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
   int m = val.m();
   int n = val.n();
   int p = val.p();
@@ -529,6 +676,9 @@ int inline serialize(const NumTns<T>& val, ostream& os, const vector<int>& mask)
 template<class T>
 int inline deserialize(NumTns<T>& val, istream& is, const vector<int>& mask)
 {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
   int m;
   int n;
   int p;
