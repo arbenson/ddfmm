@@ -14,7 +14,8 @@ LIB_SRC = src/wave3d.cpp \
           src/wave3d_eval.cpp \
           src/wave3d_check.cpp \
           src/vecmatop.cpp \
-          src/parallel.cpp
+          src/parallel.cpp \
+          src/global.cpp
 
 LIB_OBJ = $(LIB_SRC:.cpp=.o)
 
