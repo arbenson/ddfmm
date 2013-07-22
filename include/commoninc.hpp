@@ -23,7 +23,6 @@
 //external libraries
 #include "fftw3.h"
 #include "blas.h"
-#include "lapack.h"
 
 #include "mpi.h"
 
@@ -54,6 +53,10 @@ ostream& operator<<(ostream& os, const pair<T,S>& a)
   os<<a.first<<" "<<a.second;
   return os;
 }
+
+int getMPIRank();
+int getMPISize();
+int getMPIInfo(int *mpirank, int *mpisize);
 
 #ifndef RELEASE
 void PushCallStack( std::string s );
