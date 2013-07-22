@@ -1,4 +1,3 @@
-HOST=arbenson-mbp
 ifndef HOST
   $(error "$${HOST} is not defined")
 endif
