@@ -1,3 +1,4 @@
+HOST=arbenson-mbp
 ifndef HOST
   $(error "$${HOST} is not defined")
 endif
@@ -15,7 +16,8 @@ LIB_SRC = src/wave3d.cpp \
           src/wave3d_check.cpp \
           src/vecmatop.cpp \
           src/parallel.cpp \
-          src/global.cpp
+          src/global.cpp \
+          src/utility.cpp
 
 LIB_OBJ = $(LIB_SRC:.cpp=.o)
 
