@@ -1,5 +1,4 @@
 #include "blas.h"
-#include "lapack.h"
 #include "numvec.hpp"
 #include "nummat.hpp"
 #include "numtns.hpp"
@@ -29,7 +28,7 @@ int dgemm(int m, int n, int k, double alpha, double* A, double* B, double beta, 
   char transb = 'N';
   assert(m!=0 && n!=0 && k!=0);
   dgemm_(&transa, &transb, &m, &n, &k,
-		 &alpha, A, &m, B, &k, &beta, C, &m);
+	 &alpha, A, &m, B, &k, &beta, C, &m);
   return 0;
 }
 //Y <- a M X + b Y
