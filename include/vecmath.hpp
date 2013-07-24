@@ -1,6 +1,7 @@
 #ifndef _VECMATH_
 #define _VECMATH_
 #include <math.h>
+#include "blas.h"
 
 /*
  * This file is a wrapper around vector operations.  If MKL is available, these functions
@@ -82,11 +83,9 @@ int mat_dscale(int M, int N, DblNumMat& in, double K)
 #ifndef RELEASE
     CallStackEntry entry("mat_dscale");
 #endif
-    for(int i = 0; i < M; i++) {
-        for(int j = 0; j < N; j++) {
-            in(i,j) *= K;
-        }
-    }
+    int TTL = M * N;
+    int incr = 1;
+    dscal_(&TTL, &K, in.data(), &incr);
     return 0;
 }
 
