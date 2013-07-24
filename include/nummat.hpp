@@ -85,17 +85,11 @@ public:
     }
 
     const F& operator()(int i, int j) const  { 
-#ifndef RELEASE
-        CallStackEntry entry("NumMat::operator()");
-#endif
         assert( i >= 0 && i < _m && j >= 0 && j <_ n );
         return _data[i + j * _m];
     }
 
     F& operator()(int i, int j)  { 
-#ifndef RELEASE
-        CallStackEntry entry("NumMat::operator()");
-#endif
         assert( i >= 0 && i < _m && j >= 0 && j < _n );
         return _data[i + j * _m];
     }
