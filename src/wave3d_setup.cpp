@@ -15,7 +15,7 @@ int Wave3d::setup(map<string,string>& opts)
 #endif
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     _self = this;
-    int mpirank = this->mpirank();
+    int mpirank = getMPIRank();
     //read optional data
     map<string,string>::iterator mi;
     mi = opts.find("-" + prefix() + "ACCU");
@@ -93,7 +93,7 @@ int Wave3d::setup_tree()
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_tree");
 #endif
-    int mpirank = this->mpirank();
+    int mpirank = getMPIRank();
     double eps = 1e-12;
     double K = this->K();
     // pos contains all data read by this processor
@@ -499,7 +499,7 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, vector<int>& pids)
     if (iscell(boxkey)) {
         //LEXING: CELL LEVEL BOXES ARE NEEDED FOR ALL CPUS
         pids.clear();
-        for(int i = 0; i < mpisize(); i++) {
+        for(int i = 0; i < getMPISize(); i++) {
             pids.push_back(i);
         }
     } else {
