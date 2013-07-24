@@ -17,10 +17,10 @@ pair<double, double> Wave3d::mean_var(time_t t0, time_t t1) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::mean_var");
 #endif
-    int mpirank = this->mpirank();
-    int mpisize = this->mpisize();
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
     double diff = difftime(t1, t0);
-    double *rbuf = (double *)malloc(mpisize * sizeof(double));
+    double *rbuf = new double[mpisize];
 
     MPI_Gather((void *)&diff, 1, MPI_DOUBLE, rbuf, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
@@ -38,7 +38,7 @@ pair<double, double> Wave3d::mean_var(time_t t0, time_t t1) {
 	var /= (mpisize - 1);
     }
 
-    free(rbuf);
+    delete[] rbuf;
     return pair<double, double>(mean, var);
 }
 
@@ -52,7 +52,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     _self = this;
     time_t t0, t1, t2, t3;
-    int mpirank = this->mpirank();
+    int mpirank = getMPIRank();
     double eps = 1e-12;
     ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
     // 1. Go through posptr to get nonlocal points
@@ -365,7 +365,7 @@ int Wave3d::eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqbo
     DblNumMat ucp;
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
-    iC( _mlibptr->upward_lowfetch(W, uep, ucp, uc2ue, ue2uc) );
+    iC( _mlibptr->upwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
     //---------------
     int tdof = 1;
     for(int k = 0; k < srcvec.size(); k++) {
@@ -444,7 +444,7 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
     NumTns<CpxNumMat> de2dc;
     NumTns<CpxNumTns> ue2dc;
     DblNumMat uep;
-    iC( _mlibptr->dnward_lowfetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
+    iC( _mlibptr->downwardLowFetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
     //------------------
     int _P = P();
     for(int k = 0; k < trgvec.size(); k++) {
@@ -713,7 +713,7 @@ int Wave3d::eval_upward_hgh(double W, Index3 dir,
     DblNumMat ucp;
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
-    iC( _mlibptr->upward_hghfetch(W, dir, uep, ucp, uc2ue, ue2uc) );
+    iC( _mlibptr->upwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
     //---------------
     vector<BoxKey>& srcvec = hdvecs.first;
     for(int k = 0; k < srcvec.size(); k++) {
@@ -815,7 +815,7 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
     NumVec<CpxNumMat> dc2de;
     NumTns<CpxNumMat> de2dc;
     DblNumMat uep;
-    iC( _mlibptr->dnward_hghfetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
+    iC( _mlibptr->downwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     //LEXING: IMPORTANT
     vector<BoxKey>& trgvec = hdvecs.second;
     for(int k = 0; k < trgvec.size(); k++) {

@@ -91,11 +91,11 @@ int Mlib3d::setup(map<string,string>& opts)
 }
 
 //-----------------------------------
-int Mlib3d::upward_lowfetch(double W, DblNumMat& uep, DblNumMat& ucp,
-                            NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
+int Mlib3d::upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
+			   NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
 {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::upward_lowfetch");
+    CallStackEntry entry("Mlib3d::upwardLowFetch");
 #endif
     iA(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
@@ -123,12 +123,12 @@ int Mlib3d::upward_lowfetch(double W, DblNumMat& uep, DblNumMat& ucp,
 }
 
 //-----------------------------------
-int Mlib3d::dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
-                            NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-                            NumTns<CpxNumTns>& ue2dc, DblNumMat& uep)
+int Mlib3d::downwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
+			     NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+			     NumTns<CpxNumTns>& ue2dc, DblNumMat& uep)
 {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::dnward_lowfetch");
+    CallStackEntry entry("Mlib3d::downwardLowFetch");
 #endif
     iA(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
@@ -169,23 +169,23 @@ int Mlib3d::dnward_lowfetch(double W, DblNumMat& dep, DblNumMat& dcp,
 }
 
 //-----------------------------------
-int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
+int Mlib3d::upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
                             NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
 {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::upward_hghfetch");
+    CallStackEntry entry("Mlib3d::upwardHighFetch");
 #endif
     iA(_w2hdmap.find(W) != _w2hdmap.end());
     map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
-    Index3 srt, sgn, prm;  iC( hghfetch_index3sort(dir, srt, sgn, prm) );
+    Index3 srt, sgn, prm;  iC( highFetchIndex3Sort(dir, srt, sgn, prm) );
     iA(curmap.count(srt) != 0);
 
     HghFreqDirEntry& he = curmap[srt];
     DblNumMat ueptmp( he.uep() );
     DblNumMat ucptmp( he.ucp() );
-    iC( hghfetch_shuffle(prm, sgn, ueptmp, uep) );
-    iC( hghfetch_shuffle(prm, sgn, ucptmp, ucp) );
+    iC( highFetchShuffle(prm, sgn, ueptmp, uep) );
+    iC( highFetchShuffle(prm, sgn, ucptmp, ucp) );
     uc2ue.resize(3);
     for (int i = 0; i < 3; i++) {
 	uc2ue(i) = he.uc2ue()(i);
@@ -202,11 +202,11 @@ int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;
-        iC( hghfetch_index3sort(pdr, srt, sgn, prm) );
+        iC( highFetchIndex3Sort(pdr, srt, sgn, prm) );
 	iA(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
-        iC( hghfetch_shuffle(prm, sgn, ueptmp, uepchd) );
+        iC( highFetchShuffle(prm, sgn, ueptmp, uepchd) );
     }
     ue2uc.resize(2,2,2);
     for (int ind = 0; ind < NUM_DIRS; ind++) {
@@ -219,28 +219,28 @@ int Mlib3d::upward_hghfetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
 }
 
 //-----------------------------------
-int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp,
-                            NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-                            DblNumMat& uep)
+int Mlib3d::downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp,
+                              NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+                              DblNumMat& uep)
 {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::dnward_hghfetch");
+    CallStackEntry entry("Mlib3d::downwardHighFetch");
 #endif
     iA(_w2hdmap.find(W) != _w2hdmap.end());
     map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
     Index3 srt, sgn, prm;
-    iC( hghfetch_index3sort(dir, srt, sgn, prm) );
+    iC( highFetchIndex3Sort(dir, srt, sgn, prm) );
     iA(curmap.find(srt) != curmap.end());
     HghFreqDirEntry& he = curmap[srt];
   
     DblNumMat ueptmp( he.uep() );
     DblNumMat ucptmp( he.ucp() );
-    iC( hghfetch_shuffle(prm, sgn, ucptmp, dep) ); //ucp->dep
+    iC( highFetchShuffle(prm, sgn, ucptmp, dep) ); //ucp->dep
     negate(dep);
-    iC( hghfetch_shuffle(prm, sgn, ueptmp, dcp) ); //uep->dcp
+    iC( highFetchShuffle(prm, sgn, ueptmp, dcp) ); //uep->dcp
     negate(dcp);
-    iC( hghfetch_shuffle(prm, sgn, ueptmp, uep) ); //uep->uep
+    iC( highFetchShuffle(prm, sgn, ueptmp, uep) ); //uep->uep
     dc2de.resize(3);
     for (int k = 0; k < 3; k++) {
         CpxNumMat tmp( he.uc2ue()(2 - k) );
@@ -256,11 +256,11 @@ int Mlib3d::dnward_hghfetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp
         map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
         
         Index3 pdr = predir(dir);
-        Index3 srt, sgn, prm;  iC( hghfetch_index3sort(pdr, srt, sgn, prm) );
+        Index3 srt, sgn, prm;  iC( highFetchIndex3Sort(pdr, srt, sgn, prm) );
 	iA(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
-        iC( hghfetch_shuffle(prm, sgn, ueptmp, dcpchd) );
+        iC( highFetchShuffle(prm, sgn, ueptmp, dcpchd) );
 	negate(dcpchd);
     }
   
@@ -299,10 +299,10 @@ Index3 Mlib3d::predir(Index3 dir)
 
 
 //---------------------------------------------------------------------
-int Mlib3d::hghfetch_shuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& res)
+int Mlib3d::highFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& res)
 {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::hghfetch_shuffle");
+    CallStackEntry entry("Mlib3d::highFetchShuffle");
 #endif
     res.resize(3, tmp.n());
     for(int k=0; k<res.n(); k++) {
@@ -319,10 +319,10 @@ int Mlib3d::hghfetch_shuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& 
 }
 
 //---------------------------------------------------------------------
-int Mlib3d::hghfetch_index3sort(Index3 val, Index3& srt, Index3& sgn, Index3& prm)
+int Mlib3d::highFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& prm)
 {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::hghfetch_index3sort");
+    CallStackEntry entry("Mlib3d::highFetchIndex3Sort");
 #endif
     //make it positive
     for(int d=0; d<3; d++) {
