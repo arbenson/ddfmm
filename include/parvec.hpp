@@ -51,25 +51,9 @@ public:
     int discard(vector<Key>& keyvec); //remove non-owned entries
 
 private:
-    int mpirank() const {
-#ifndef RELEASE
-	CallStackEntry entry("ParVec::mpirank");
-#endif
-	int rank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	return rank;
-    }
-    int mpisize() const {
-#ifndef RELEASE
-	CallStackEntry entry("ParVec::mpisize");
-#endif
-	int size;
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
-	return size;
-    }
-    int reset_vecs();
-    int get_sizes(vector<int>& rszvec, vector<int>& sifvec);
-    int make_buf_reqs(vector<int>& rszvec, vector<int>& sszvec);
+    int resetVecs();
+    int getSizes(vector<int>& rszvec, vector<int>& sifvec);
+    int makeBufReqs(vector<int>& rszvec, vector<int>& sszvec);
     int strs2vec(vector<ostringstream*>& ossvec);
 
     //temporary data
@@ -83,12 +67,12 @@ private:
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
-int ParVec<Key,Data,Partition>::reset_vecs()
+int ParVec<Key,Data,Partition>::resetVecs()
 {
 #ifndef RELEASE
-    CallStackEntry entry("ParVec::reset_vecs");
+    CallStackEntry entry("ParVec::resetVecs");
 #endif
-    int mpisize = this->mpisize();
+    int mpisize = getMPISize();
     _snbvec.resize(mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
         _snbvec[k] = 0;
@@ -102,12 +86,12 @@ int ParVec<Key,Data,Partition>::reset_vecs()
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
-int ParVec<Key,Data,Partition>::get_sizes(vector<int>& rszvec, vector<int>& sszvec)
+int ParVec<Key,Data,Partition>::getSizes(vector<int>& rszvec, vector<int>& sszvec)
 {
 #ifndef RELEASE
-    CallStackEntry entry("ParVec::get_sizes");
+    CallStackEntry entry("ParVec::getSizes");
 #endif
-    int mpisize = this->mpisize();
+    int mpisize = getMPISize();
     sszvec.resize(mpisize, 0);
     for(int k = 0; k < mpisize; k++) {
         sszvec[k] = _sbufvec[k].size();
@@ -130,16 +114,17 @@ int ParVec<Key,Data,Partition>::get_sizes(vector<int>& rszvec, vector<int>& sszv
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
-int ParVec<Key,Data,Partition>::make_buf_reqs(vector<int>& rszvec, vector<int>& sszvec)
+int ParVec<Key,Data,Partition>::makeBufReqs(vector<int>& rszvec, vector<int>& sszvec)
 {
 #ifndef RELEASE
-    CallStackEntry entry("ParVec::make_buf_reqs");
+    CallStackEntry entry("ParVec::makeBufReqs");
 #endif
-    int mpisize = this->mpisize();
+    int mpisize = getMPISize();
     for(int k = 0; k < mpisize; k++) {
         _rbufvec[k].resize(rszvec[k]);
     }
     for(int k = 0; k < mpisize; k++) {
+	// TODO (Austin): Check if rszvec[k], sszvec[k] are 0 
         iC( MPI_Irecv( (void *)&(_rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0,
                        MPI_COMM_WORLD, &_reqs[2 * k] ) );
         iC( MPI_Isend( (void *)&(_sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
@@ -155,7 +140,7 @@ int ParVec<Key,Data,Partition>::strs2vec(vector<ostringstream *>& ossvec)
 #ifndef RELEASE
     CallStackEntry entry("ParVec::strs2vec");
 #endif
-    int mpisize = this->mpisize();
+    int mpisize = getMPISize();
     for (int k = 0; k < mpisize; k++) {
         string tmp( ossvec[k]->str() );
         _sbufvec[k].clear();
@@ -176,7 +161,7 @@ int ParVec<Key,Data,Partition>::insert(Key key, Data& dat)
 #ifndef RELEASE
     CallStackEntry entry("ParVec::insert");
 #endif
-    int mpirank = this->mpirank();
+    int mpirank = getMPIRank();
     iA( _prtn.owner(key) == mpirank); //LEXING: VERY IMPORTANT
     _lclmap[key] = dat;
     return 0;
@@ -202,14 +187,14 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&),
 #ifndef RELEASE
     CallStackEntry entry("ParVec::getBegin");
 #endif
-    int mpirank = this->mpirank();
-    int mpisize = this->mpisize();
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
     //---------
-    reset_vecs();
+    resetVecs();
     _sbufvec.resize(mpisize);
     _rbufvec.resize(mpisize);
-    _reqs = (MPI_Request *) malloc(2 * mpisize * sizeof(MPI_Request));
-    _stats = (MPI_Status *) malloc(2 * mpisize * sizeof(MPI_Status));
+    _reqs = new MPI_Request[2 * mpisize];
+    _stats = new MPI_Status[2 * mpisize];
     //---------
     vector<ostringstream*> ossvec(mpisize);
     for(int k=0; k<mpisize; k++)        {
@@ -241,10 +226,10 @@ int ParVec<Key,Data,Partition>::getBegin( int (*e2ps)(Key,Data&,vector<int>&),
     //2. all th sendsize of the message
     vector<int> sszvec;
     vector<int> rszvec;
-    get_sizes(rszvec, sszvec);
+    getSizes(rszvec, sszvec);
 
     //3. allocate space, send and receive
-    make_buf_reqs(rszvec, sszvec);
+    makeBufReqs(rszvec, sszvec);
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
@@ -256,14 +241,14 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
 #ifndef RELEASE
     CallStackEntry entry("ParVec::getBegin");
 #endif
-    int mpirank = this->mpirank();
-    int mpisize = this->mpisize();
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
     //---------
-    reset_vecs();
+    resetVecs();
     _sbufvec.resize(mpisize);
     _rbufvec.resize(mpisize);
-    _reqs = (MPI_Request *) malloc(2 * mpisize * sizeof(MPI_Request));
-    _stats = (MPI_Status *) malloc(2 * mpisize * sizeof(MPI_Status));
+    _reqs = new MPI_Request[2 * mpisize];
+    _stats = new MPI_Status[2 * mpisize];
 
     //1. go thrw the keyvec to partition them among other procs
     vector< vector<Key> > skeyvec(mpisize);
@@ -289,23 +274,23 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
         rkeyvec[k].resize(rszvec[k]);
     }
 
-    MPI_Request *reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
-    MPI_Status  *stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
+    MPI_Request *reqs = new MPI_Request[2 * mpisize];
+    MPI_Status  *stats = new MPI_Status[2 * mpisize];
     for(int k = 0; k < mpisize; k++) {
-	iC( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k]*sizeof(Key), MPI_BYTE,
+	iC( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k] * sizeof(Key), MPI_BYTE,
                         k, 0, MPI_COMM_WORLD, &reqs[2 * k] ) );
-	iC( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k]*sizeof(Key), MPI_BYTE,
+	iC( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k] * sizeof(Key), MPI_BYTE,
                        k, 0, MPI_COMM_WORLD, &reqs[2 * k + 1] ) );
     }
     iC( MPI_Waitall(2 * mpisize, &(reqs[0]), &(stats[0])) );
-    free(reqs);
-    free(stats);
+    delete[] reqs;
+    delete[] stats;
 
     skeyvec.clear(); //save space
 
     //4. prepare the streams
     vector<ostringstream*> ossvec(mpisize);
-    for(int k=0; k<mpisize; k++) {
+    for(int k = 0; k < mpisize; k++) {
         ossvec[k] = new ostringstream();
     }
     for(int k = 0; k < mpisize; k++) {
@@ -325,10 +310,10 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
     strs2vec(ossvec);
 
     //5. all the sendsize of the message
-    get_sizes(rszvec, sszvec);
+    getSizes(rszvec, sszvec);
 
     //6. allocate space, send and receive
-    make_buf_reqs(rszvec, sszvec);
+    makeBufReqs(rszvec, sszvec);
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
@@ -340,11 +325,11 @@ int ParVec<Key,Data,Partition>::getEnd( const vector<int>& mask )
 #ifndef RELEASE
     CallStackEntry entry("ParVec::getEnd");
 #endif
-    int mpisize = this->mpisize();
+    int mpisize = getMPISize();
     //LEXING: SEPARATE HERE
     iC( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
-    free(_reqs);
-    free(_stats);
+    delete[] _reqs;
+    delete[] _stats;
     _sbufvec.clear(); //save space
     //4. write back
     //to stream
@@ -386,14 +371,14 @@ int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>&
 #ifndef RELEASE
     CallStackEntry entry("ParVec::putBegin");
 #endif
-    int mpirank = this->mpirank();
-    int mpisize = this->mpisize();
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
     //---------
-    reset_vecs();
+    resetVecs();
     _sbufvec.resize(mpisize);
     _rbufvec.resize(mpisize);
-    _reqs = (MPI_Request *) malloc(2*mpisize * sizeof(MPI_Request));
-    _stats = (MPI_Status *) malloc(2*mpisize * sizeof(MPI_Status));
+    _reqs = new MPI_Request[2 * mpisize];
+    _stats = new MPI_Status[2 * mpisize];
     //1.
     vector<ostringstream*> ossvec(mpisize);
     for (int k = 0; k < mpisize; k++) {
@@ -421,10 +406,10 @@ int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>&
     //3. get size
     vector<int> sszvec;
     vector<int> rszvec;
-    get_sizes(rszvec, sszvec);
+    getSizes(rszvec, sszvec);
 
     //4. allocate space, send and receive
-    make_buf_reqs(rszvec, sszvec);
+    makeBufReqs(rszvec, sszvec);
 
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
@@ -437,12 +422,13 @@ int ParVec<Key,Data,Partition>::putEnd( const vector<int>& mask )
 #ifndef RELEASE
     CallStackEntry entry("ParVec::putEnd");
 #endif
-    int mpirank = this->mpirank();
-    int mpisize = this->mpisize();
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
+
     //LEXING: SEPARATE HERE
     iC( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
-    free(_reqs);
-    free(_stats);
+    delete[] _reqs;
+    delete[] _stats;
     _sbufvec.clear(); //save space
     //5. go thrw the messages and write back
     vector<istringstream*> issvec(mpisize);
@@ -497,7 +483,7 @@ int ParVec<Key,Data,Partition>::discard(vector<Key>& keyvec)
 #ifndef RELEASE
     CallStackEntry entry("ParVec::discard");
 #endif
-    int mpirank = this->mpirank();
+    int mpirank = getMPIRank();
     for(int i=0; i<keyvec.size(); i++) {
         Key key = keyvec[i];
         if(_prtn.owner(key) != mpirank) {
