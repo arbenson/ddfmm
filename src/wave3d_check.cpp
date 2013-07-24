@@ -13,7 +13,7 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     iC( MPI_Barrier(MPI_COMM_WORLD) );
   
     _self = this;
-    int mpirank = this->mpirank();
+    int mpirank = getMPIRank();
     ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
   
     //1. get pos
