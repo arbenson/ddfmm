@@ -288,24 +288,6 @@ private:
     vector<Index3> chddir(Index3 dir);
     double dir2width(Index3 dir);
 
-    // TODO (Austin): These should be moved to ComObject
-    int mpirank() const {
-#ifndef RELEASE
-	CallStackEntry entry("Wave3d::mpirank");
-#endif
-	int rank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	return rank;
-    }
-    int mpisize() const {
-#ifndef RELEASE
-	CallStackEntry entry("Wave3d::mpisize");
-#endif
-	int size;
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
-	return size;
-    }
-
     int setup_tree();
     static int setup_Q1_wrapper(int key, Point3& dat, vector<int>& pids);
     static int setup_Q2_wrapper(BoxKey key, BoxDat& dat, vector<int>& pids);
