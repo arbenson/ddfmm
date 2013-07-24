@@ -124,11 +124,11 @@ int ParVec<Key,Data,Partition>::makeBufReqs(vector<int>& rszvec, vector<int>& ss
         _rbufvec[k].resize(rszvec[k]);
     }
     for(int k = 0; k < mpisize; k++) {
-	// TODO (Austin): Check if rszvec[k], sszvec[k] are 0 
-        iC( MPI_Irecv( (void *)&(_rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0,
-                       MPI_COMM_WORLD, &_reqs[2 * k] ) );
-        iC( MPI_Isend( (void *)&(_sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
-                       MPI_COMM_WORLD, &_reqs[2 * k + 1] ) );
+        // TODO (Austin): Is there a problem if rszvec or sszvec is 0?
+        iC( MPI_Irecv((void *)&(_rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0,
+                      MPI_COMM_WORLD, &_reqs[2 * k] ) );
+        iC( MPI_Isend((void *)&(_sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
+                      MPI_COMM_WORLD, &_reqs[2 * k + 1] ) );
     }
     return 0;
 }
@@ -277,9 +277,9 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
     MPI_Request *reqs = new MPI_Request[2 * mpisize];
     MPI_Status  *stats = new MPI_Status[2 * mpisize];
     for(int k = 0; k < mpisize; k++) {
-	iC( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k] * sizeof(Key), MPI_BYTE,
+        iC( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k] * sizeof(Key), MPI_BYTE,
                         k, 0, MPI_COMM_WORLD, &reqs[2 * k] ) );
-	iC( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k] * sizeof(Key), MPI_BYTE,
+        iC( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k] * sizeof(Key), MPI_BYTE,
                        k, 0, MPI_COMM_WORLD, &reqs[2 * k + 1] ) );
     }
     iC( MPI_Waitall(2 * mpisize, &(reqs[0]), &(stats[0])) );
@@ -392,7 +392,7 @@ int ParVec<Key,Data,Partition>::putBegin(vector<Key>& keyvec, const vector<int>&
         if (k != mpirank) {
             typename map<Key,Data>::iterator mi = _lclmap.find(key);
             iA( mi!=_lclmap.end() );
-	    iA( key == mi->first );
+            iA( key == mi->first );
             Data& dat = mi->second;
             iC( serialize(key, *(ossvec[k]), mask) );
             iC( serialize(dat, *(ossvec[k]), mask) );
