@@ -78,9 +78,10 @@ int Shared_Read(string name, istringstream& is)
 	    fprintf(stderr, "failed to open input file stream (%s)\n", filename);
 	}
 
-	tmpstr.insert(tmpstr.end(), std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>());
+	tmpstr.insert(tmpstr.end(), std::istreambuf_iterator<char>(fin),
+		      std::istreambuf_iterator<char>());
 	fin.close();
-	int size = tmpstr.size();	//cerr<<size<<endl;
+	int size = tmpstr.size();
 	iC( MPI_Bcast((void*)&size, 1, MPI_INT, 0, MPI_COMM_WORLD) );
 	iC( MPI_Bcast((void*)&(tmpstr[0]), size, MPI_BYTE, 0, MPI_COMM_WORLD) );
     } else {
