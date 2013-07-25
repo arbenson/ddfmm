@@ -9,6 +9,8 @@ MODE = optim
 INCLUDES =
 LIBS = -lfftw3 -llapack -lblas -lm 
 
+#DEFINES = -DRELEASE=1
+
 AR = ar
 ARFLAGS = rc
 
