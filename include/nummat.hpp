@@ -85,7 +85,7 @@ public:
     }
 
     const F& operator()(int i, int j) const  { 
-        assert( i >= 0 && i < _m && j >= 0 && j <_ n );
+        assert( i >= 0 && i < _m && j >= 0 && j < _n );
         return _data[i + j * _m];
     }
 
