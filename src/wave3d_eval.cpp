@@ -27,15 +27,15 @@ pair<double, double> Wave3d::mean_var(time_t t0, time_t t1) {
     double mean = 0;
     double var = 0;
     if (mpirank == 0) {
-	for (int i = 0; i < mpisize; i++) {
-	    mean += rbuf[i];
-	}
-	mean /= mpisize;
+        for (int i = 0; i < mpisize; i++) {
+            mean += rbuf[i];
+        }
+        mean /= mpisize;
 
-	for (int i = 0; i < mpisize; i++) {
-	    var += (rbuf[i] - mean) * (rbuf[i] - mean);
-	}
-	var /= (mpisize - 1);
+        for (int i = 0; i < mpisize; i++) {
+            var += (rbuf[i] - mean) * (rbuf[i] - mean);
+        }
+        var /= (mpisize - 1);
     }
 
     delete[] rbuf;
@@ -69,9 +69,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     iC( den.getBegin(reqpts, all) );
     iC( den.getEnd(all) );
     t1 = time(0);
-    if(mpirank == 0) {
-	cout << "Density communication: " << difftime(t1, t0)
-	     << " secs" << endl;
+    if (mpirank == 0) {
+        cout << "Density communication: " << difftime(t1, t0)
+             << " secs" << endl;
     }
 
     // 3. compute extden using ptidxvec
@@ -128,7 +128,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     set<BoxKey> reqboxset;
     //LOW UP
     if(mpirank == 0) {
-	cout << "Beginning low frequency upward pass..." << endl;
+        cout << "Beginning low frequency upward pass..." << endl;
     }
     t0 = time(0);
     // For each box width in the low frequency regime that this processor
@@ -140,13 +140,13 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     t1 = time(0);
     if (mpirank == 0) {
-	cout << "End low frequency upward pass: " << difftime(t1,t0)
+        cout << "End low frequency upward pass: " << difftime(t1,t0)
              << " secs" << endl;
     }
 
     // HIGH
     if(mpirank == 0) {
-	cout << "Beginning high frequency pass..." << endl;
+        cout << "Beginning high frequency pass..." << endl;
     }
     t0 = time(0);
 
@@ -189,11 +189,11 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         t2 = time(0);
         iC( _bndvec.getBegin(reqbnd, mask) );
         iC( _bndvec.getEnd(mask) );
-	t3 = time(0);
-	if(mpirank==0) {
-	    cout << "High frequency communication: " << difftime(t3, t2)
-		 << " secs" << endl;
-	}
+        t3 = time(0);
+        if(mpirank==0) {
+            cout << "High frequency communication: " << difftime(t3, t2)
+                 << " secs" << endl;
+        }
     }
 
     for (int cur = 0; cur < NG; cur++) {
@@ -215,9 +215,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
             iC( eval_upward_hgh_recursive(1, dir, hdmap, reqbndset) );
         }
         //Rpre
-	if (cur != 0) {
-	    iC( _bndvec.getEnd(mask) );
-	}
+        if (cur != 0) {
+            iC( _bndvec.getEnd(mask) );
+        }
         //Scur
         vector<BndKey> reqbnd;
         reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
@@ -253,7 +253,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         }
         //S1
         vector<BndKey> reqbnd;
-	reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
+        reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
         iC( _bndvec.getBegin(reqbnd, mask) );
     }
 
@@ -295,7 +295,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 
     t1 = time(0);
     if(mpirank==0) {
-	cout << "End high frequency pass: " << difftime(t1,t0)
+        cout << "End high frequency pass: " << difftime(t1,t0)
              << " secs" << endl;
     }
     // LOW COMM
@@ -308,13 +308,13 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     iC( _boxvec.getEnd(mask) );
     t1 = time(0);
     if(mpirank == 0) {
-	cout << "Communication time for low-frequency computations: "
+        cout << "Communication time for low-frequency computations: "
              << difftime(t1,t0) << " secs" << endl;
     }
     //
     // LOW DOWN
     if(mpirank == 0) {
-	cout << "Beginning low frequency downward pass..." << endl;
+        cout << "Beginning low frequency downward pass..." << endl;
     }
     t0 = time(0);
     for(map< double, vector<BoxKey> >::reverse_iterator mi = ldmap.rbegin();
@@ -323,7 +323,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     }
     t1 = time(0);
     cout << "End low frequency downward pass: " << difftime(t1,t0)
-	 << " secs on proc " << mpirank << endl;
+         << " secs on proc " << mpirank << endl;
 
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     //set val from extval
@@ -340,13 +340,13 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if(has_pts(curdat) && own_box(curkey, mpirank) && isterminal(curdat)) {
-	    CpxNumVec& extval = curdat.extval();
-	    vector<int>& curpis = curdat.ptidxvec();
-	    for(int k=0; k<curpis.size(); k++) {
-		int poff = curpis[k];
-		val.access(poff) = extval(k);
-	    }
-	}
+            CpxNumVec& extval = curdat.extval();
+            vector<int>& curpis = curdat.ptidxvec();
+            for(int k=0; k<curpis.size(); k++) {
+                int poff = curpis[k];
+                val.access(poff) = extval(k);
+            }
+        }
     }
     //call val->put
     val.putBegin(wrtpts, all);  val.putEnd(all);
@@ -368,66 +368,66 @@ int Wave3d::eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqbo
     iC( _mlibptr->upwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
     //---------------
     int tdof = 1;
-    for(int k = 0; k < srcvec.size(); k++) {
+    for (int k = 0; k < srcvec.size(); k++) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
         // If there are no points, continue to the next Box
-	if (!has_pts(srcdat)) {
-	    continue;
-	}
-	//-----------------------------------------------------------------------------
-	Point3 srcctr = center(srckey);
-	//get array
-	CpxNumVec upchkval(tdof*ucp.n());
+        if (!has_pts(srcdat)) {
+            continue;
+        }
+        //-----------------------------------------------------------------------------
+        Point3 srcctr = center(srckey);
+        //get array
+        CpxNumVec upchkval(tdof*ucp.n());
         setvalue(upchkval,cpx(0,0));
-	CpxNumVec& upeqnden = srcdat.upeqnden();
-	//ue2dc
-	if(isterminal(srcdat)) {
-	    DblNumMat upchkpos(ucp.m(), ucp.n());
-	    for(int k=0; k<ucp.n(); k++) {
-		for(int d=0; d<dim(); d++) {
-		    upchkpos(d,k) = ucp(d,k) + srcctr(d);
-		}
-	    }
-	    //mul
-	    CpxNumMat mat;
-	    iC( _knl.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
-	    iC( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
-	} else {
-	    for (int ind = 0; ind < NUM_DIRS; ind++) {
-		int a = DIR_1(ind);
-		int b = DIR_2(ind);
-		int c = DIR_3(ind);
-		BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
-		BoxDat& chddat = _boxvec.access(chdkey);
-		if(has_pts(chddat)) {
-		    iC( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
-		}
-	    }
-	}
+        CpxNumVec& upeqnden = srcdat.upeqnden();
+        //ue2dc
+        if (isterminal(srcdat)) {
+            DblNumMat upchkpos(ucp.m(), ucp.n());
+            for (int k = 0; k < ucp.n(); k++) {
+                for (int d = 0; d < dim(); d++) {
+                    upchkpos(d,k) = ucp(d,k) + srcctr(d);
+                }
+            }
+            //mul
+            CpxNumMat mat;
+            iC( _knl.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
+            iC( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
+        } else {
+            for (int ind = 0; ind < NUM_DIRS; ind++) {
+                int a = DIR_1(ind);
+                int b = DIR_2(ind);
+                int c = DIR_3(ind);
+                BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
+                BoxDat& chddat = _boxvec.access(chdkey);
+                if (has_pts(chddat)) {
+                    iC( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
+                }
+            }
+        }
 
-	//uc2ue
-	CpxNumMat& v  = uc2ue(0);
-	CpxNumMat& is = uc2ue(1); //LEXING: it is stored as a matrix
-	CpxNumMat& up = uc2ue(2);
-	CpxNumVec mid(up.m());
-	setvalue(mid,cpx(0,0));
-	iC( zgemv(1.0, up, upchkval, 0.0, mid) );
-	for (int k=0; k<mid.m(); k++) {
-	    mid(k) = mid(k) * is(k,0);
-	}
-	upeqnden.resize(v.m());
-	setvalue(upeqnden,cpx(0,0));
-	iC( zgemv(1.0, v, mid, 0.0, upeqnden) );
+        //uc2ue
+        CpxNumMat& v  = uc2ue(0);
+        CpxNumMat& is = uc2ue(1); //LEXING: it is stored as a matrix
+        CpxNumMat& up = uc2ue(2);
+        CpxNumVec mid(up.m());
+        setvalue(mid,cpx(0,0));
+        iC( zgemv(1.0, up, upchkval, 0.0, mid) );
+        for (int k = 0; k < mid.m(); k++) {
+            mid(k) = mid(k) * is(k,0);
+        }
+        upeqnden.resize(v.m());
+        setvalue(upeqnden,cpx(0,0));
+        iC( zgemv(1.0, v, mid, 0.0, upeqnden) );
 
-	//-------------------------
-	//EXTRA WORK, change role now
-	// Add boxes in U, V, W, and X lists of trgdat to reqboxset.           
-	BoxDat& trgdat = srcdat;
-	reqboxset.insert(trgdat.undeidxvec().begin(), trgdat.undeidxvec().end());
-	reqboxset.insert(trgdat.vndeidxvec().begin(), trgdat.vndeidxvec().end());
-	reqboxset.insert(trgdat.wndeidxvec().begin(), trgdat.wndeidxvec().end());
-	reqboxset.insert(trgdat.xndeidxvec().begin(), trgdat.xndeidxvec().end());
+        //-------------------------
+        //EXTRA WORK, change role now
+        // Add boxes in U, V, W, and X lists of trgdat to reqboxset.           
+        BoxDat& trgdat = srcdat;
+        reqboxset.insert(trgdat.undeidxvec().begin(), trgdat.undeidxvec().end());
+        reqboxset.insert(trgdat.vndeidxvec().begin(), trgdat.vndeidxvec().end());
+        reqboxset.insert(trgdat.wndeidxvec().begin(), trgdat.wndeidxvec().end());
+        reqboxset.insert(trgdat.xndeidxvec().begin(), trgdat.xndeidxvec().end());
     }
     return 0;
 }
@@ -447,83 +447,83 @@ int Wave3d::eval_dnward_low(double W, vector<BoxKey>& trgvec)
     iC( _mlibptr->downwardLowFetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
     //------------------
     int _P = P();
-    for(int k = 0; k < trgvec.size(); k++) {
+    for (int k = 0; k < trgvec.size(); k++) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
         // If there are no points, continue to the next box.
         if (!has_pts(trgdat)) {
-	    continue;
-	}
-	//-----------------------------------------------------------------------------
-	Point3 trgctr = center(trgkey);
-	//array
-	CpxNumVec& dnchkval = trgdat.dnchkval();
-	if(dnchkval.m()==0) {
-	    dnchkval.resize(dcp.n());
-	    setvalue(dnchkval,cpx(0,0));
-	}
-	if(trgdat.extval().m()==0) {
-	    trgdat.extval().resize( trgdat.extpos().n() );
-	    setvalue(trgdat.extval(), cpx(0,0));
-	}
-	DblNumMat dnchkpos(dcp.m(), dcp.n());
-	for(int k=0; k<dcp.n(); k++) {
-	    for(int d=0; d<dim(); d++) {
-		dnchkpos(d,k) = dcp(d,k) + trgctr(d);
-	    }
-	}
-	// List computations
+            continue;
+        }
+        //-----------------------------------------------------------------------------
+        Point3 trgctr = center(trgkey);
+        //array
+        CpxNumVec& dnchkval = trgdat.dnchkval();
+        if (dnchkval.m() == 0) {
+            dnchkval.resize(dcp.n());
+            setvalue(dnchkval,cpx(0,0));
+        }
+        if (trgdat.extval().m() == 0) {
+            trgdat.extval().resize( trgdat.extpos().n() );
+            setvalue(trgdat.extval(), cpx(0,0));
+        }
+        DblNumMat dnchkpos(dcp.m(), dcp.n());
+        for (int k = 0; k < dcp.n(); k++) {
+            for (int d = 0; d < dim(); d++) {
+                dnchkpos(d,k) = dcp(d,k) + trgctr(d);
+            }
+        }
+        // List computations
         iC( U_list_compute(trgdat) );
-	iC( V_list_compute(trgdat, W, _P, trgctr, uep, dcp, dnchkval, ue2dc) );
-	iC( W_list_compute(trgdat, W, uep) );
-	iC( X_list_compute(trgdat, dcp, dnchkpos, dnchkval) );
+        iC( V_list_compute(trgdat, W, _P, trgctr, uep, dcp, dnchkval, ue2dc) );
+        iC( W_list_compute(trgdat, W, uep) );
+        iC( X_list_compute(trgdat, dcp, dnchkpos, dnchkval) );
 
-	//-------------
-	//dnchkval to dneqnden
-	CpxNumMat& v  = dc2de(0);
-	CpxNumMat& is = dc2de(1);
-	CpxNumMat& up = dc2de(2);
-	CpxNumVec mid(up.m());        setvalue(mid,cpx(0,0));
-	iC( zgemv(1.0, up, dnchkval, 0.0, mid) );
-	dnchkval.resize(0); //LEXING: SAVE SPACE
-	for(int k=0; k<mid.m(); k++) {
-	    mid(k) = mid(k) * is(k,0);
-	}
-	CpxNumVec dneqnden(v.m());
-	setvalue(dneqnden,cpx(0,0));
-	iC( zgemv(1.0, v, mid, 0.0, dneqnden) );
-	//-------------
-	//to children or to exact points
-	if(isterminal(trgdat)) {
-	    DblNumMat dneqnpos(dep.m(), dep.n());
-	    for(int k = 0; k < dep.n(); k++) {
-		for(int d = 0; d < dim(); d++) {
-		    dneqnpos(d,k) = dep(d,k) + trgctr(d);
-		}
-	    }
-	    //mul
-	    CpxNumMat mat;
-	    iC( _knl.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
-	    iC( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
-	} else {
-	    //put stuff to children
-	    for (int ind = 0; ind < NUM_DIRS; ind++) {
-		int a = DIR_1(ind);
-		int b = DIR_2(ind);
-		int c = DIR_3(ind);
-		BoxKey chdkey = this->chdkey(trgkey, Index3(a, b, c));
-		BoxDat& chddat = _boxvec.access(chdkey);
-		if (!has_pts(chddat)) {
-		    continue;
-		}
-		//mul
-		if (chddat.dnchkval().m() == 0) {
-		    chddat.dnchkval().resize(de2dc(a,b,c).m());
-		    setvalue(chddat.dnchkval(), cpx(0,0));
-		}
-		iC( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddat.dnchkval()) );
-	    }
-	}
+        //-------------
+        //dnchkval to dneqnden
+        CpxNumMat& v  = dc2de(0);
+        CpxNumMat& is = dc2de(1);
+        CpxNumMat& up = dc2de(2);
+        CpxNumVec mid(up.m());        setvalue(mid,cpx(0,0));
+        iC( zgemv(1.0, up, dnchkval, 0.0, mid) );
+        dnchkval.resize(0); //LEXING: SAVE SPACE
+        for (int k = 0; k < mid.m(); k++) {
+            mid(k) = mid(k) * is(k,0);
+        }
+        CpxNumVec dneqnden(v.m());
+        setvalue(dneqnden,cpx(0,0));
+        iC( zgemv(1.0, v, mid, 0.0, dneqnden) );
+        //-------------
+        //to children or to exact points
+        if (isterminal(trgdat)) {
+            DblNumMat dneqnpos(dep.m(), dep.n());
+            for (int k = 0; k < dep.n(); k++) {
+                for (int d = 0; d < dim(); d++) {
+                    dneqnpos(d,k) = dep(d,k) + trgctr(d);
+                }
+            }
+            //mul
+            CpxNumMat mat;
+            iC( _knl.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
+            iC( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
+        } else {
+            //put stuff to children
+            for (int ind = 0; ind < NUM_DIRS; ind++) {
+                int a = DIR_1(ind);
+                int b = DIR_2(ind);
+                int c = DIR_3(ind);
+                BoxKey chdkey = this->chdkey(trgkey, Index3(a, b, c));
+                BoxDat& chddat = _boxvec.access(chdkey);
+                if (!has_pts(chddat)) {
+                    continue;
+                }
+                //mul
+                if (chddat.dnchkval().m() == 0) {
+                    chddat.dnchkval().resize(de2dc(a,b,c).m());
+                    setvalue(chddat.dnchkval(), cpx(0,0));
+                }
+                iC( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddat.dnchkval()) );
+            }
+        }
     }
     return 0;
 }
@@ -534,19 +534,19 @@ int Wave3d::U_list_compute(BoxDat& trgdat)
     CallStackEntry entry("Wave3d::U_list_compute");
 #endif
     for(vector<BoxKey>::iterator vi = trgdat.undeidxvec().begin();
-	vi != trgdat.undeidxvec().end(); vi++) {
-	BoxKey neikey = (*vi);
-	BoxDat& neidat = _boxvec.access(neikey);
-	//mul
-	CpxNumMat mat;
-	iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
-	iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
+        vi != trgdat.undeidxvec().end(); vi++) {
+        BoxKey neikey = (*vi);
+        BoxDat& neidat = _boxvec.access(neikey);
+        //mul
+        CpxNumMat mat;
+        iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+        iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
     }
     return 0;
 }
 
 int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNumMat& uep,
-			   DblNumMat& dcp, CpxNumVec& dnchkval, NumTns<CpxNumTns>& ue2dc)
+                           DblNumMat& dcp, CpxNumVec& dnchkval, NumTns<CpxNumTns>& ue2dc)
 {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::V_list_compute");
@@ -555,78 +555,78 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
     setvalue(_valfft,cpx(0,0));
     //LEXING: SPECIAL
     for(vector<BoxKey>::iterator vi=trgdat.vndeidxvec().begin();
-	vi!=trgdat.vndeidxvec().end(); vi++) {
-	BoxKey neikey = (*vi);
-	BoxDat& neidat = _boxvec.access(neikey);
-	//mul
-	Point3 neictr = center(neikey);         //double DD = neinde.width();
-	Index3 idx;
-	for(int d=0; d<dim(); d++) {
-	    idx(d) = int(round( (trgctr[d]-neictr[d])/W )); //LEXING:CHECK
-	}
-	//create if it is missing
-	if(neidat.fftcnt()==0) {
-	    setvalue(_denfft, cpx(0,0));
-	    CpxNumVec& neiden = neidat.upeqnden();
-	    for(int k=0; k<uep.n(); k++) {
-		int a = int( round((uep(0,k)+W/2)/step) ) + _P;
-		int b = int( round((uep(1,k)+W/2)/step) ) + _P;
-		int c = int( round((uep(2,k)+W/2)/step) ) + _P;
-		_denfft(a,b,c) = neiden(k);
-	    }
-	    fftw_execute(_fplan);
-	    neidat.upeqnden_fft() = _denfft; //COPY to the right place
-	}
-	CpxNumTns& neidenfft = neidat.upeqnden_fft();
-	//TODO: LEXING GET THE INTERACTION TENSOR
-	CpxNumTns& inttns = ue2dc(idx[0]+3,idx[1]+3,idx[2]+3);
-	for(int a = 0; a < 2 * _P; a++) {
-	    for(int b = 0; b < 2 * _P; b++) {
-		for(int c = 0; c < 2 * _P; c++) {
-		    _valfft(a,b,c) += (neidenfft(a,b,c)*inttns(a,b,c));
-		}
-	    }
-	}
-	//clean if necessary
-	neidat.fftcnt()++;
-	if(neidat.fftcnt()==neidat.fftnum()) {
-	    neidat.upeqnden_fft().resize(0,0,0);
-	    neidat.fftcnt() = 0;//reset, LEXING
-	}
+        vi!=trgdat.vndeidxvec().end(); vi++) {
+        BoxKey neikey = (*vi);
+        BoxDat& neidat = _boxvec.access(neikey);
+        //mul
+        Point3 neictr = center(neikey);         //double DD = neinde.width();
+        Index3 idx;
+        for(int d=0; d<dim(); d++) {
+            idx(d) = int(round( (trgctr[d]-neictr[d])/W )); //LEXING:CHECK
+        }
+        //create if it is missing
+        if(neidat.fftcnt()==0) {
+            setvalue(_denfft, cpx(0,0));
+            CpxNumVec& neiden = neidat.upeqnden();
+            for(int k=0; k<uep.n(); k++) {
+                int a = int( round((uep(0,k)+W/2)/step) ) + _P;
+                int b = int( round((uep(1,k)+W/2)/step) ) + _P;
+                int c = int( round((uep(2,k)+W/2)/step) ) + _P;
+                _denfft(a,b,c) = neiden(k);
+            }
+            fftw_execute(_fplan);
+            neidat.upeqnden_fft() = _denfft; //COPY to the right place
+        }
+        CpxNumTns& neidenfft = neidat.upeqnden_fft();
+        //TODO: LEXING GET THE INTERACTION TENSOR
+        CpxNumTns& inttns = ue2dc(idx[0]+3,idx[1]+3,idx[2]+3);
+        for(int a = 0; a < 2 * _P; a++) {
+            for(int b = 0; b < 2 * _P; b++) {
+                for(int c = 0; c < 2 * _P; c++) {
+                    _valfft(a,b,c) += (neidenfft(a,b,c)*inttns(a,b,c));
+                }
+            }
+        }
+        //clean if necessary
+        neidat.fftcnt()++;
+        if(neidat.fftcnt()==neidat.fftnum()) {
+            neidat.upeqnden_fft().resize(0,0,0);
+            neidat.fftcnt() = 0;//reset, LEXING
+        }
     }
     fftw_execute(_bplan);
     //add back
     double coef = 1.0/(2*_P * 2*_P * 2*_P);
     for(int k=0; k<dcp.n(); k++) {
-	int a = int( round((dcp(0,k)+W/2)/step) ) + _P;
-	int b = int( round((dcp(1,k)+W/2)/step) ) + _P;
-	int c = int( round((dcp(2,k)+W/2)/step) ) + _P;
-	dnchkval(k) += (_valfft(a,b,c)*coef); //LEXING: VERY IMPORTANT
+        int a = int( round((dcp(0,k)+W/2)/step) ) + _P;
+        int b = int( round((dcp(1,k)+W/2)/step) ) + _P;
+        int c = int( round((dcp(2,k)+W/2)/step) ) + _P;
+        dnchkval(k) += (_valfft(a,b,c)*coef); //LEXING: VERY IMPORTANT
     }
     return 0;
 }
 
 int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
-			   CpxNumVec& dnchkval)
+                           CpxNumVec& dnchkval)
 {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::X_list_compute");
 #endif
     for(vector<BoxKey>::iterator vi = trgdat.xndeidxvec().begin();
-	vi != trgdat.xndeidxvec().end(); vi++) {
-	BoxKey neikey = (*vi);
-	BoxDat& neidat = _boxvec.access(neikey);
-	Point3 neictr = center(neikey);
-	if(isterminal(trgdat) && trgdat.extpos().n() < dcp.n()) {
-	    CpxNumMat mat;
-	    iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
-	    iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
-	} else {
-	    //mul
-	    CpxNumMat mat;
-	    iC( _knl.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
-	    iC( zgemv(1.0, mat, neidat.extden(), 1.0, dnchkval) );
-	}
+        vi != trgdat.xndeidxvec().end(); vi++) {
+        BoxKey neikey = (*vi);
+        BoxDat& neidat = _boxvec.access(neikey);
+        Point3 neictr = center(neikey);
+        if(isterminal(trgdat) && trgdat.extpos().n() < dcp.n()) {
+            CpxNumMat mat;
+            iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+            iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
+        } else {
+            //mul
+            CpxNumMat mat;
+            iC( _knl.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
+            iC( zgemv(1.0, mat, neidat.extden(), 1.0, dnchkval) );
+        }
     }
     return 0;
 }
@@ -637,28 +637,28 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep)
     CallStackEntry entry("Wave3d::W_list_compute");
 #endif
     for(vector<BoxKey>::iterator vi = trgdat.wndeidxvec().begin();
-	vi != trgdat.wndeidxvec().end(); vi++) {
-	BoxKey neikey = (*vi);
-	BoxDat& neidat = _boxvec.access(neikey);
-	Point3 neictr = center(neikey);
-	//upchkpos
-	if (isterminal(neidat) && neidat.extpos().n()<uep.n()) {
-	    CpxNumMat mat;
-	    iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
-	    iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
-	} else {
-	    double coef = width(neikey) / W; //LEXING: SUPER IMPORTANT
-	    DblNumMat upeqnpos(uep.m(), uep.n()); //local version
-	    for(int k=0; k<uep.n(); k++) {
-		for(int d=0; d<dim(); d++) {
-		    upeqnpos(d,k) = coef*uep(d,k) + neictr(d);
-		}
-	    }
-	    //mul
-	    CpxNumMat mat;
-	    iC( _knl.kernel(trgdat.extpos(), upeqnpos, upeqnpos, mat) );
-	    iC( zgemv(1.0, mat, neidat.upeqnden(), 1.0, trgdat.extval()) );
-	}
+        vi != trgdat.wndeidxvec().end(); vi++) {
+        BoxKey neikey = (*vi);
+        BoxDat& neidat = _boxvec.access(neikey);
+        Point3 neictr = center(neikey);
+        //upchkpos
+        if (isterminal(neidat) && neidat.extpos().n()<uep.n()) {
+            CpxNumMat mat;
+            iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+            iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
+        } else {
+            double coef = width(neikey) / W; //LEXING: SUPER IMPORTANT
+            DblNumMat upeqnpos(uep.m(), uep.n()); //local version
+            for(int k=0; k<uep.n(); k++) {
+                for(int d=0; d<dim(); d++) {
+                    upeqnpos(d,k) = coef*uep(d,k) + neictr(d);
+                }
+            }
+            //mul
+            CpxNumMat mat;
+            iC( _knl.kernel(trgdat.extpos(), upeqnpos, upeqnpos, mat) );
+            iC( zgemv(1.0, mat, neidat.upeqnden(), 1.0, trgdat.extval()) );
+        }
     }
     return 0;
 }
@@ -672,10 +672,10 @@ int Wave3d::eval_upward_hgh_recursive(double W, Index3 nowdir,
     CallStackEntry entry("Wave3d::eval_upward_hgh_recursive");
 #endif
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
-    if(mi!=hdmap.end()) {
+    if (mi != hdmap.end()) {
         iC( eval_upward_hgh(W, nowdir, mi->second, reqbndset) );
         vector<Index3> dirvec = chddir(nowdir);
-        for(int k = 0; k < dirvec.size(); k++) {
+        for (int k = 0; k < dirvec.size(); k++) {
             iC( eval_upward_hgh_recursive(2*W, dirvec[k], hdmap, reqbndset) );
         }
     }
@@ -720,62 +720,62 @@ int Wave3d::eval_upward_hgh(double W, Index3 dir,
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
         // If there are no points, continue to the next box.
-	if (!has_pts(srcdat)) {
-	    continue;
-	}
-	//-----------------------------------------------------------------------------
-	Point3 srcctr = center(srckey);
-	BndKey bndkey(srckey, dir);
-	BndDat& bnddat = _bndvec.access( bndkey );
-	CpxNumVec& upeqnden = bnddat.dirupeqnden();
-	//eval
-	CpxNumVec upchkval(ue2uc(0,0,0).m());
-	setvalue(upchkval,cpx(0,0));
+        if (!has_pts(srcdat)) {
+            continue;
+        }
+        //-----------------------------------------------------------------------------
+        Point3 srcctr = center(srckey);
+        BndKey bndkey(srckey, dir);
+        BndDat& bnddat = _bndvec.access( bndkey );
+        CpxNumVec& upeqnden = bnddat.dirupeqnden();
+        //eval
+        CpxNumVec upchkval(ue2uc(0,0,0).m());
+        setvalue(upchkval,cpx(0,0));
         // High-frequency M2M
-	if(abs(W-1) < eps) {
-	    // The children boxes only have non-directional equivalent densities
-	    for (int ind = 0; ind < NUM_DIRS; ind++) {
-		int a = DIR_1(ind);
-		int b = DIR_2(ind);
-		int c = DIR_3(ind);
-		BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
-		BoxDat& chddat = _boxvec.access(chdkey);
-		if(has_pts(chddat)) {
-		    CpxNumVec& chdued = chddat.upeqnden();
-		    iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
-		}
-	    }
-	} else {
-	    Index3 pdir = predir(dir); // parent direction
-	    for (int ind = 0; ind < NUM_DIRS; ind++) {
-		int a = DIR_1(ind);
-		int b = DIR_2(ind);
-		int c = DIR_3(ind);
-		BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
-		BoxDat& chddat = _boxvec.access(chdkey);
-		if(has_pts(chddat)) {
-		    BndKey bndkey(chdkey, pdir);
-		    BndDat& bnddat = _bndvec.access(bndkey);
-		    CpxNumVec& chdued = bnddat.dirupeqnden();
-		    iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
-		}
-	    }
-	}
+        if(abs(W-1) < eps) {
+            // The children boxes only have non-directional equivalent densities
+            for (int ind = 0; ind < NUM_DIRS; ind++) {
+                int a = DIR_1(ind);
+                int b = DIR_2(ind);
+                int c = DIR_3(ind);
+                BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
+                BoxDat& chddat = _boxvec.access(chdkey);
+                if(has_pts(chddat)) {
+                    CpxNumVec& chdued = chddat.upeqnden();
+                    iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
+                }
+            }
+        } else {
+            Index3 pdir = predir(dir); // parent direction
+            for (int ind = 0; ind < NUM_DIRS; ind++) {
+                int a = DIR_1(ind);
+                int b = DIR_2(ind);
+                int c = DIR_3(ind);
+                BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
+                BoxDat& chddat = _boxvec.access(chdkey);
+                if(has_pts(chddat)) {
+                    BndKey bndkey(chdkey, pdir);
+                    BndDat& bnddat = _bndvec.access(bndkey);
+                    CpxNumVec& chdued = bnddat.dirupeqnden();
+                    iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
+                }
+            }
+        }
 
-	// Upward check to upward equivalency (uc2ue)
-	CpxNumMat& E1 = uc2ue(0);
-	CpxNumMat& E2 = uc2ue(1);
-	CpxNumMat& E3 = uc2ue(2);
-	cpx dat0[DVMAX], dat1[DVMAX];
-	CpxNumVec tmp0(E3.m(), false, dat0);
+        // Upward check to upward equivalency (uc2ue)
+        CpxNumMat& E1 = uc2ue(0);
+        CpxNumMat& E2 = uc2ue(1);
+        CpxNumMat& E3 = uc2ue(2);
+        cpx dat0[DVMAX], dat1[DVMAX];
+        CpxNumVec tmp0(E3.m(), false, dat0);
         iA(DVMAX>=E3.m());
-	CpxNumVec tmp1(E2.m(), false, dat1);
-	iA(DVMAX>=E2.m());
-	upeqnden.resize(E1.m());
-	setvalue(upeqnden,cpx(0,0));
-	iC( zgemv(1.0, E3, upchkval, 0.0, tmp0) );
-	iC( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
-	iC( zgemv(1.0, E1, tmp1, 0.0, upeqnden) );
+        CpxNumVec tmp1(E2.m(), false, dat1);
+        iA(DVMAX>=E2.m());
+        upeqnden.resize(E1.m());
+        setvalue(upeqnden,cpx(0,0));
+        iC( zgemv(1.0, E3, upchkval, 0.0, tmp0) );
+        iC( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
+        iC( zgemv(1.0, E1, tmp1, 0.0, upeqnden) );
     }
 
     iC( get_reqs(dir, hdvecs, reqbndset) );
@@ -795,8 +795,8 @@ int Wave3d::get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
       BoxDat& trgdat = _boxvec.access(trgkey);
       vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
       for(int i = 0; i < tmpvec.size(); i++) {
-	  BoxKey srckey = tmpvec[i];
-	  reqbndset.insert(BndKey(srckey, dir));
+          BoxKey srckey = tmpvec[i];
+          reqbndset.insert(BndKey(srckey, dir));
       }
   }
   return 0;
@@ -823,101 +823,101 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
         BoxDat& trgdat = _boxvec.access(trgkey);
         // If there are not points, continue to the next box.
         if (!has_pts(trgdat)) {
-	    continue;
-	}
-	//-----------------------------------------------------------------------------
-	Point3 trgctr = center(trgkey);
-	//1. mix
-	//get target
-	DblNumMat tmpdcp(dcp.m(),dcp.n());
-	for (int k = 0; k < tmpdcp.n(); k++) {
-	    for (int d = 0; d < 3; d++) {
-		tmpdcp(d,k) = dcp(d,k) + trgctr(d);
-	    }
-	}
-	BndKey bndkey(trgkey, dir);
-	BndDat& bnddat = _bndvec.access(bndkey);
-	CpxNumVec& dcv = bnddat.dirdnchkval();
-	vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-	for (int i = 0; i < tmpvec.size(); i++) {
-	    BoxKey srckey = tmpvec[i];
-	    Point3 srcctr = center(srckey);
-	    //difference vector
-	    Point3 diff = trgctr - srcctr;
-	    diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
-	    iA( nml2dir(diff,W) == dir );  //Index3 dir = nml2dir(tmp, W);
-	    //get source
-	    DblNumMat tmpuep(uep.m(),uep.n());
-	    for (int k = 0; k < tmpuep.n(); k++) {
-		for (int d = 0; d < 3; d++) {
-		    tmpuep(d,k) = uep(d,k) + srcctr(d);
-		}
-	    }
-	    BndKey bndkey(srckey, dir);
-	    BndDat& bnddat = _bndvec.access(bndkey);
-	    CpxNumVec& ued = bnddat.dirupeqnden();
-	    //mateix
-	    CpxNumMat Mts;          iC( _knl.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
-	    //allocate space if necessary
-	    if(dcv.m()==0) {
-		dcv.resize(Mts.m());
-		setvalue(dcv,cpx(0,0)); //LEXING: CHECK
-	    }
-	    iC( zgemv(1.0, Mts, ued, 1.0, dcv) );
-	}
-	//2. to children
-	CpxNumVec& dnchkval = dcv;
-	//dc2de
-	CpxNumMat& E1 = dc2de(0);
-	CpxNumMat& E2 = dc2de(1);
-	CpxNumMat& E3 = dc2de(2);
-	cpx dat0[DVMAX], dat1[DVMAX], dat2[DVMAX];
-	CpxNumVec tmp0(E3.m(), false, dat0);
-	CpxNumVec tmp1(E2.m(), false, dat1);
-	CpxNumVec dneqnden(E1.m(), false, dat2);
-	iC( zgemv(1.0, E3, dnchkval, 0.0, tmp0) );
-	iC( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
-	iC( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
-	dnchkval.resize(0); //LEXING: SAVE SPACE
-	//eval
-	if(abs(W-1)<eps) {
-	    for (int ind = 0; ind < NUM_DIRS; ind++) {
-		int a = DIR_1(ind);
-		int b = DIR_2(ind);
-		int c = DIR_3(ind);		
-		BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
-		BoxDat& chddat = _boxvec.access(chdkey);
-		if(!has_pts(chddat)) {
-		    continue;
-		}
-		CpxNumVec& chddcv = chddat.dnchkval();
-		if(chddcv.m()==0) {
-		    chddcv.resize(de2dc(a,b,c).m());
-		    setvalue(chddcv,cpx(0,0));
-		}
-		iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
-	    }
-	} else {
-	    Index3 pdir = predir(dir); //LEXING: CHECK
-	    for (int ind = 0; ind < NUM_DIRS; ind++) {
-		int a = DIR_1(ind);
-		int b = DIR_2(ind);
-		int c = DIR_3(ind);		
-		BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
-		BoxDat& chddat = _boxvec.access(chdkey);
-		if (!has_pts(chddat)) {
-		    continue;
-		}
-		BndKey bndkey(chdkey, pdir);
-		BndDat& bnddat = _bndvec.access(bndkey);
-		CpxNumVec& chddcv = bnddat.dirdnchkval();
-		if(chddcv.m()==0) {
-		    chddcv.resize(de2dc(a,b,c).m());
-		    setvalue(chddcv,cpx(0,0));
-		}
-		iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
-	    }
-	}
+            continue;
+        }
+        //-----------------------------------------------------------------------------
+        Point3 trgctr = center(trgkey);
+        //1. mix
+        //get target
+        DblNumMat tmpdcp(dcp.m(),dcp.n());
+        for (int k = 0; k < tmpdcp.n(); k++) {
+            for (int d = 0; d < 3; d++) {
+                tmpdcp(d,k) = dcp(d,k) + trgctr(d);
+            }
+        }
+        BndKey bndkey(trgkey, dir);
+        BndDat& bnddat = _bndvec.access(bndkey);
+        CpxNumVec& dcv = bnddat.dirdnchkval();
+        vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
+        for (int i = 0; i < tmpvec.size(); i++) {
+            BoxKey srckey = tmpvec[i];
+            Point3 srcctr = center(srckey);
+            //difference vector
+            Point3 diff = trgctr - srcctr;
+            diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
+            iA( nml2dir(diff,W) == dir );  //Index3 dir = nml2dir(tmp, W);
+            //get source
+            DblNumMat tmpuep(uep.m(),uep.n());
+            for (int k = 0; k < tmpuep.n(); k++) {
+                for (int d = 0; d < 3; d++) {
+                    tmpuep(d,k) = uep(d,k) + srcctr(d);
+                }
+            }
+            BndKey bndkey(srckey, dir);
+            BndDat& bnddat = _bndvec.access(bndkey);
+            CpxNumVec& ued = bnddat.dirupeqnden();
+            //mateix
+            CpxNumMat Mts;          iC( _knl.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
+            //allocate space if necessary
+            if(dcv.m()==0) {
+                dcv.resize(Mts.m());
+                setvalue(dcv,cpx(0,0)); //LEXING: CHECK
+            }
+            iC( zgemv(1.0, Mts, ued, 1.0, dcv) );
+        }
+        //2. to children
+        CpxNumVec& dnchkval = dcv;
+        //dc2de
+        CpxNumMat& E1 = dc2de(0);
+        CpxNumMat& E2 = dc2de(1);
+        CpxNumMat& E3 = dc2de(2);
+        cpx dat0[DVMAX], dat1[DVMAX], dat2[DVMAX];
+        CpxNumVec tmp0(E3.m(), false, dat0);
+        CpxNumVec tmp1(E2.m(), false, dat1);
+        CpxNumVec dneqnden(E1.m(), false, dat2);
+        iC( zgemv(1.0, E3, dnchkval, 0.0, tmp0) );
+        iC( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
+        iC( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
+        dnchkval.resize(0); //LEXING: SAVE SPACE
+        //eval
+        if(abs(W-1)<eps) {
+            for (int ind = 0; ind < NUM_DIRS; ind++) {
+                int a = DIR_1(ind);
+                int b = DIR_2(ind);
+                int c = DIR_3(ind);             
+                BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
+                BoxDat& chddat = _boxvec.access(chdkey);
+                if(!has_pts(chddat)) {
+                    continue;
+                }
+                CpxNumVec& chddcv = chddat.dnchkval();
+                if(chddcv.m()==0) {
+                    chddcv.resize(de2dc(a,b,c).m());
+                    setvalue(chddcv,cpx(0,0));
+                }
+                iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
+            }
+        } else {
+            Index3 pdir = predir(dir); //LEXING: CHECK
+            for (int ind = 0; ind < NUM_DIRS; ind++) {
+                int a = DIR_1(ind);
+                int b = DIR_2(ind);
+                int c = DIR_3(ind);             
+                BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
+                BoxDat& chddat = _boxvec.access(chdkey);
+                if (!has_pts(chddat)) {
+                    continue;
+                }
+                BndKey bndkey(chdkey, pdir);
+                BndDat& bnddat = _bndvec.access(bndkey);
+                CpxNumVec& chddcv = bnddat.dirdnchkval();
+                if(chddcv.m()==0) {
+                    chddcv.resize(de2dc(a,b,c).m());
+                    setvalue(chddcv,cpx(0,0));
+                }
+                iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
+            }
+        }
     }
     //-----------------
     //EXTRA WORK, change role
@@ -926,25 +926,25 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
         if (!has_pts(srcdat)) {
-	    continue;
-	}
-	BndKey bndkey(srckey, dir);
-	BndDat& bnddat = _bndvec.access( bndkey );
-	bnddat.dirupeqnden().resize(0);
+            continue;
+        }
+        BndKey bndkey(srckey, dir);
+        BndDat& bnddat = _bndvec.access( bndkey );
+        bnddat.dirupeqnden().resize(0);
     }
     for(int k=0; k<trgvec.size(); k++) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
         if (!has_pts(trgdat)) {
-	    continue;
-	}
-	vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-	for(int i=0; i<tmpvec.size(); i++) {
-	    BoxKey srckey = tmpvec[i];
-	    BndKey bndkey(srckey, dir);
-	    BndDat& bnddat = _bndvec.access(bndkey);
-	    bnddat.dirupeqnden().resize(0);
-	}
+            continue;
+        }
+        vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
+        for(int i=0; i<tmpvec.size(); i++) {
+            BoxKey srckey = tmpvec[i];
+            BndKey bndkey(srckey, dir);
+            BndDat& bnddat = _bndvec.access(bndkey);
+            bnddat.dirupeqnden().resize(0);
+        }
     }
     return 0;
 }
