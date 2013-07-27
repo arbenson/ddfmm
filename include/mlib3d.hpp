@@ -51,14 +51,8 @@ public:
     string _ldname;
     string _hdname;
   
-    //INTERNAL
-    map<double, LowFreqEntry> _w2ldmap;
-    map<double, map<Index3, HghFreqDirEntry> > _w2hdmap;
-  
-public:
     Mlib3d(const string& p): ComObject(p) {}
     ~Mlib3d() {}
-
   
     Kernel3d& knl() { return _knl; }
     int& NPQ() { return _NPQ; }
@@ -85,6 +79,10 @@ public:
     int highFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& prm);
 
     Index3 predir(Index3);
+
+private:
+    map<double, LowFreqEntry> _w2ldmap;
+    map<double, map<Index3, HghFreqDirEntry> > _w2hdmap;
 };
 
 //-------------------
@@ -95,4 +93,3 @@ int serialize(const HghFreqDirEntry&, ostream&, const vector<int>&);
 int deserialize(HghFreqDirEntry&, istream&, const vector<int>&);
 
 #endif
-
