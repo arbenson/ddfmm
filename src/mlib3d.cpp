@@ -65,17 +65,17 @@ int Mlib3d::setup(map<string,string>& opts)
     mi = opts.find("-" + prefix() + "NPQ");
     if(mi!=opts.end()) {
         istringstream ss(mi->second);
-        ss>>_NPQ;
+        ss >> _NPQ;
     }
     mi = opts.find("-" + prefix() + "ldname");
     if(mi!=opts.end()) {
         istringstream ss(mi->second);
-        ss>>_ldname;
+        ss >> _ldname;
     }
     mi = opts.find("-" + prefix() + "hdname");
     if(mi!=opts.end()) {
         istringstream ss(mi->second);
-        ss>>_hdname;
+        ss >> _hdname;
     }
   
     //LEXING: read data in a shared way
@@ -156,10 +156,10 @@ int Mlib3d::downwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
     }
   
     ue2dc.resize(7,7,7);
-    for(int a = 0; a < 7; a++) {
-        for(int b = 0; b < 7; b++) {
-            for(int c = 0; c < 7; c++) {
-                if(abs(a-3)>1 || abs(b-3)>1 || abs(c-3)>1) {
+    for (int a = 0; a < 7; a++) {
+        for (int b = 0; b < 7; b++) {
+            for (int c = 0; c < 7; c++) {
+                if (abs(a - 3) > 1 || abs(b - 3) > 1 || abs(c-3) > 1) {
                     ue2dc(a,b,c) = le.ue2dc()(a,b,c);
                 }
             }
@@ -176,9 +176,10 @@ int Mlib3d::upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
     CallStackEntry entry("Mlib3d::upwardHighFetch");
 #endif
     iA(_w2hdmap.find(W) != _w2hdmap.end());
-    map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
+    map<Index3, HghFreqDirEntry>& curmap = _w2hdmap[W];
   
-    Index3 srt, sgn, prm;  iC( highFetchIndex3Sort(dir, srt, sgn, prm) );
+    Index3 srt, sgn, prm;
+    iC( highFetchIndex3Sort(dir, srt, sgn, prm) );
     iA(curmap.count(srt) != 0);
 
     HghFreqDirEntry& he = curmap[srt];
@@ -247,7 +248,7 @@ int Mlib3d::downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
 	transpose(dc2de(k), tmp);
     }
     DblNumMat dcpchd;
-    if(W == 1.0) { //unit box
+    if (W == 1.0) { //unit box
 	iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
         LowFreqEntry& le = _w2ldmap[W/2];
         dcpchd = le.uep();
@@ -283,12 +284,14 @@ Index3 Mlib3d::predir(Index3 dir)
     int C = dir.linfty();
     int B = C / 2;
     int midx = -1;
-    for(int d=0; d<3; d++) {
-        if(abs(dir(d))==C) midx = d;
+    for (int d = 0; d < 3; d++) {
+        if (abs(dir(d)) == C) {
+	    midx = d;
+	}
     }
     //midx gives the direction
     Index3 res;
-    for(int d=0; d<3; d++) {
+    for (int d = 0; d < 3; d++) {
         res(d) = (dir(d) + C - 1) / 2;
         res(d) = 2 * (res(d) / 2) + 1 - B;
     }
@@ -305,14 +308,14 @@ int Mlib3d::highFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& 
     CallStackEntry entry("Mlib3d::highFetchShuffle");
 #endif
     res.resize(3, tmp.n());
-    for(int k=0; k<res.n(); k++) {
-        for(int d=0; d<3; d++) {
-            res(prm(d),k) = tmp(d,k);
+    for (int k = 0; k < res.n(); k++) {
+        for (int d = 0; d < 3; d++) {
+            res(prm(d), k) = tmp(d, k);
         }
     }
-    for(int k=0; k<res.n(); k++) {
-        for(int d=0; d<3; d++) {
-            res(d,k) = sgn(d) * res(d,k);
+    for (int k = 0; k < res.n(); k++) {
+        for (int d = 0; d < 3; d++) {
+            res(d, k) = sgn(d) * res(d, k);
         }
     }
     return 0;
@@ -325,7 +328,7 @@ int Mlib3d::highFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& pr
     CallStackEntry entry("Mlib3d::highFetchIndex3Sort");
 #endif
     //make it positive
-    for(int d=0; d<3; d++) {
+    for (int d = 0; d < 3; d++) {
         sgn(d) = 1;
         if (val(d) < 0) {
             sgn(d) = -1;
@@ -334,11 +337,11 @@ int Mlib3d::highFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& pr
     }
     //sort
     int upp = val.linfty() + 1;
-    for(int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; d++) {
         int minidx = d;
         int minval = val[d];
-        for(int e = 0; e < 3; e++) {
-            if(val[e] < minval) {
+        for (int e = 0; e < 3; e++) {
+            if (val[e] < minval) {
                 minval = val[e];
                 minidx = e;
             }
