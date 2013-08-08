@@ -6,6 +6,8 @@ using std::vector;
 using std::cerr;
 using std::endl;
 
+#define MAX_FILE_NAME_LENGTH 128
+
 //---------------------------------------------------------
 int Separate_Read(string name, istringstream& is)
 {
@@ -16,7 +18,7 @@ int Separate_Read(string name, istringstream& is)
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
 
-    char filename[100];
+    char filename[MAX_FILE_NAME_LENGTH];
     sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);  
     cerr << filename << endl;
     ifstream fin(filename);
@@ -42,7 +44,7 @@ int Separate_Write(string name, ostringstream& os)
     getMPIInfo(&mpirank, &mpisize);
 
     //
-    char filename[100];
+    char filename[MAX_FILE_NAME_LENGTH];
     sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);
     cerr << filename << endl;
     ofstream fout(filename);
@@ -69,7 +71,7 @@ int Shared_Read(string name, istringstream& is)
 
     vector<char> tmpstr;
     if(mpirank == 0) {
-	char filename[100];
+	char filename[MAX_FILE_NAME_LENGTH];
 	sprintf(filename, "data/%s", name.c_str());
 	cerr << filename << endl;
 	ifstream fin(filename);
@@ -107,7 +109,7 @@ int Shared_Write(string name, ostringstream& os)
 
     //
     if(mpirank == 0) {
-	char filename[100];
+	char filename[MAX_FILE_NAME_LENGTH];
 	sprintf(filename, "data/%s", name.c_str());
 	cerr << filename << endl;
 	ofstream fout(filename);
