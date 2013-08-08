@@ -251,5 +251,3 @@ int deserialize(BndDat& val, istream& is, const vector<int>& mask)
     iA(i==BndDat_Number);
     return 0;
 }
-
-
