@@ -191,6 +191,14 @@ public:
     }
 };
 
+typedef struct ParData {
+    double mean;
+    double var;
+    double max;
+    double min;
+} ParData;
+
+
 //---------------------------------------------------------------------------
 class Wave3d: public ComObject
 {
@@ -300,7 +308,7 @@ private:
 
     int P();
 
-    pair<double, double> mean_var(time_t t0, time_t t1);
+    ParData gatherParData(time_t t0, time_t t1);
 
 
     // Functions for evaluation
