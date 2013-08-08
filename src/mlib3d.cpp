@@ -195,11 +195,11 @@ int Mlib3d::upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
     DblNumMat uepchd;
     if (W == 1.0) { //unit box
 	iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
-        LowFreqEntry& le = _w2ldmap[W/2];
+        LowFreqEntry& le = _w2ldmap[W / 2];
         uepchd = le.uep();
     } else { //large box
 	iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
-        map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
+        map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W / 2];
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;
