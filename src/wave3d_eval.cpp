@@ -10,10 +10,10 @@
 // 0: All communication between upward and downwards passes
 // 1: Overlap communication with upward pass computations
 // 2: Overlap communication with upward and downward passes
-#define HGH_COMMUNICATION_PATTERN 0
+#define HGH_COMMUNICATION_PATTERN 2
 
 
-pair<double, double> Wave3d::mean_var(time_t t0, time_t t1) {
+ParData Wave3d::gatherParData(time_t t0, time_t t1) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::mean_var");
 #endif
@@ -24,23 +24,40 @@ pair<double, double> Wave3d::mean_var(time_t t0, time_t t1) {
 
     MPI_Gather((void *)&diff, 1, MPI_DOUBLE, rbuf, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    double mean = 0;
-    double var = 0;
+    ParData data = {0., 0., 0., 0.};
     if (mpirank == 0) {
+	data.max = rbuf[0];
+	data.min = rbuf[0];
         for (int i = 0; i < mpisize; i++) {
-            mean += rbuf[i];
+            data.mean += rbuf[i];
+	    if (rbuf[i] > data.max)
+		data.max = rbuf[i];
+	    if (rbuf[i] < data.min)
+		data.min = rbuf[i];
         }
-        mean /= mpisize;
+        data.mean /= mpisize;
 
         for (int i = 0; i < mpisize; i++) {
-            var += (rbuf[i] - mean) * (rbuf[i] - mean);
+            data.var += (rbuf[i] - data.mean) * (rbuf[i] - data.mean);
         }
-        var /= (mpisize - 1);
+        data.var /= (mpisize - 1);
     }
 
     delete[] rbuf;
-    return pair<double, double>(mean, var);
+    return data;
 }
+
+void printData(ParData data, std::string message) {
+    int mpirank = getMPIRank();
+    if (mpirank == 0) {
+        cout << message << endl
+	     << "mean: " << data.mean << endl
+	     << "var: "  << data.var  << endl
+	     << "max: "  << data.max  << endl
+	     << "min: "  << data.min  << endl;
+    }
+}
+
 
 
 //---------------------------------------------------------------------
@@ -130,6 +147,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     if(mpirank == 0) {
         cout << "Beginning low frequency upward pass..." << endl;
     }
+
     t0 = time(0);
     // For each box width in the low frequency regime that this processor
     // owns, evaluate upward.
@@ -139,10 +157,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     }
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     t1 = time(0);
-    if (mpirank == 0) {
-        cout << "End low frequency upward pass: " << difftime(t1,t0)
-             << " secs" << endl;
-    }
+    printData(gatherParData(t0, t1), "Low frequency upward pass");
 
     // HIGH
     if(mpirank == 0) {
@@ -171,7 +186,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     // Number of groups
     int NG = (TTL-1) / DPG + 1;
 
-#if HGH_COMMUNICATION_PATTERN == 0
     set<BndKey> reqbndset;
     for(int cur = 0; cur < NG; cur++) {
         for(int i= cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
@@ -179,151 +193,50 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
             iC( eval_upward_hgh_recursive(1, dir, hdmap, reqbndset) );
         }
     }
-
-    {
-        vector<int> mask(BndDat_Number,0);
-        mask[BndDat_dirupeqnden] = 1;
-        vector<BndKey> reqbnd;
-        reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-
-        t2 = time(0);
-        iC( _bndvec.getBegin(reqbnd, mask) );
-        iC( _bndvec.getEnd(mask) );
-        t3 = time(0);
-        if(mpirank==0) {
-            cout << "High frequency communication: " << difftime(t3, t2)
-                 << " secs" << endl;
-        }
-    }
-
-    for (int cur = 0; cur < NG; cur++) {
-        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
-            Index3 dir = basedirs[i]; //LEXING: PRE HERE
-            iC( eval_dnward_hgh_recursive(1, dir, hdmap) );
-        }
-    }
-#endif
-
-#if HGH_COMMUNICATION_PATTERN == 1
-    for(int cur = 0; cur < NG; cur++) {
-        vector<int> mask(BndDat_Number,0);
-        mask[BndDat_dirupeqnden] = 1;
-        //Ucur
-        set<BndKey> reqbndset;
-        for(int i= cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
-            Index3 dir = basedirs[i];
-            iC( eval_upward_hgh_recursive(1, dir, hdmap, reqbndset) );
-        }
-        //Rpre
-        if (cur != 0) {
-            iC( _bndvec.getEnd(mask) );
-        }
-        //Scur
-        vector<BndKey> reqbnd;
-        reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-        iC( _bndvec.getBegin(reqbnd, mask) );
-        //Dpre
-    }
-
-    {
-        vector<int> mask(BndDat_Number,0);
-        mask[BndDat_dirupeqnden] = 1;
-        //Rcur
-        iC( _bndvec.getEnd(mask) );
-    }
-
-    for (int cur = 0; cur < NG; cur++) {
-        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
-            Index3 dir = basedirs[i]; //LEXING: PRE HERE
-            iC( eval_dnward_hgh_recursive(1, dir, hdmap) );
-        }
-    }
-#endif
-
-#if HGH_COMMUNICATION_PATTERN == 2
-    {
-        int cur = 0;
-        vector<int> mask(BndDat_Number,0);
-        mask[BndDat_dirupeqnden] = 1;
-        //U1
-        set<BndKey> reqbndset;
-        for(int i = cur * DPG; i <  min((cur + 1) * DPG, TTL); i++) {
-            Index3 dir = basedirs[i];
-            iC( eval_upward_hgh_recursive(1, dir, hdmap, reqbndset) );
-        }
-        //S1
-        vector<BndKey> reqbnd;
-        reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-        iC( _bndvec.getBegin(reqbnd, mask) );
-    }
-
-    for(int cur = 1; cur < NG; cur++) {
-        int pre = cur-1;
-        vector<int> mask(BndDat_Number,0);
-        mask[BndDat_dirupeqnden] = 1;
-        //Ucur
-        set<BndKey> reqbndset;
-        for(int i= cur * DPG; i < min((cur + 1) * DPG,TTL); i++) {
-            Index3 dir = basedirs[i];
-            iC( eval_upward_hgh_recursive(1, dir, hdmap, reqbndset) );
-        }
-        //Rpre
-        iC( _bndvec.getEnd(mask) );
-        //Scur
-        vector<BndKey> reqbnd;
-        reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-        iC( _bndvec.getBegin(reqbnd, mask) );
-        //Dpre
-        for(int i = pre * DPG; i < min((pre + 1) * DPG, TTL); i++) {
-            Index3 dir = basedirs[i]; //LEXING: PRE HERE
-            iC( eval_dnward_hgh_recursive(1, dir, hdmap) );
-        }
-    }
-    {
-        int cur = NG-1;
-        vector<int> mask(BndDat_Number,0);
-        mask[BndDat_dirupeqnden] = 1;
-        //Rcur
-        iC( _bndvec.getEnd(mask) );
-        //Dcur
-        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
-            Index3 dir = basedirs[i];
-            iC( eval_dnward_hgh_recursive(1, dir, hdmap) );
-        }
-    }
-#endif
-
     t1 = time(0);
-    if(mpirank==0) {
-        cout << "End high frequency pass: " << difftime(t1,t0)
-             << " secs" << endl;
+    printData(gatherParData(t0, t1), "High frequency upward pass");
+
+    t0 = time(0);
+    {
+        vector<int> mask(BndDat_Number,0);
+        mask[BndDat_dirupeqnden] = 1;
+        vector<BndKey> reqbnd;
+        reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
+
+        iC( _bndvec.getBegin(reqbnd, mask) );
+        iC( _bndvec.getEnd(mask) );
     }
+    t1 = time(0);
+    printData(gatherParData(t0, t1), "High frequency communication");
+
+    t0 = time(0);
+    for (int cur = 0; cur < NG; cur++) {
+        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
+            Index3 dir = basedirs[i]; //LEXING: PRE HERE
+            iC( eval_dnward_hgh_recursive(1, dir, hdmap) );
+        }
+    }
+    t1 = time(0);
+    printData(gatherParData(t0, t1), "High frequency downward pass");
+
     // LOW COMM
+    t0 = time(0);
     vector<BoxKey> reqbox;
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
     vector<int> mask(BoxDat_Number,0);
     mask[BoxDat_extden] = 1;  mask[BoxDat_upeqnden] = 1;
-    t0 = time(0);
     iC( _boxvec.getBegin(reqbox, mask) );
     iC( _boxvec.getEnd(mask) );
     t1 = time(0);
-    if(mpirank == 0) {
-        cout << "Communication time for low-frequency computations: "
-             << difftime(t1,t0) << " secs" << endl;
-    }
-    //
-    // LOW DOWN
-    if(mpirank == 0) {
-        cout << "Beginning low frequency downward pass..." << endl;
-    }
+    printData(gatherParData(t0, t1), "Low frequency downward communication");
+
     t0 = time(0);
     for(map< double, vector<BoxKey> >::reverse_iterator mi = ldmap.rbegin();
         mi != ldmap.rend(); mi++) {
         iC( eval_dnward_low(mi->first, mi->second) );
     }
     t1 = time(0);
-    cout << "End low frequency downward pass: " << difftime(t1,t0)
-         << " secs on proc " << mpirank << endl;
+    printData(gatherParData(t0, t1), "Low frequency downward pass");
 
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     //set val from extval
@@ -335,14 +248,14 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
         }
     }
     val.expand(wrtpts);
-    for(map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
+    for (map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if(has_pts(curdat) && own_box(curkey, mpirank) && isterminal(curdat)) {
+        if (has_pts(curdat) && own_box(curkey, mpirank) && isterminal(curdat)) {
             CpxNumVec& extval = curdat.extval();
             vector<int>& curpis = curdat.ptidxvec();
-            for(int k=0; k<curpis.size(); k++) {
+            for (int k = 0; k < curpis.size(); k++) {
                 int poff = curpis[k];
                 val.access(poff) = extval(k);
             }
@@ -845,7 +758,7 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
             //difference vector
             Point3 diff = trgctr - srcctr;
             diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
-            iA( nml2dir(diff,W) == dir );  //Index3 dir = nml2dir(tmp, W);
+            iA( nml2dir(diff,W) == dir );
             //get source
             DblNumMat tmpuep(uep.m(),uep.n());
             for (int k = 0; k < tmpuep.n(); k++) {
@@ -857,12 +770,14 @@ int Wave3d::eval_dnward_hgh(double W, Index3 dir,
             BndDat& bnddat = _bndvec.access(bndkey);
             CpxNumVec& ued = bnddat.dirupeqnden();
             //mateix
-            CpxNumMat Mts;          iC( _knl.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
+            CpxNumMat Mts;
+	    iC( _knl.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
             //allocate space if necessary
-            if(dcv.m()==0) {
+            if (dcv.m() == 0) {
                 dcv.resize(Mts.m());
                 setvalue(dcv,cpx(0,0)); //LEXING: CHECK
             }
+	    iC( ued.m() != 0 );
             iC( zgemv(1.0, Mts, ued, 1.0, dcv) );
         }
         //2. to children
