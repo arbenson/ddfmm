@@ -5,14 +5,6 @@
 
 #define DVMAX 400
 
-// Type of communication pattern for high-frequency domain
-// 
-// 0: All communication between upward and downwards passes
-// 1: Overlap communication with upward pass computations
-// 2: Overlap communication with upward and downward passes
-#define HGH_COMMUNICATION_PATTERN 2
-
-
 ParData Wave3d::gatherParData(time_t t0, time_t t1) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::mean_var");
@@ -139,12 +131,14 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     std::random_shuffle(basedirs.begin(), basedirs.end());
 
     int TTL = basedirs.size();
+    cout << "basedirs size: " << basedirs.size() << " on processor " << mpirank << endl;
     // Directions per group
     int DPG = 4;
     // Number of groups
     int NG = (TTL-1) / DPG + 1;
 
     set<BndKey> reqbndset;
+    // vector< set<BndKey> > reqbndsets;
     for(int cur = 0; cur < NG; cur++) {
         for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
             Index3 dir = basedirs[i];
@@ -176,6 +170,73 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     printData(gatherParData(t0, t1), "High frequency downward pass");
     return 0;
 }
+
+
+//int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap) {
+//#ifndef RELEASE
+//    CallStackEntry entry("Wave3d::HighFreqPass");
+//#endif
+//    time_t t0, t1;
+//    int mpirank = getMPIRank();
+//    
+//    if(mpirank == 0) {
+//        cout << "Beginning high frequency pass..." << endl;
+//    }
+//    t0 = time(0);
+//
+//    // Find all directions on the first level (width = 1)
+//    vector<Index3> basedirs;
+//    for (map<Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.begin();
+//         mi != hdmap.end(); mi++) {
+//        Index3 dir = mi->first;
+//        if (dir2width(dir) == 1) {
+//            basedirs.push_back(dir);
+//        }
+//    }
+//
+//    std::random_shuffle(basedirs.begin(), basedirs.end());
+//
+//    int TTL = basedirs.size();
+//    cout << "basedirs size: " << basedirs.size() << " on processor " << mpirank << endl;
+//    // Directions per group
+//    int DPG = 4;
+//    // Number of groups
+//    int NG = (TTL-1) / DPG + 1;
+//
+//    set<BndKey> reqbndset;
+//    for(int cur = 0; cur < NG; cur++) {
+//        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
+//            Index3 dir = basedirs[i];
+//            iC( EvalUpwardHighRecursive(1, dir, hdmap, reqbndset) );
+//        }
+//    }
+//    t1 = time(0);
+//    printData(gatherParData(t0, t1), "High frequency upward pass");
+//
+//    t0 = time(0);
+//    vector<int> mask(BndDat_Number,0);
+//    mask[BndDat_dirupeqnden] = 1;
+//    vector<BndKey> reqbnd;
+//    reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
+//    cout << "reqbd size is " << reqbnd.size() << " on processor " << mpirank << endl;
+//    iC( _bndvec.getBegin(reqbnd, mask) );
+//    iC( _bndvec.getEnd(mask) );
+//    t1 = time(0);
+//    printData(gatherParData(t0, t1), "High frequency communication");
+//
+//    t0 = time(0);
+//    for (int cur = 0; cur < NG; cur++) {
+//        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
+//            Index3 dir = basedirs[i]; //LEXING: PRE HERE
+//            iC( EvalDownwardHighRecursive(1, dir, hdmap) );
+//        }
+//    }
+//    t1 = time(0);
+//    printData(gatherParData(t0, t1), "High frequency downward pass");
+//    return 0;
+//}
+//
+//
 
 int Wave3d::GatherDensities(vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den) {
     int mpirank = getMPIRank();
@@ -837,18 +898,18 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir,
         iC( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
         dnchkval.resize(0); //LEXING: SAVE SPACE
         //eval
-        if(abs(W-1)<eps) {
+        if (abs(W - 1)<eps) {
             for (int ind = 0; ind < NUM_DIRS; ind++) {
                 int a = DIR_1(ind);
                 int b = DIR_2(ind);
                 int c = DIR_3(ind);             
                 BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
                 BoxDat& chddat = _boxvec.access(chdkey);
-                if(!has_pts(chddat)) {
+                if (!has_pts(chddat)) {
                     continue;
                 }
                 CpxNumVec& chddcv = chddat.dnchkval();
-                if(chddcv.m()==0) {
+                if (chddcv.m() == 0) {
                     chddcv.resize(de2dc(a,b,c).m());
                     setvalue(chddcv,cpx(0,0));
                 }
