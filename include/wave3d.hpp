@@ -320,24 +320,35 @@ private:
     // srcvec is the list of all boxes owned by this processor of width W
     // reqboxset is filled with all boxes whose information this processor needs
     // for the low-frequency downward pass
-    int eval_upward_low(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqboxset);
+    int EvalUpwardLow(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqboxset);
 
     // Travel down the octree and visit the boxes in the low frequency regime.
     //
     // W is the width of the box
-    int eval_dnward_low(double W, vector<BoxKey>& trgvec);
+    int EvalDownwardLow(double W, vector<BoxKey>& trgvec);
+
+    
+    int LowFreqUpwardPass(map< double, vector<BoxKey> >& ldmap,
+			  set<BoxKey>& reqboxset);
+    int LowFreqDownwardComm(set<BoxKey>& reqboxset);
+    int LowFreqDownwardPass(map< double, vector<BoxKey> >& ldmap);
+    int HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
 
     //
-    int eval_upward_hgh_recursive(double W, Index3 nowdir,
+    int EvalUpwardHighRecursive(double W, Index3 nowdir,
             map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
             set<BndKey>& reqbndset);
-    int eval_dnward_hgh_recursive(double W, Index3 nowdir,
+    int EvalDownwardHighRecursive(double W, Index3 nowdir,
             map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
     
-    int eval_upward_hgh(double W, Index3 dir,
+    int EvalUpwardHigh(double W, Index3 dir,
             pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset);
-    int eval_dnward_hgh(double W, Index3 dir,
-                        pair< vector<BoxKey>, vector<BoxKey> >& hdvecs);
+    int EvalDownwardHigh(double W, Index3 dir,
+                         pair< vector<BoxKey>, vector<BoxKey> >& hdvecs);
+
+    int GatherMaps(map< double, vector<BoxKey> >& ldmap,
+		   map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
+    int GatherDensities(vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
     
     int U_list_compute(BoxDat& trgdat);
     int X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
