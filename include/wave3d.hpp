@@ -47,7 +47,7 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef pair<int,Index3> BoxKey; //level, offset_in_level
+typedef pair<int,Index3> BoxKey; // level, offset_in_level
 
 class BoxDat
 {
@@ -346,8 +346,8 @@ private:
     int EvalDownwardHigh(double W, Index3 dir,
                          pair< vector<BoxKey>, vector<BoxKey> >& hdvecs);
 
-    int GatherMaps(map< double, vector<BoxKey> >& ldmap,
-		   map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
+    int ConstructMaps(map< double, vector<BoxKey> >& ldmap,
+		      map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
     int GatherDensities(vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
     
     int U_list_compute(BoxDat& trgdat);
