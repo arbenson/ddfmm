@@ -128,22 +128,11 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
         }
     }
 
-    std::random_shuffle(basedirs.begin(), basedirs.end());
-
-    int TTL = basedirs.size();
     cout << "basedirs size: " << basedirs.size() << " on processor " << mpirank << endl;
-    // Directions per group
-    int DPG = 4;
-    // Number of groups
-    int NG = (TTL-1) / DPG + 1;
 
     set<BndKey> reqbndset;
-    // vector< set<BndKey> > reqbndsets;
-    for(int cur = 0; cur < NG; cur++) {
-        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
-            Index3 dir = basedirs[i];
-            iC( EvalUpwardHighRecursive(1, dir, hdmap, reqbndset) );
-        }
+    for(int i = 0; i < basedirs.size(); i++) {
+	iC( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
     }
     t1 = time(0);
     printData(gatherParData(t0, t1), "High frequency upward pass");
@@ -160,83 +149,14 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     printData(gatherParData(t0, t1), "High frequency communication");
 
     t0 = time(0);
-    for (int cur = 0; cur < NG; cur++) {
-        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
-            Index3 dir = basedirs[i]; //LEXING: PRE HERE
-            iC( EvalDownwardHighRecursive(1, dir, hdmap) );
-        }
+    for (int i = 0; i < basedirs.size(); i++) {
+	Index3 dir = basedirs[i]; // LEXING: PRE HERE
+	iC( EvalDownwardHighRecursive(1, dir, hdmap) );
     }
     t1 = time(0);
     printData(gatherParData(t0, t1), "High frequency downward pass");
     return 0;
 }
-
-
-//int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap) {
-//#ifndef RELEASE
-//    CallStackEntry entry("Wave3d::HighFreqPass");
-//#endif
-//    time_t t0, t1;
-//    int mpirank = getMPIRank();
-//    
-//    if(mpirank == 0) {
-//        cout << "Beginning high frequency pass..." << endl;
-//    }
-//    t0 = time(0);
-//
-//    // Find all directions on the first level (width = 1)
-//    vector<Index3> basedirs;
-//    for (map<Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.begin();
-//         mi != hdmap.end(); mi++) {
-//        Index3 dir = mi->first;
-//        if (dir2width(dir) == 1) {
-//            basedirs.push_back(dir);
-//        }
-//    }
-//
-//    std::random_shuffle(basedirs.begin(), basedirs.end());
-//
-//    int TTL = basedirs.size();
-//    cout << "basedirs size: " << basedirs.size() << " on processor " << mpirank << endl;
-//    // Directions per group
-//    int DPG = 4;
-//    // Number of groups
-//    int NG = (TTL-1) / DPG + 1;
-//
-//    set<BndKey> reqbndset;
-//    for(int cur = 0; cur < NG; cur++) {
-//        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
-//            Index3 dir = basedirs[i];
-//            iC( EvalUpwardHighRecursive(1, dir, hdmap, reqbndset) );
-//        }
-//    }
-//    t1 = time(0);
-//    printData(gatherParData(t0, t1), "High frequency upward pass");
-//
-//    t0 = time(0);
-//    vector<int> mask(BndDat_Number,0);
-//    mask[BndDat_dirupeqnden] = 1;
-//    vector<BndKey> reqbnd;
-//    reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-//    cout << "reqbd size is " << reqbnd.size() << " on processor " << mpirank << endl;
-//    iC( _bndvec.getBegin(reqbnd, mask) );
-//    iC( _bndvec.getEnd(mask) );
-//    t1 = time(0);
-//    printData(gatherParData(t0, t1), "High frequency communication");
-//
-//    t0 = time(0);
-//    for (int cur = 0; cur < NG; cur++) {
-//        for(int i = cur * DPG; i < min((cur + 1) * DPG, TTL); i++) {
-//            Index3 dir = basedirs[i]; //LEXING: PRE HERE
-//            iC( EvalDownwardHighRecursive(1, dir, hdmap) );
-//        }
-//    }
-//    t1 = time(0);
-//    printData(gatherParData(t0, t1), "High frequency downward pass");
-//    return 0;
-//}
-//
-//
 
 int Wave3d::GatherDensities(vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den) {
     int mpirank = getMPIRank();
@@ -252,14 +172,20 @@ int Wave3d::GatherDensities(vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den) {
     return 0;
 }
 
-int Wave3d::GatherMaps(map< double, vector<BoxKey> >& ldmap,
-                       map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap) {
+int Wave3d::ConstructMaps(map< double, vector<BoxKey> >& ldmap,
+			  map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap) {
     int mpirank = getMPIRank();
     double eps = 1e-12;
-    // 3. gather maps, low frequency level by level, high frequency dir by dir
-    // ldmap (hdmap) maps box widths to a list of BoxKeys which correspond
-    // to boxes in the low-frequency (high-frequency) regime that are 
-    // owned by this processor
+    // construct maps, low frequency level by level, high frequency dir by dir
+    // 
+    // ldmap  maps box widths to a list of BoxKeys which correspond
+    // to boxes in the low-frequency regime that are owned by this processor
+    //
+    // hdmap maps a direction to a pair of lists:
+    //           1. List of BoxKeys of outgoing directions
+    //           2. List of BoxKeys of incoming directions
+    //
+    // TODO (Austin): Make the data structure of hdmap clearer
     for (map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
@@ -273,16 +199,18 @@ int Wave3d::GatherMaps(map< double, vector<BoxKey> >& ldmap,
             } else {
                 // High frequency regime
                 BndDat dummy;
+                // For each outgoing direction of this box, add to the first list
                 for (set<Index3>::iterator si = curdat.outdirset().begin();
                     si != curdat.outdirset().end(); si++) {
                     hdmap[*si].first.push_back(curkey);
-                    //into bndvec
+                    // into bndvec
                     _bndvec.insert(BndKey(curkey, *si), dummy);
                 }
+		// For each incoming direction of this box, add to the second list
                 for (set<Index3>::iterator si = curdat.incdirset().begin();
                     si != curdat.incdirset().end(); si++) {
                     hdmap[*si].second.push_back(curkey);
-                    //into bndvec
+                    // into bndvec
                     _bndvec.insert(BndKey(curkey, *si), dummy);
                 }
             }
@@ -332,7 +260,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 
     map< double, vector<BoxKey> > ldmap;
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > > hdmap;
-    GatherMaps(ldmap, hdmap);
+    ConstructMaps(ldmap, hdmap);
 
     set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);
@@ -716,7 +644,6 @@ int Wave3d::EvalDownwardHighRecursive(double W, Index3 nowdir,
     return 0;
 }
 
-
 //---------------------------------------------------------------------
 int Wave3d::EvalUpwardHigh(double W, Index3 dir,
         pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset)
@@ -804,7 +731,7 @@ int Wave3d::get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::get_reqs");
 #endif
-  // Fill reqbndset with 
+  // Fill reqbndset
   vector<BoxKey>& trgvec = hdvecs.second;
   for(int k = 0; k < trgvec.size(); k++) {
       BoxKey trgkey = trgvec[k];
@@ -861,7 +788,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir,
             //difference vector
             Point3 diff = trgctr - srcctr;
             diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
-            iA( nml2dir(diff,W) == dir );
+            iA( nml2dir(diff, W) == dir );
             //get source
             DblNumMat tmpuep(uep.m(),uep.n());
             for (int k = 0; k < tmpuep.n(); k++) {
@@ -880,7 +807,11 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir,
                 dcv.resize(Mts.m());
                 setvalue(dcv,cpx(0,0)); //LEXING: CHECK
             }
-	    iC( ued.m() != 0 );
+	    //iC( ued.m() != 0 );
+	    if (ued.m() == 0) {
+		ued.resize(Mts.n());
+		setvalue(ued, cpx(0, 0));
+	    }
             iC( zgemv(1.0, Mts, ued, 1.0, dcv) );
         }
         //2. to children
