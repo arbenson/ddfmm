@@ -47,7 +47,7 @@ public:
 
     int putEnd(const vector<int>& mask);
 
-    int expand( vector<Key>& keyvec); //allocate space for not-owned entries
+    int expand(vector<Key>& keyvec); //allocate space for not-owned entries
     int discard(vector<Key>& keyvec); //remove non-owned entries
 
 private:
@@ -266,7 +266,8 @@ int ParVec<Key,Data,Partition>::getBegin(vector<Key>& keyvec, const vector<int>&
     for(int k=0; k<mpisize; k++) {
         sszvec[k] = skeyvec[k].size();
     }
-    iC( MPI_Alltoall( (void*)&(sszvec[0]), 1, MPI_INT, (void*)&(rszvec[0]), 1, MPI_INT, MPI_COMM_WORLD ) );
+    iC( MPI_Alltoall( (void*)&(sszvec[0]), 1, MPI_INT, (void*)&(rszvec[0]), 1,
+                       MPI_INT, MPI_COMM_WORLD ) );
 
     //3. allocate space for the keys, send and receive
     vector< vector<Key> > rkeyvec(mpisize);
@@ -484,9 +485,9 @@ int ParVec<Key,Data,Partition>::discard(vector<Key>& keyvec)
     CallStackEntry entry("ParVec::discard");
 #endif
     int mpirank = getMPIRank();
-    for(int i=0; i<keyvec.size(); i++) {
+    for (int i = 0; i < keyvec.size(); i++) {
         Key key = keyvec[i];
-        if(_prtn.owner(key) != mpirank) {
+        if (_prtn.owner(key) != mpirank) {
             _lclmap.erase(key);
         }
     }
