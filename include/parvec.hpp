@@ -50,6 +50,14 @@ public:
     int expand(vector<Key>& keyvec); //allocate space for not-owned entries
     int discard(vector<Key>& keyvec); //remove non-owned entries
 
+    // ANALYSIS INFO
+    int initialize_data() {
+	_kbytes_received = 0;
+	_kbytes_sent = 0;
+    }
+    int kbytes_received() { return _kbytes_received; }
+    int kbytes_sent() { return _kbytes_sent; }
+
 private:
     int resetVecs();
     int getSizes(vector<int>& rszvec, vector<int>& sifvec);
@@ -63,6 +71,11 @@ private:
     vector< vector<char> > _rbufvec;
     MPI_Request *_reqs;
     MPI_Status  *_stats;
+    std::string _tag;
+
+    // ANALYSIS INFO
+    int _kbytes_received;
+    int _kbytes_sent;
 };
 
 //--------------------------------------------
@@ -129,6 +142,8 @@ int ParVec<Key,Data,Partition>::makeBufReqs(vector<int>& rszvec, vector<int>& ss
                       MPI_COMM_WORLD, &_reqs[2 * k] ) );
         iC( MPI_Isend((void *)&(_sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
                       MPI_COMM_WORLD, &_reqs[2 * k + 1] ) );
+	_kbytes_received += rszvec[k] / 1024;
+	_kbytes_sent += sszvec[k] / 1024;
     }
     return 0;
 }
