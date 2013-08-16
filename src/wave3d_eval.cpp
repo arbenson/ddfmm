@@ -5,7 +5,7 @@
 
 #define DVMAX 400
 
-ParData Wave3d::gatherParData(time_t t0, time_t t1) {
+ParData Wave3d::GatherParData(time_t t0, time_t t1) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::mean_var");
 #endif
@@ -39,7 +39,7 @@ ParData Wave3d::gatherParData(time_t t0, time_t t1) {
     return data;
 }
 
-void printData(ParData data, std::string message) {
+void PrintData(ParData data, std::string message) {
     int mpirank = getMPIRank();
     if (mpirank == 0) {
         cout << message << endl
@@ -69,7 +69,7 @@ int Wave3d::LowFreqUpwardPass(map< double, vector<BoxKey> >& ldmap,
     }
     time_t t1 = time(0);
     iC( MPI_Barrier(MPI_COMM_WORLD) );
-    printData(gatherParData(t0, t1), "Low frequency upward pass");
+    PrintData(GatherParData(t0, t1), "Low frequency upward pass");
     return 0;
 }
 
@@ -86,7 +86,7 @@ int Wave3d::LowFreqDownwardComm(set<BoxKey>& reqboxset) {
     iC( _boxvec.getBegin(reqbox, mask) );
     iC( _boxvec.getEnd(mask) );
     time_t t1 = time(0);
-    printData(gatherParData(t0, t1), "Low frequency downward communication");
+    PrintData(GatherParData(t0, t1), "Low frequency downward communication");
     return 0;
 }
 
@@ -100,16 +100,117 @@ int Wave3d::LowFreqDownwardPass(map< double, vector<BoxKey> >& ldmap) {
         iC( EvalDownwardLow(mi->first, mi->second) );
     }
     time_t t1 = time(0);
-    printData(gatherParData(t0, t1), "Low frequency downward pass");
+    PrintData(GatherParData(t0, t1), "Low frequency downward pass");
 
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
+#ifdef LIMITED_MEMORY
 int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap) {
-#ifndef RELEASE
+# ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
-#endif
+# endif
+    time_t t0, t1;
+    int mpirank = getMPIRank();
+    
+    if(mpirank == 0) {
+        cout << "Beginning high frequency pass..." << endl;
+    }
+    t0 = time(0);
+
+    // Find all directions on the first level (width = 1)
+    vector<Index3> basedirs;
+    double local_max_W = 1;
+    for (map<Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.begin();
+         mi != hdmap.end(); mi++) {
+        Index3 dir = mi->first;
+	double W = dir2width(dir);
+        if (W == 1) {
+            basedirs.push_back(dir);
+        }
+	if (W > local_max_W) {
+	    local_max_W = W;
+	}
+    }
+
+    double max_W = 1;
+    MPI_Allreduce(&local_max_W, &max_W, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+    set<BndKey> reqbndset;
+    for(int i = 0; i < basedirs.size(); i++) {
+	iC( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
+    }
+    t1 = time(0);
+    PrintData(GatherParData(t0, t1), "High frequency upward pass");
+
+    t0 = time(0);
+    vector<BndKey> reqbnd;
+    reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
+    vector<int> mask(BndDat_Number, 0);
+    mask[BndDat_dirupeqnden] = 1;
+
+    // Initial communication
+    {
+	vector<BndKey> curr_request;
+	for (int i = 0; i < reqbnd.size(); i++) {
+	    if (width(reqbnd[i].first) == max_W) {
+		curr_request.push_back(reqbnd[i]);
+	    }
+	}
+	_bndvec.initialize_data();
+	iC( _bndvec.getBegin(curr_request, mask) );
+	iC( _bndvec.getEnd(mask) );
+        int recv = _bndvec.kbytes_received();
+        int sent = _bndvec.kbytes_sent();
+	int total_recv = 0;
+	int total_sent = 0;
+	MPI_Allreduce(&recv, &total_recv, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+	MPI_Allreduce(&sent, &total_sent, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+	if (mpirank == 0) {
+	    cout << total_recv << " total kbytes received." << endl;
+	    cout << total_sent << " total kbytes sent." << endl;
+	}
+    }
+
+    for (double W = max_W; W >= 1; W /= 2) {
+	if (W > 1) {
+	    vector<BndKey> curr_request;
+	    for (int i = 0; i < reqbnd.size(); i++) {
+		if (width(reqbnd[i].first) == W / 2) {
+		    curr_request.push_back(reqbnd[i]);
+		}
+	    }
+	    _bndvec.initialize_data();
+	    iC( _bndvec.getBegin(curr_request, mask) );
+	    iC( _bndvec.getEnd(mask) );
+	    int recv = _bndvec.kbytes_received();
+	    int sent = _bndvec.kbytes_sent();
+	    int total_recv = 0;
+	    int total_sent = 0;
+	    MPI_Allreduce(&recv, &total_recv, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+	    MPI_Allreduce(&sent, &total_sent, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+	    if (mpirank == 0) {
+		cout << total_recv << " total kbytes received." << endl;
+		cout << total_sent << " total kbytes sent." << endl;
+	    }
+	}
+
+	for (int i = 0; i < basedirs.size(); i++) {
+	    Index3 dir = basedirs[i]; // LEXING: PRE HERE
+	    iC( EvalDownwardHighRecursive2(1, dir, hdmap, W) );
+	}
+    }
+    t1 = time(0);
+
+    PrintData(GatherParData(t0, t1), "High frequency downward pass");
+    return 0;
+}
+#else
+int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap) {
+# ifndef RELEASE
+    CallStackEntry entry("Wave3d::HighFreqPass");
+# endif
     time_t t0, t1;
     int mpirank = getMPIRank();
     
@@ -135,7 +236,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 	iC( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
     }
     t1 = time(0);
-    printData(gatherParData(t0, t1), "High frequency upward pass");
+    PrintData(GatherParData(t0, t1), "High frequency upward pass");
 
     t0 = time(0);
     vector<int> mask(BndDat_Number,0);
@@ -146,7 +247,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     iC( _bndvec.getBegin(reqbnd, mask) );
     iC( _bndvec.getEnd(mask) );
     t1 = time(0);
-    printData(gatherParData(t0, t1), "High frequency communication");
+    PrintData(GatherParData(t0, t1), "High frequency communication");
 
     t0 = time(0);
     for (int i = 0; i < basedirs.size(); i++) {
@@ -154,9 +255,11 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 	iC( EvalDownwardHighRecursive(1, dir, hdmap) );
     }
     t1 = time(0);
-    printData(gatherParData(t0, t1), "High frequency downward pass");
+
+    PrintData(GatherParData(t0, t1), "High frequency downward pass");
     return 0;
 }
+#endif
 
 int Wave3d::GatherDensities(vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den) {
     int mpirank = getMPIRank();
@@ -640,6 +743,27 @@ int Wave3d::EvalDownwardHighRecursive(double W, Index3 nowdir,
             iC( EvalDownwardHighRecursive(2 * W, dirvec[k], hdmap) );
         }
         iC( EvalDownwardHigh(W, nowdir, mi->second) );
+    }
+    return 0;
+}
+
+//---------------------------------------------------------------------
+int Wave3d::EvalDownwardHighRecursive2(double W, Index3 nowdir,
+				       map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
+				       double only_W)
+{
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::EvalDownwardHighRecursive");
+#endif
+    map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
+    if (mi!=hdmap.end()) {
+        vector<Index3> dirvec = chddir(nowdir);
+        for (int k = 0; k < dirvec.size(); k++) {
+            iC( EvalDownwardHighRecursive(2 * W, dirvec[k], hdmap) );
+        }
+	if (W == only_W) {
+	    iC( EvalDownwardHigh(W, nowdir, mi->second) );
+	}
     }
     return 0;
 }

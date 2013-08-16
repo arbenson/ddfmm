@@ -308,7 +308,7 @@ private:
 
     int P();
 
-    ParData gatherParData(time_t t0, time_t t1);
+    ParData GatherParData(time_t t0, time_t t1);
 
 
     // Functions for evaluation
@@ -340,6 +340,10 @@ private:
             set<BndKey>& reqbndset);
     int EvalDownwardHighRecursive(double W, Index3 nowdir,
             map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
+
+    int EvalDownwardHighRecursive2(double W, Index3 nowdir,
+				   map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
+				   double max_W);
     
     int EvalUpwardHigh(double W, Index3 dir,
             pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset);
