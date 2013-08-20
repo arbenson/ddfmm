@@ -341,9 +341,11 @@ private:
     int EvalDownwardHighRecursive(double W, Index3 nowdir,
             map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
 
-    int EvalDownwardHighRecursive2(double W, Index3 nowdir,
+# ifdef LIMITED_MEMORY
+    int BuildDownwardHighCallStack(double W, Index3 nowdir,
 				   map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
-				   double max_W);
+				   vector< pair<double, Index3> >& stack);
+# endif
     
     int EvalUpwardHigh(double W, Index3 dir,
             pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset);

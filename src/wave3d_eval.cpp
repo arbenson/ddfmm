@@ -2,6 +2,9 @@
 #include "vecmatop.hpp"
 
 #include <algorithm>
+#include <list>
+
+using std::list;
 
 #define DVMAX 400
 
@@ -48,6 +51,10 @@ void PrintData(ParData data, std::string message) {
 	     << "max: "  << data.max  << endl
 	     << "min: "  << data.min  << endl;
     }
+}
+
+bool CompareStackEntries(pair<double, Index3> a, pair<double, Index3> b) {
+    return a.first < b.first;
 }
 
 int Wave3d::LowFreqUpwardPass(map< double, vector<BoxKey> >& ldmap,
@@ -150,6 +157,15 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     vector<int> mask(BndDat_Number, 0);
     mask[BndDat_dirupeqnden] = 1;
 
+    list< vector< pair<double, Index3> > > call_stacks;
+    for (int i = 0; i < basedirs.size(); i++) {
+	vector< pair<double, Index3> > curr_stack;
+	Index3 dir = basedirs[i];
+	iC( BuildDownwardHighCallStack(1, dir, hdmap, curr_stack) );
+	std::sort(curr_stack.begin(), curr_stack.end(), &CompareStackEntries);
+        call_stacks.push_back(curr_stack);
+    }
+
     // Initial communication
     {
 	vector<BndKey> curr_request;
@@ -196,10 +212,20 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 	    }
 	}
 
-	for (int i = 0; i < basedirs.size(); i++) {
-	    Index3 dir = basedirs[i]; // LEXING: PRE HERE
-	    iC( EvalDownwardHighRecursive2(1, dir, hdmap, W) );
+	for (list< vector< pair<double, Index3> > >::iterator it = call_stacks.begin();
+	     it != call_stacks.end(); ++it) {
+	    while (!it->empty() && it->back().first == W) {
+		Index3 dir = it->back().second;
+                map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(dir);
+		if (mi == hdmap.end()) {
+		    cout << "W is: " << W << " and dir is " << dir << endl;
+		}
+		iA (mi != hdmap.end());
+		EvalDownwardHigh(W, dir, mi->second);
+                it->pop_back();
+	    }
 	}
+
     }
     t1 = time(0);
 
@@ -737,7 +763,7 @@ int Wave3d::EvalDownwardHighRecursive(double W, Index3 nowdir,
     CallStackEntry entry("Wave3d::EvalDownwardHighRecursive");
 #endif
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
-    if (mi!=hdmap.end()) {
+    if (mi != hdmap.end()) {
         vector<Index3> dirvec = chddir(nowdir);
         for (int k = 0; k < dirvec.size(); k++) {
             iC( EvalDownwardHighRecursive(2 * W, dirvec[k], hdmap) );
@@ -748,32 +774,32 @@ int Wave3d::EvalDownwardHighRecursive(double W, Index3 nowdir,
 }
 
 //---------------------------------------------------------------------
-int Wave3d::EvalDownwardHighRecursive2(double W, Index3 nowdir,
+# ifdef LIMITED_MEMORY
+int Wave3d::BuildDownwardHighCallStack(double W, Index3 nowdir,
 				       map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
-				       double only_W)
+				       vector< pair<double, Index3> >& call_stack)
 {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::EvalDownwardHighRecursive");
+    CallStackEntry entry("Wave3d::DownwardHighCallStack");
 #endif
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
-    if (mi!=hdmap.end()) {
+    if (mi != hdmap.end()) {
         vector<Index3> dirvec = chddir(nowdir);
         for (int k = 0; k < dirvec.size(); k++) {
-            iC( EvalDownwardHighRecursive(2 * W, dirvec[k], hdmap) );
+            iC( BuildDownwardHighCallStack(2 * W, dirvec[k], hdmap, call_stack) );
         }
-	if (W == only_W) {
-	    iC( EvalDownwardHigh(W, nowdir, mi->second) );
-	}
+	call_stack.push_back(pair<double, Index3>(W, nowdir));
     }
     return 0;
 }
+# endif
 
 //---------------------------------------------------------------------
 int Wave3d::EvalUpwardHigh(double W, Index3 dir,
         pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset)
 {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::Eval_upward_hgh");
+    CallStackEntry entry("Wave3d::EvalUpwardHigh");
 #endif
     double eps = 1e-12;
     DblNumMat uep;
@@ -876,6 +902,13 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardHigh");
 #endif
+    int mpirank = getMPIRank();
+#if 0
+    if (mpirank == 0) {
+	cout << "W is: " << W << " (dir: " << dir << ")" << endl;
+    }
+#endif
+
     double eps = 1e-12;
     DblNumMat dep;
     DblNumMat dcp;
@@ -885,6 +918,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir,
     iC( _mlibptr->downwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     //LEXING: IMPORTANT
     vector<BoxKey>& trgvec = hdvecs.second;
+
     for(int k = 0; k < trgvec.size(); k++) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
