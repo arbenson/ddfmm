@@ -217,9 +217,6 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 	    while (!it->empty() && it->back().first == W) {
 		Index3 dir = it->back().second;
                 map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(dir);
-		if (mi == hdmap.end()) {
-		    cout << "W is: " << W << " and dir is " << dir << endl;
-		}
 		iA (mi != hdmap.end());
 		EvalDownwardHigh(W, dir, mi->second);
                 it->pop_back();
@@ -255,8 +252,6 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
         }
     }
 
-    cout << "basedirs size: " << basedirs.size() << " on processor " << mpirank << endl;
-
     set<BndKey> reqbndset;
     for(int i = 0; i < basedirs.size(); i++) {
 	iC( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
@@ -269,7 +264,6 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     mask[BndDat_dirupeqnden] = 1;
     vector<BndKey> reqbnd;
     reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-    cout << "reqbd size is " << reqbnd.size() << " on processor " << mpirank << endl;
     iC( _bndvec.getBegin(reqbnd, mask) );
     iC( _bndvec.getEnd(mask) );
     t1 = time(0);
@@ -903,11 +897,6 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir,
     CallStackEntry entry("Wave3d::EvalDownwardHigh");
 #endif
     int mpirank = getMPIRank();
-#if 0
-    if (mpirank == 0) {
-	cout << "W is: " << W << " (dir: " << dir << ")" << endl;
-    }
-#endif
 
     double eps = 1e-12;
     DblNumMat dep;
