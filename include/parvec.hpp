@@ -133,10 +133,10 @@ int ParVec<Key,Data,Partition>::makeBufReqs(vector<int>& rszvec, vector<int>& ss
     CallStackEntry entry("ParVec::makeBufReqs");
 #endif
     int mpisize = getMPISize();
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         _rbufvec[k].resize(rszvec[k]);
     }
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         // TODO (Austin): Is there a problem if rszvec or sszvec is 0?
         iC( MPI_Irecv((void *)&(_rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0,
                       MPI_COMM_WORLD, &_reqs[2 * k] ) );
