@@ -1,6 +1,6 @@
 # ----------------------------machine dependent file
+MODE = debug
 MODE = optim
-#MODE = debug
 
 # compiler and linker variable 
 #INCLUDES = -I/usr/include/mpi
@@ -9,7 +9,8 @@ MODE = optim
 INCLUDES =
 LIBS = -lfftw3 -llapack -lblas -lm 
 
-#DEFINES = -DRELEASE=1
+DEFINES = -DRELEASE=1
+DEFINES += -DLIMITED_MEMORY
 
 AR = ar
 ARFLAGS = rc
