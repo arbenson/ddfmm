@@ -1,5 +1,6 @@
 #include "wave3d.hpp"
 #include "vecmatop.hpp"
+#include "DataCollection.hpp"
 
 #include <algorithm>
 #include <list>
@@ -7,51 +8,6 @@
 using std::list;
 
 #define DVMAX 400
-
-ParData Wave3d::GatherParData(time_t t0, time_t t1) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::mean_var");
-#endif
-    int mpirank, mpisize;
-    getMPIInfo(&mpirank, &mpisize);
-    double diff = difftime(t1, t0);
-    double *rbuf = new double[mpisize];
-
-    MPI_Gather((void *)&diff, 1, MPI_DOUBLE, rbuf, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    ParData data = {0., 0., 0., 0.};
-    if (mpirank == 0) {
-	data.max = rbuf[0];
-	data.min = rbuf[0];
-        for (int i = 0; i < mpisize; i++) {
-            data.mean += rbuf[i];
-	    if (rbuf[i] > data.max)
-		data.max = rbuf[i];
-	    if (rbuf[i] < data.min)
-		data.min = rbuf[i];
-        }
-        data.mean /= mpisize;
-
-        for (int i = 0; i < mpisize; i++) {
-            data.var += (rbuf[i] - data.mean) * (rbuf[i] - data.mean);
-        }
-        data.var /= (mpisize - 1);
-    }
-
-    delete[] rbuf;
-    return data;
-}
-
-void PrintData(ParData data, std::string message) {
-    int mpirank = getMPIRank();
-    if (mpirank == 0) {
-        cout << message << endl
-	     << "mean: " << data.mean << endl
-	     << "var: "  << data.var  << endl
-	     << "max: "  << data.max  << endl
-	     << "min: "  << data.min  << endl;
-    }
-}
 
 bool CompareStackEntries(pair<double, Index3> a, pair<double, Index3> b) {
     return a.first < b.first;
@@ -75,8 +31,7 @@ int Wave3d::LowFreqUpwardPass(map< double, vector<BoxKey> >& ldmap,
         iC( EvalUpwardLow(mi->first, mi->second, reqboxset) );
     }
     time_t t1 = time(0);
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
-    PrintData(GatherParData(t0, t1), "Low frequency upward pass");
+    PrintParData(GatherParData(t0, t1), "Low frequency upward pass");
     return 0;
 }
 
@@ -90,10 +45,15 @@ int Wave3d::LowFreqDownwardComm(set<BoxKey>& reqboxset) {
     vector<int> mask(BoxDat_Number,0);
     mask[BoxDat_extden] = 1;
     mask[BoxDat_upeqnden] = 1;
+    _boxvec.initialize_data();
     iC( _boxvec.getBegin(reqbox, mask) );
     iC( _boxvec.getEnd(mask) );
     time_t t1 = time(0);
-    PrintData(GatherParData(t0, t1), "Low frequency downward communication");
+    PrintParData(GatherParData(t0, t1), "Low frequency downward communication");
+    PrintCommData(GatherCommData(_boxvec.kbytes_received()),
+		  "kbytes received");
+    PrintCommData(GatherCommData(_boxvec.kbytes_sent()),
+		  "kbytes sent");
     return 0;
 }
 
@@ -107,9 +67,7 @@ int Wave3d::LowFreqDownwardPass(map< double, vector<BoxKey> >& ldmap) {
         iC( EvalDownwardLow(mi->first, mi->second) );
     }
     time_t t1 = time(0);
-    PrintData(GatherParData(t0, t1), "Low frequency downward pass");
-
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    PrintParData(GatherParData(t0, t1), "Low frequency downward pass");
     return 0;
 }
 
@@ -149,13 +107,22 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 	iC( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
     }
     t1 = time(0);
-    PrintData(GatherParData(t0, t1), "High frequency upward pass");
+    PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
     t0 = time(0);
     vector<BndKey> reqbnd;
     reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
     vector<int> mask(BndDat_Number, 0);
     mask[BndDat_dirupeqnden] = 1;
+
+    // Requests by level
+    std::map< double, vector<BndKey> > request_bnds;
+    while (!reqbnd.empty()) {
+	BndKey key = reqbnd.back();
+	request_bnds[width(key.first)].push_back(key);
+	reqbnd.pop_back();
+    }
+
 
     list< vector< pair<double, Index3> > > call_stacks;
     for (int i = 0; i < basedirs.size(); i++) {
@@ -168,48 +135,30 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 
     // Initial communication
     {
-	vector<BndKey> curr_request;
-	for (int i = 0; i < reqbnd.size(); i++) {
-	    if (width(reqbnd[i].first) == max_W) {
-		curr_request.push_back(reqbnd[i]);
-	    }
-	}
 	_bndvec.initialize_data();
-	iC( _bndvec.getBegin(curr_request, mask) );
+	iC( _bndvec.getBegin(request_bnds[max_W], mask) );
 	iC( _bndvec.getEnd(mask) );
-        int recv = _bndvec.kbytes_received();
-        int sent = _bndvec.kbytes_sent();
-	int total_recv = 0;
-	int total_sent = 0;
-	MPI_Allreduce(&recv, &total_recv, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-	MPI_Allreduce(&sent, &total_sent, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-	if (mpirank == 0) {
-	    cout << total_recv << " total kbytes received." << endl;
-	    cout << total_sent << " total kbytes sent." << endl;
-	}
+	request_bnds[max_W].clear();
+	std::ostringstream recv_msg;
+	recv_msg << "kbytes received (W = " << max_W << ")";
+	PrintCommData(GatherCommData(_bndvec.kbytes_received()), recv_msg.str());
+	std::ostringstream sent_msg;
+	sent_msg << "kbytes sent (W = " << max_W << ")";
+	PrintCommData(GatherCommData(_bndvec.kbytes_sent()), sent_msg.str());
     }
 
     for (double W = max_W; W >= 1; W /= 2) {
 	if (W > 1) {
-	    vector<BndKey> curr_request;
-	    for (int i = 0; i < reqbnd.size(); i++) {
-		if (width(reqbnd[i].first) == W / 2) {
-		    curr_request.push_back(reqbnd[i]);
-		}
-	    }
 	    _bndvec.initialize_data();
-	    iC( _bndvec.getBegin(curr_request, mask) );
+	    iC( _bndvec.getBegin(request_bnds[W / 2], mask) );
 	    iC( _bndvec.getEnd(mask) );
-	    int recv = _bndvec.kbytes_received();
-	    int sent = _bndvec.kbytes_sent();
-	    int total_recv = 0;
-	    int total_sent = 0;
-	    MPI_Allreduce(&recv, &total_recv, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-	    MPI_Allreduce(&sent, &total_sent, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-	    if (mpirank == 0) {
-		cout << total_recv << " total kbytes received." << endl;
-		cout << total_sent << " total kbytes sent." << endl;
-	    }
+	    request_bnds[W / 2].clear();
+	    std::ostringstream recv_msg;
+	    recv_msg << "kbytes received (W = " << W / 2 << ")";
+	    PrintCommData(GatherCommData(_bndvec.kbytes_received()), recv_msg.str());
+	    std::ostringstream sent_msg;
+	    sent_msg << "kbytes sent (W = " << W / 2 << ")";
+	    PrintCommData(GatherCommData(_bndvec.kbytes_sent()), sent_msg.str());
 	}
 
 	for (list< vector< pair<double, Index3> > >::iterator it = call_stacks.begin();
@@ -225,8 +174,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 
     }
     t1 = time(0);
-
-    PrintData(GatherParData(t0, t1), "High frequency downward pass");
+    PrintParData(GatherParData(t0, t1), "High frequency downward pass");
     return 0;
 }
 #else
@@ -257,7 +205,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 	iC( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
     }
     t1 = time(0);
-    PrintData(GatherParData(t0, t1), "High frequency upward pass");
+    PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
     t0 = time(0);
     vector<int> mask(BndDat_Number,0);
@@ -267,7 +215,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     iC( _bndvec.getBegin(reqbnd, mask) );
     iC( _bndvec.getEnd(mask) );
     t1 = time(0);
-    PrintData(GatherParData(t0, t1), "High frequency communication");
+    PrintParData(GatherParData(t0, t1), "High frequency communication");
 
     t0 = time(0);
     for (int i = 0; i < basedirs.size(); i++) {
@@ -276,7 +224,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     }
     t1 = time(0);
 
-    PrintData(GatherParData(t0, t1), "High frequency downward pass");
+    PrintParData(GatherParData(t0, t1), "High frequency downward pass");
     return 0;
 }
 #endif
@@ -355,7 +303,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     int mpirank = getMPIRank();
     vector<int> all(1, 1);
     ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
-    // 1. Go through posptr to get nonlocal points
+    // Go through posptr to get nonlocal points
     vector<int> reqpts;
     for(map<int,Point3>::iterator mi = pos.lclmap().begin();
         mi != pos.lclmap().end(); mi++) {
@@ -364,7 +312,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 
     GatherDensities(reqpts, den);
 
-    // 3. compute extden using ptidxvec
+    // Compute extden using ptidxvec
     for(map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
@@ -381,17 +329,19 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     }
     iC( den.discard(reqpts) );
 
+    // Setup of low and high frequency maps
     map< double, vector<BoxKey> > ldmap;
     map< Index3, pair< vector<BoxKey>, vector<BoxKey> > > hdmap;
     ConstructMaps(ldmap, hdmap);
 
+    // Main work of the algorithm
     set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);
-
+    iC( MPI_Barrier(MPI_COMM_WORLD) );
     HighFreqPass(hdmap);
-
     LowFreqDownwardComm(reqboxset);
     LowFreqDownwardPass(ldmap);
+    iC( MPI_Barrier(MPI_COMM_WORLD) );
 
     //set val from extval
     vector<int> wrtpts;

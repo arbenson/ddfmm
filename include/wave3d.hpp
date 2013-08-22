@@ -191,14 +191,6 @@ public:
     }
 };
 
-typedef struct ParData {
-    double mean;
-    double var;
-    double max;
-    double min;
-} ParData;
-
-
 //---------------------------------------------------------------------------
 class Wave3d: public ComObject
 {
@@ -249,6 +241,10 @@ public:
     // Compute the true solution and store the relative err in relerr.
     int check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
               IntNumVec& chkkeyvec, double& relerr);
+
+    bool CompareBndKey(BndKey a, BndKey b) {
+	return width(a.first) < width(b.first);
+    }
 
 private:
     double width() { return _K; }
@@ -307,9 +303,6 @@ private:
     bool setup_tree_adjacent(BoxKey me, BoxKey yo);
 
     int P();
-
-    ParData GatherParData(time_t t0, time_t t1);
-
 
     // Functions for evaluation
 
@@ -383,4 +376,4 @@ int deserialize(BndDat&, istream&, const vector<int>&);
 //BndPrtn, not necessary
 
 
-#endif
+#endif  // _WAVE3D_HPP_
