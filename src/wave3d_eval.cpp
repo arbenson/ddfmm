@@ -13,8 +13,7 @@ bool CompareStackEntries(pair<double, Index3> a, pair<double, Index3> b) {
     return a.first < b.first;
 }
 
-int Wave3d::LowFreqUpwardPass(map< double, vector<BoxKey> >& ldmap,
-                              set<BoxKey>& reqboxset) {
+int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, set<BoxKey>& reqboxset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqUpwardPass");
 #endif
@@ -26,8 +25,7 @@ int Wave3d::LowFreqUpwardPass(map< double, vector<BoxKey> >& ldmap,
     time_t t0 = time(0);
     // For each box width in the low frequency regime that this processor
     // owns, evaluate upward.
-    for(map< double, vector<BoxKey> >::iterator mi = ldmap.begin();
-        mi != ldmap.end(); mi++) {
+    for(ldmap_t::iterator mi = ldmap.begin(); mi != ldmap.end(); ++mi) {
         iC( EvalUpwardLow(mi->first, mi->second, reqboxset) );
     }
     time_t t1 = time(0);
@@ -57,12 +55,12 @@ int Wave3d::LowFreqDownwardComm(set<BoxKey>& reqboxset) {
     return 0;
 }
 
-int Wave3d::LowFreqDownwardPass(map< double, vector<BoxKey> >& ldmap) {
+int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqDownwardPass");
 #endif
     time_t t0 = time(0);
-    for(map< double, vector<BoxKey> >::reverse_iterator mi = ldmap.rbegin();
+    for(ldmap_t::reverse_iterator mi = ldmap.rbegin();
         mi != ldmap.rend(); mi++) {
         iC( EvalDownwardLow(mi->first, mi->second) );
     }
@@ -72,7 +70,7 @@ int Wave3d::LowFreqDownwardPass(map< double, vector<BoxKey> >& ldmap) {
 }
 
 #ifdef LIMITED_MEMORY
-int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap) {
+int Wave3d::HighFreqPass(hdmap_t& hdmap) {
 # ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
 # endif
@@ -87,8 +85,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     // Find all directions on the first level (width = 1)
     vector<Index3> basedirs;
     double local_max_W = 1;
-    for (map<Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.begin();
-         mi != hdmap.end(); mi++) {
+    for (hdmap_t::iterator mi = hdmap.begin(); mi != hdmap.end(); ++mi) {
         Index3 dir = mi->first;
 	double W = dir2width(dir);
         if (W == 1) {
@@ -165,7 +162,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 	     it != call_stacks.end(); ++it) {
 	    while (!it->empty() && it->back().first == W) {
 		Index3 dir = it->back().second;
-                map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(dir);
+                hdmap_t::iterator mi = hdmap.find(dir);
 		iA (mi != hdmap.end());
 		EvalDownwardHigh(W, dir, mi->second);
                 it->pop_back();
@@ -178,7 +175,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
     return 0;
 }
 #else
-int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap) {
+int Wave3d::HighFreqPass(hdmap_t& hdmap) {
 # ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
 # endif
@@ -192,8 +189,7 @@ int Wave3d::HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& 
 
     // Find all directions on the first level (width = 1)
     vector<Index3> basedirs;
-    for (map<Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.begin();
-         mi != hdmap.end(); mi++) {
+    for (hdmap_t::iterator mi = hdmap.begin(); mi != hdmap.end(); ++mi) {
         Index3 dir = mi->first;
         if (dir2width(dir) == 1) {
             basedirs.push_back(dir);
@@ -243,8 +239,7 @@ int Wave3d::GatherDensities(vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den) {
     return 0;
 }
 
-int Wave3d::ConstructMaps(map< double, vector<BoxKey> >& ldmap,
-			  map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap) {
+int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
     int mpirank = getMPIRank();
     double eps = 1e-12;
     // construct maps, low frequency level by level, high frequency dir by dir
@@ -330,8 +325,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
     iC( den.discard(reqpts) );
 
     // Setup of low and high frequency maps
-    map< double, vector<BoxKey> > ldmap;
-    map< Index3, pair< vector<BoxKey>, vector<BoxKey> > > hdmap;
+    ldmap_t ldmap;
+    hdmap_t hdmap;
     ConstructMaps(ldmap, hdmap);
 
     // Main work of the algorithm
@@ -597,10 +592,10 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
         CpxNumTns& neidenfft = neidat.upeqnden_fft();
         //TODO: LEXING GET THE INTERACTION TENSOR
         CpxNumTns& inttns = ue2dc(idx[0]+3,idx[1]+3,idx[2]+3);
-        for(int a = 0; a < 2 * _P; a++) {
-            for(int b = 0; b < 2 * _P; b++) {
-                for(int c = 0; c < 2 * _P; c++) {
-                    _valfft(a,b,c) += (neidenfft(a,b,c)*inttns(a,b,c));
+        for (int a = 0; a < 2 * _P; a++) {
+            for (int b = 0; b < 2 * _P; b++) {
+                for (int c = 0; c < 2 * _P; c++) {
+                    _valfft(a, b, c) += (neidenfft(a, b, c) * inttns(a, b, c));
                 }
             }
         }
@@ -682,13 +677,13 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep)
 
 //---------------------------------------------------------------------
 int Wave3d::EvalUpwardHighRecursive(double W, Index3 nowdir,
-        map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
+        hdmap_t& hdmap,
         set<BndKey>& reqbndset)
 {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardHighRecursive");
 #endif
-    map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
+    hdmap_t::iterator mi = hdmap.find(nowdir);
     if (mi != hdmap.end()) {
         iC( EvalUpwardHigh(W, nowdir, mi->second, reqbndset) );
         vector<Index3> dirvec = chddir(nowdir);
@@ -701,12 +696,12 @@ int Wave3d::EvalUpwardHighRecursive(double W, Index3 nowdir,
 
 //---------------------------------------------------------------------
 int Wave3d::EvalDownwardHighRecursive(double W, Index3 nowdir,
-        map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap)
+        hdmap_t& hdmap)
 {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardHighRecursive");
 #endif
-    map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
+    hdmap_t::iterator mi = hdmap.find(nowdir);
     if (mi != hdmap.end()) {
         vector<Index3> dirvec = chddir(nowdir);
         for (int k = 0; k < dirvec.size(); k++) {
@@ -719,14 +714,13 @@ int Wave3d::EvalDownwardHighRecursive(double W, Index3 nowdir,
 
 //---------------------------------------------------------------------
 # ifdef LIMITED_MEMORY
-int Wave3d::BuildDownwardHighCallStack(double W, Index3 nowdir,
-				       map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
-				       vector< pair<double, Index3> >& call_stack)
+int Wave3d::BuildDownwardHighCallStack(double W, Index3 nowdir, hdmap_t& hdmap,
+                                       vector< pair<double, Index3> >& call_stack)
 {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::DownwardHighCallStack");
 #endif
-    map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >::iterator mi = hdmap.find(nowdir);
+    hdmap_t::iterator mi = hdmap.find(nowdir);
     if (mi != hdmap.end()) {
         vector<Index3> dirvec = chddir(nowdir);
         for (int k = 0; k < dirvec.size(); k++) {

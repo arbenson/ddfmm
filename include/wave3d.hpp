@@ -192,6 +192,9 @@ public:
 };
 
 //---------------------------------------------------------------------------
+typedef map< Index3, pair< vector<BoxKey>, vector<BoxKey> > > hdmap_t;
+typedef map< double, vector<BoxKey> > ldmap_t;
+
 class Wave3d: public ComObject
 {
 public:
@@ -321,22 +324,18 @@ private:
     int EvalDownwardLow(double W, vector<BoxKey>& trgvec);
 
     
-    int LowFreqUpwardPass(map< double, vector<BoxKey> >& ldmap,
-			  set<BoxKey>& reqboxset);
+    int LowFreqUpwardPass(ldmap_t& ldmap, set<BoxKey>& reqboxset);
     int LowFreqDownwardComm(set<BoxKey>& reqboxset);
-    int LowFreqDownwardPass(map< double, vector<BoxKey> >& ldmap);
-    int HighFreqPass(map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
+    int LowFreqDownwardPass(ldmap_t& ldmap);
+    int HighFreqPass(hdmap_t& hdmap);
 
     //
-    int EvalUpwardHighRecursive(double W, Index3 nowdir,
-            map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
-            set<BndKey>& reqbndset);
-    int EvalDownwardHighRecursive(double W, Index3 nowdir,
-            map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
+    int EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
+                                set<BndKey>& reqbndset);
+    int EvalDownwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap);
 
 # ifdef LIMITED_MEMORY
-    int BuildDownwardHighCallStack(double W, Index3 nowdir,
-				   map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap,
+    int BuildDownwardHighCallStack(double W, Index3 nowdir, hdmap_t& hdmap,
 				   vector< pair<double, Index3> >& stack);
 # endif
     
@@ -345,8 +344,7 @@ private:
     int EvalDownwardHigh(double W, Index3 dir,
                          pair< vector<BoxKey>, vector<BoxKey> >& hdvecs);
 
-    int ConstructMaps(map< double, vector<BoxKey> >& ldmap,
-		      map< Index3, pair< vector<BoxKey>, vector<BoxKey> > >& hdmap);
+    int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap);
     int GatherDensities(vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
     
     int U_list_compute(BoxDat& trgdat);
