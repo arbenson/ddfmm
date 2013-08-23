@@ -9,9 +9,27 @@ using std::list;
 
 #define DVMAX 400
 
+#ifdef LIMITED_MEMORY
 bool CompareStackEntries(pair<double, Index3> a, pair<double, Index3> b) {
     return a.first < b.first;
 }
+
+int Wave3d::LevelCommunication(map< double, vector<BndKey> >& request_bnds,
+                               double W) {
+    vector<int> mask(BndDat_Number, 0);
+    mask[BndDat_dirupeqnden] = 1;
+    _bndvec.initialize_data();
+    iC( _bndvec.getBegin(request_bnds[W], mask) );
+    iC( _bndvec.getEnd(mask) );
+    request_bnds[W].clear();
+    std::ostringstream recv_msg;
+    recv_msg << "kbytes received (W = " << W << ")";
+    PrintCommData(GatherCommData(_bndvec.kbytes_received()), recv_msg.str());
+    std::ostringstream sent_msg;
+    sent_msg << "kbytes sent (W = " << W << ")";
+    PrintCommData(GatherCommData(_bndvec.kbytes_sent()), sent_msg.str());
+}
+#endif
 
 int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, set<BoxKey>& reqboxset) {
 #ifndef RELEASE
@@ -109,8 +127,6 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     t0 = time(0);
     vector<BndKey> reqbnd;
     reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-    vector<int> mask(BndDat_Number, 0);
-    mask[BndDat_dirupeqnden] = 1;
 
     // Requests by level
     std::map< double, vector<BndKey> > request_bnds;
@@ -119,7 +135,6 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
 	request_bnds[width(key.first)].push_back(key);
 	reqbnd.pop_back();
     }
-
 
     list< vector< pair<double, Index3> > > call_stacks;
     for (int i = 0; i < basedirs.size(); i++) {
@@ -130,34 +145,9 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
         call_stacks.push_back(curr_stack);
     }
 
-    // Initial communication
-    {
-	_bndvec.initialize_data();
-	iC( _bndvec.getBegin(request_bnds[max_W], mask) );
-	iC( _bndvec.getEnd(mask) );
-	request_bnds[max_W].clear();
-	std::ostringstream recv_msg;
-	recv_msg << "kbytes received (W = " << max_W << ")";
-	PrintCommData(GatherCommData(_bndvec.kbytes_received()), recv_msg.str());
-	std::ostringstream sent_msg;
-	sent_msg << "kbytes sent (W = " << max_W << ")";
-	PrintCommData(GatherCommData(_bndvec.kbytes_sent()), sent_msg.str());
-    }
-
+    // Level by level communication and computation
     for (double W = max_W; W >= 1; W /= 2) {
-	if (W > 1) {
-	    _bndvec.initialize_data();
-	    iC( _bndvec.getBegin(request_bnds[W / 2], mask) );
-	    iC( _bndvec.getEnd(mask) );
-	    request_bnds[W / 2].clear();
-	    std::ostringstream recv_msg;
-	    recv_msg << "kbytes received (W = " << W / 2 << ")";
-	    PrintCommData(GatherCommData(_bndvec.kbytes_received()), recv_msg.str());
-	    std::ostringstream sent_msg;
-	    sent_msg << "kbytes sent (W = " << W / 2 << ")";
-	    PrintCommData(GatherCommData(_bndvec.kbytes_sent()), sent_msg.str());
-	}
-
+	LevelCommunication(request_bnds, W);
 	for (list< vector< pair<double, Index3> > >::iterator it = call_stacks.begin();
 	     it != call_stacks.end(); ++it) {
 	    while (!it->empty() && it->back().first == W) {
@@ -168,7 +158,6 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
                 it->pop_back();
 	    }
 	}
-
     }
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency downward pass");
