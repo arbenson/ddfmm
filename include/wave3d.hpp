@@ -337,6 +337,8 @@ private:
 # ifdef LIMITED_MEMORY
     int BuildDownwardHighCallStack(double W, Index3 nowdir, hdmap_t& hdmap,
 				   vector< pair<double, Index3> >& stack);
+    int LevelCommunication(map< double, vector<BndKey> >& request_bnds,
+                           double W);
 # endif
     
     int EvalUpwardHigh(double W, Index3 dir,
