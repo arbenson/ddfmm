@@ -10,7 +10,7 @@ using std::list;
 #define DVMAX 400
 
 #ifdef LIMITED_MEMORY
-bool CompareStackEntries(pair<double, Index3> a, pair<double, Index3> b) {
+bool CompareDownwardHighInfo(pair<double, Index3> a, pair<double, Index3> b) {
     return a.first < b.first;
 }
 
@@ -136,20 +136,20 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
 	reqbnd.pop_back();
     }
 
-    list< vector< pair<double, Index3> > > call_stacks;
+    list< vector< pair<double, Index3> > > all_info;
     for (int i = 0; i < basedirs.size(); i++) {
-	vector< pair<double, Index3> > curr_stack;
+	vector< pair<double, Index3> > curr_info;
 	Index3 dir = basedirs[i];
-	iC( BuildDownwardHighCallStack(1, dir, hdmap, curr_stack) );
-	std::sort(curr_stack.begin(), curr_stack.end(), &CompareStackEntries);
-        call_stacks.push_back(curr_stack);
+	iC( GetDownwardHighInfo(1, dir, hdmap, curr_info) );
+	std::sort(curr_info.begin(), curr_info.end(), &CompareDownwardHighInfo);
+        all_info.push_back(curr_info);
     }
 
     // Level by level communication and computation
     for (double W = max_W; W >= 1; W /= 2) {
 	LevelCommunication(request_bnds, W);
-	for (list< vector< pair<double, Index3> > >::iterator it = call_stacks.begin();
-	     it != call_stacks.end(); ++it) {
+	for (list< vector< pair<double, Index3> > >::iterator it = all_info.begin();
+	     it != all_info.end(); ++it) {
 	    while (!it->empty() && it->back().first == W) {
 		Index3 dir = it->back().second;
                 hdmap_t::iterator mi = hdmap.find(dir);
@@ -534,7 +534,7 @@ int Wave3d::U_list_compute(BoxDat& trgdat)
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::U_list_compute");
 #endif
-    for(vector<BoxKey>::iterator vi = trgdat.undeidxvec().begin();
+    for (vector<BoxKey>::iterator vi = trgdat.undeidxvec().begin();
         vi != trgdat.undeidxvec().end(); vi++) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
@@ -555,21 +555,21 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
     double step = W/(_P-1);
     setvalue(_valfft,cpx(0,0));
     //LEXING: SPECIAL
-    for(vector<BoxKey>::iterator vi=trgdat.vndeidxvec().begin();
-        vi!=trgdat.vndeidxvec().end(); vi++) {
+    for (vector<BoxKey>::iterator vi = trgdat.vndeidxvec().begin();
+         vi != trgdat.vndeidxvec().end(); vi++) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
         //mul
         Point3 neictr = center(neikey);         //double DD = neinde.width();
         Index3 idx;
-        for(int d=0; d<dim(); d++) {
+        for (int d = 0; d < dim(); d++) {
             idx(d) = int(round( (trgctr[d]-neictr[d])/W )); //LEXING:CHECK
         }
         //create if it is missing
-        if(neidat.fftcnt()==0) {
+        if (neidat.fftcnt() == 0) {
             setvalue(_denfft, cpx(0,0));
             CpxNumVec& neiden = neidat.upeqnden();
-            for(int k=0; k<uep.n(); k++) {
+            for (int k = 0; k < uep.n(); k++) {
                 int a = int( round((uep(0,k)+W/2)/step) ) + _P;
                 int b = int( round((uep(1,k)+W/2)/step) ) + _P;
                 int c = int( round((uep(2,k)+W/2)/step) ) + _P;
@@ -590,19 +590,19 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
         }
         //clean if necessary
         neidat.fftcnt()++;
-        if(neidat.fftcnt()==neidat.fftnum()) {
+        if (neidat.fftcnt() == neidat.fftnum()) {
             neidat.upeqnden_fft().resize(0,0,0);
             neidat.fftcnt() = 0;//reset, LEXING
         }
     }
     fftw_execute(_bplan);
     //add back
-    double coef = 1.0/(2*_P * 2*_P * 2*_P);
-    for(int k=0; k<dcp.n(); k++) {
-        int a = int( round((dcp(0,k)+W/2)/step) ) + _P;
-        int b = int( round((dcp(1,k)+W/2)/step) ) + _P;
-        int c = int( round((dcp(2,k)+W/2)/step) ) + _P;
-        dnchkval(k) += (_valfft(a,b,c)*coef); //LEXING: VERY IMPORTANT
+    double coef = 1.0 / (2 * _P * 2 * _P * 2 * _P);
+    for (int k = 0; k < dcp.n(); k++) {
+        int a = int( round((dcp(0, k) + W / 2) / step) ) + _P;
+        int b = int( round((dcp(1, k) + W / 2) / step) ) + _P;
+        int c = int( round((dcp(2, k) + W / 2) / step) ) + _P;
+        dnchkval(k) += (_valfft(a, b, c) * coef); //LEXING: VERY IMPORTANT
     }
     return 0;
 }
@@ -643,15 +643,15 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep)
         BoxDat& neidat = _boxvec.access(neikey);
         Point3 neictr = center(neikey);
         //upchkpos
-        if (isterminal(neidat) && neidat.extpos().n()<uep.n()) {
+        if (isterminal(neidat) && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
             iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
             double coef = width(neikey) / W; //LEXING: SUPER IMPORTANT
             DblNumMat upeqnpos(uep.m(), uep.n()); //local version
-            for(int k=0; k<uep.n(); k++) {
-                for(int d=0; d<dim(); d++) {
+            for (int k = 0; k < uep.n(); k++) {
+                for (int d = 0; d < dim(); d++) {
                     upeqnpos(d,k) = coef*uep(d,k) + neictr(d);
                 }
             }
@@ -703,8 +703,8 @@ int Wave3d::EvalDownwardHighRecursive(double W, Index3 nowdir,
 
 //---------------------------------------------------------------------
 # ifdef LIMITED_MEMORY
-int Wave3d::BuildDownwardHighCallStack(double W, Index3 nowdir, hdmap_t& hdmap,
-                                       vector< pair<double, Index3> >& call_stack)
+int Wave3d::GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
+                                vector< pair<double, Index3> >& compute_info)
 {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::DownwardHighCallStack");
@@ -713,9 +713,9 @@ int Wave3d::BuildDownwardHighCallStack(double W, Index3 nowdir, hdmap_t& hdmap,
     if (mi != hdmap.end()) {
         vector<Index3> dirvec = chddir(nowdir);
         for (int k = 0; k < dirvec.size(); k++) {
-            iC( BuildDownwardHighCallStack(2 * W, dirvec[k], hdmap, call_stack) );
+            iC( GetDownwardHighInfo(2 * W, dirvec[k], hdmap, compute_info) );
         }
-	call_stack.push_back(pair<double, Index3>(W, nowdir));
+	compute_info.push_back(pair<double, Index3>(W, nowdir));
     }
     return 0;
 }
@@ -810,11 +810,11 @@ int Wave3d::get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
 #endif
   // Fill reqbndset
   vector<BoxKey>& trgvec = hdvecs.second;
-  for(int k = 0; k < trgvec.size(); k++) {
+  for (int k = 0; k < trgvec.size(); k++) {
       BoxKey trgkey = trgvec[k];
       BoxDat& trgdat = _boxvec.access(trgkey);
       vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-      for(int i = 0; i < tmpvec.size(); i++) {
+      for (int i = 0; i < tmpvec.size(); i++) {
           BoxKey srckey = tmpvec[i];
           reqbndset.insert(BndKey(srckey, dir));
       }
@@ -841,7 +841,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir,
     //LEXING: IMPORTANT
     vector<BoxKey>& trgvec = hdvecs.second;
 
-    for(int k = 0; k < trgvec.size(); k++) {
+    for (int k = 0; k < trgvec.size(); k++) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
         // If there are not points, continue to the next box.

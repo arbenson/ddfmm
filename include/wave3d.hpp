@@ -47,7 +47,7 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef pair<int,Index3> BoxKey; // level, offset_in_level
+typedef pair<int, Index3> BoxKey; // level, offset_in_level
 
 class BoxDat
 {
@@ -335,8 +335,8 @@ private:
     int EvalDownwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap);
 
 # ifdef LIMITED_MEMORY
-    int BuildDownwardHighCallStack(double W, Index3 nowdir, hdmap_t& hdmap,
-				   vector< pair<double, Index3> >& stack);
+    int GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
+                            vector< pair<double, Index3> >& compute_info);
     int LevelCommunication(map< double, vector<BndKey> >& request_bnds,
                            double W);
 # endif
