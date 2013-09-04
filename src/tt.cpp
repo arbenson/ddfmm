@@ -60,7 +60,8 @@ int main(int argc, char** argv)
         vector<int>& tmpinfo = pos.prtn().ownerinfo();
 	// LEXING: numpts CONTAINS THE TOTAL NUMBER OF POINTS
         int numpts = tmpinfo[tmpinfo.size()-1];
-        if(mpirank==0) {
+        if (mpirank==0) {
+	    cerr << "Total number of points: " << numpts << endl;
             cerr << "Done reading pos " << pos.lclmap().size() << " "
 		 << pos.prtn().ownerinfo().size() << endl;
         }

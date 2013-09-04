@@ -148,6 +148,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     // Level by level communication and computation
     for (double W = max_W; W >= 1; W /= 2) {
 	LevelCommunication(request_bnds, W);
+	time_t t2 = time(0);
 	for (list< vector< pair<double, Index3> > >::iterator it = all_info.begin();
 	     it != all_info.end(); ++it) {
 	    while (!it->empty() && it->back().first == W) {
@@ -158,6 +159,10 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
                 it->pop_back();
 	    }
 	}
+	time_t t3 =time(0);
+	std::ostringstream msg;
+	msg << "Computation time (W = " << W << ")";
+	PrintParData(GatherParData(t2, t3), msg.str());
     }
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency downward pass");
