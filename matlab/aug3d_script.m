@@ -1,4 +1,4 @@
-ACCU = 1;
+ACCU = 3;
 
 kind = 0; kindstr = 'helm';
 datadir = './..';
@@ -31,19 +31,13 @@ if(1)
            };
   serialize(fid, lowall, string);
   fclose(fid);
-  
-  if(0)
-    fid = fopen(binstr,'r');
-    lowtst = deserialize(fid, string);
-    fclose(fid);
-  end
 end
 
 if(1)
   NPQ = 4; %number of wedges per quadrant
   L = 4096;
   
-  Wall = 2.^[0:3];  %Wall = 2.^[0:4];
+  Wall = 2.^[0:4];  %Wall = 2.^[0:4];
   hghall = cell(length(Wall), 2);
   res = [];
   for g=1:length(Wall)    %figure;
@@ -72,10 +66,4 @@ if(1)
            };
   serialize(fid, hghall, string);
   fclose(fid);
-  
-  if(0)
-    fid = fopen(binstr,'r');
-    hghtst = deserialize(fid, string);
-    fclose(fid);
-  end
 end

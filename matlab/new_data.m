@@ -27,7 +27,6 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
   tmp = floor(rand(1,NCPU) * (numxs-NCPU)) + [1:NCPU];
   cs = xs(:,tmp);
   
-  curerr = 1e20;
   for it=1:4*NCPU
     ds = zeros(numxs, NCPU);
     for g=1:NCPU
@@ -80,7 +79,7 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
 
   fprintf('end first big loop\n');
   
-  %get the prtn
+  % get the prtn
   prtn = cell(NCPU+1,1);
   prtn{1} = 0;
   ttl = 0;
@@ -91,53 +90,27 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
     ttl = ttl+sum(tws);
   end
   
-  %get the geomptrn
+  % get the geomptrn
   coef = zeros(NC,NC,NC,NCPU);
   for k=1:numxs
     tmp = floor((xs(:,k) + K/2) / (K/NC)) + 1;
     coef(tmp(1),tmp(2),tmp(3),is(k)) = coef(tmp(1),tmp(2),tmp(3),is(k)) + ws(k);
   end
-  
-  %version 1
-  if(0)
-  geom = -ones(NC,NC,NC);
-  avewgt = sum(ws)/NCPU;
-  curwgts = zeros(1,NCPU);
-  for a=1:NC
-    for b=1:NC
-      for c=1:NC
-        tmp = squeeze(coef(a,b,c,:));
-        [srt,idx] = sort(tmp);
-        for g=NCPU:-1:1
-          %if(curwgts(idx(g))+srt(g)<maxwgt)
-          if(curwgts(idx(g))<=avewgt)
-            geom(a,b,c) = idx(g);
-            curwgts(idx(g)) = curwgts(idx(g))+srt(g);
-            break;
-          end
-        end
-      end
-    end
-  end
-  geom
-  end
-    
-  %version 2
-  if(1)
+
+  % Lloyd's Algorithm for geometry assignment  
   coef = reshape(coef, [NC*NC*NC, NCPU]);
   aws = sum(coef,2);
   geom = -ones(1,NC*NC*NC);
   %avewgt = NC*NC*NC / NCPU;
   avewgt = ceil(sum(aws>0)) / NCPU;
   curwgts = zeros(1,NCPU);
-  [tmp,idxs] = sort(aws);
+  [~, idxs] = sort(aws);
   for k=numel(geom):-1:1
     cidx = idxs(k);
     if(aws(cidx)==0)
       break;
     end
-    tmp = coef(cidx,:);
-    [tmp,order] = sort(tmp);
+    [~, order] = sort(coef(cidx,:));
     for g=NCPU:-1:1
       ccpu = order(g);
       if(curwgts(ccpu) <= avewgt*1)
@@ -149,7 +122,6 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
   end
   geom = reshape(geom, [NC,NC,NC]);
   empty = find(geom==-1);
-  %geom(empty) = 1; %all empty ones go to the first CPU
   CPU_ind = 1
   for k = 1:length(empty)
     geom(empty(k)) = CPU_ind;
@@ -159,8 +131,6 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
     end
   end
   geom
-
-  end
 
   fprintf(1, 'cell weights\n');
   for g=1:NCPU
@@ -255,20 +225,4 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
     fclose(fid);
     
     ttl = ttl+sum(tws);
-  end
-  
-  if(0)
-    string = {'tuple'...
-              {'map'...
-               {'int'}...
-               {'Point3'}...
-              }...
-              {'vector'...
-               {'int'}...
-              }...
-             };
-    outdir = sprintf('data/%s_%d_%d_%d',fname,K,NPW,NCPU);
-    binstr = sprintf('%s/pos_%d_%d',outdir,0,NCPU);
-    fid = fopen(binstr,'r');
-    postst = deserialize(fid,string);
   end
