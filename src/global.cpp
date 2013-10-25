@@ -1,5 +1,3 @@
-// TODO (Austin): This needs to be compatible with the Elemental license
-
 #ifndef RELEASE
 // If we are not in RELEASE mode, then implement wrappers for a CallStack
 #include <stack>

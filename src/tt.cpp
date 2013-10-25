@@ -2,8 +2,6 @@
 #include "parallel.hpp"
 #include <exception>
 
-using namespace std;
-
 #define CLOCK_DIFF_SECS(ck1, ck0) (double(ck1-ck0) / CLOCKS_PER_SEC)
 
 int optionsCreate(int argc, char** argv, map<string,string>& options)
@@ -19,7 +17,7 @@ string findOption(map<string,string>& opts, string option)
 {
     map<string,string>::iterator mi = opts.find(option);
     if (mi == opts.end()) {
-        cout << "Missing option " << option << endl;
+	std::cerr << "Missing option " << option << std::endl;
         return "";
     }
     return mi->second;
@@ -54,16 +52,16 @@ int main(int argc, char** argv)
             return 0;
         }
 
-        istringstream piss;
+	std::istringstream piss;
         iC( Separate_Read(opt, piss) );
         iC( deserialize(pos, piss, all) );
-        vector<int>& tmpinfo = pos.prtn().ownerinfo();
+	std::vector<int>& tmpinfo = pos.prtn().ownerinfo();
 	// LEXING: numpts CONTAINS THE TOTAL NUMBER OF POINTS
         int numpts = tmpinfo[tmpinfo.size()-1];
         if (mpirank==0) {
-	    cerr << "Total number of points: " << numpts << endl;
-            cerr << "Done reading pos " << pos.lclmap().size() << " "
-		 << pos.prtn().ownerinfo().size() << endl;
+	    std::cerr << "Total number of points: " << numpts << std::endl;
+	    std::cerr << "Done reading pos " << pos.lclmap().size() << " "
+		      << pos.prtn().ownerinfo().size() << std::endl;
         }
         ParVec<int, cpx, PtPrtn> den;
 
@@ -72,23 +70,23 @@ int main(int argc, char** argv)
             return 0;
         }
 
-        istringstream diss; iC( Separate_Read(opt, diss) );
+	std::istringstream diss; iC( Separate_Read(opt, diss) );
         iC( deserialize(den, diss, all) );
         if(mpirank==0) {
-            cerr << "Done reading den " << den.lclmap().size() << " "
-		 << den.prtn().ownerinfo().size() << endl;
+            std::cerr << "Done reading den " << den.lclmap().size() << " "
+		 << den.prtn().ownerinfo().size() << std::endl;
         }
         ParVec<int, cpx, PtPrtn> val; //preset val to be the same as den
         val = den;
         if(mpirank==0) {
-            cerr << "Done setting val " << val.lclmap().size() << " "
-		 << val.prtn().ownerinfo().size() << endl;
+            std::cerr << "Done setting val " << val.lclmap().size() << " "
+		 << val.prtn().ownerinfo().size() << std::endl;
         }
         Kernel3d knl(KNL_HELM);
         mi = opts.find("-knl");
         // TODO (Austin): change this to the other format for getting an option
-        if(mi!=opts.end()) {
-            istringstream ss(mi->second);
+        if (mi != opts.end()) {
+	    std::istringstream ss(mi->second);
             int type;
             ss >> type;
             knl.type() = type;
@@ -98,8 +96,8 @@ int main(int argc, char** argv)
         mlib.NPQ() = 4;
         iC( mlib.setup(opts) );
         if (mpirank == 0) {
-            cerr << "Done reading mlib " << mlib.w2ldmap().size() << " "
-		 << mlib.w2hdmap().size() << endl;
+            std::cerr << "Done reading mlib " << mlib.w2ldmap().size() << " "
+		 << mlib.w2hdmap().size() << std::endl;
         }
         IntNumTns geomprtn;
         opt = findOption(opts, "-geomprtn");
@@ -107,30 +105,25 @@ int main(int argc, char** argv)
             return 0;
         }
   
-        istringstream giss;  iC( Shared_Read(opt, giss) );
+	std::istringstream giss;  iC( Shared_Read(opt, giss) );
         iC( deserialize(geomprtn, giss, all) );
         if(mpirank==0) {
-            cerr << "Done reading geomprtn " << geomprtn.m() << " "
-		 << geomprtn.n() << " " << geomprtn.p() << endl
-		 << geomprtn << endl;
+            std::cerr << "Done reading geomprtn " << geomprtn.m() << " "
+		 << geomprtn.n() << " " << geomprtn.p() << std::endl
+		 << geomprtn << std::endl;
         }
         Wave3d wave("wave3d_");
         wave.posptr() = &pos;
         wave.knl() = knl;
-        wave.ACCU() = 1;
-        wave.NPQ() = 4;
         wave.mlibptr() = &mlib;
         wave.geomprtn() = geomprtn;
-        wave.K() = 64;
-        wave.ctr() = Point3(0,0,0);
-        wave.ptsmax() = 100; //LY: check
 
         //2. setup
         t0 = time(0);
         iC( wave.setup(opts) );
         t1 = time(0);
         if (mpirank == 0) {
-            cout << "wave setup used " << difftime(t1,t0) << "secs " << endl;
+	    std::cout << "wave setup used " << difftime(t1,t0) << "secs " << std::endl;
         }
 
         //3. eval
@@ -140,11 +133,11 @@ int main(int argc, char** argv)
 
 	t1 = time(0);
 	if (mpirank == 0) {
-	    cout << "wave eval used " << difftime(t1,t0) << "secs " << endl;
+	    std::cout << "wave eval used " << difftime(t1,t0) << "secs " << std::endl;
 	}
 	time_eval = difftime(t1,t0);
 
-	ostringstream oss;
+        std::ostringstream oss;
 	iC( serialize(val, oss, all) );
 
 	opt = findOption(opts, "-valfile");
@@ -159,7 +152,7 @@ int main(int argc, char** argv)
 	if (opt.empty()) {
 	    return 0;
 	}
-	istringstream iss;
+        std::istringstream iss;
 	iC( Shared_Read(opt, iss) );
 	iC( deserialize(chkkeyvec, iss, all) );
 	int numchk = chkkeyvec.m();
@@ -168,8 +161,8 @@ int main(int argc, char** argv)
 	iC( wave.check(den, val, chkkeyvec, relerr) );
 	ck1 = clock();
 	if(mpirank==0) {
-	    cout << "wave check used " << CLOCK_DIFF_SECS(ck1, ck0) << "secs "
-		 << endl;
+	    std::cout << "wave check used " << CLOCK_DIFF_SECS(ck1, ck0)
+                      << "secs " << std::endl;
 	}
 
 	//5. output results
@@ -181,7 +174,7 @@ int main(int argc, char** argv)
 	    printf("Ta %.2e\n", time_eval);
 	    printf("Td %.2e\n", time_drct);
 	    printf("Rt %.2e\n", time_drct / time_eval);
-	    printf("Ea %.2e\n", relerr);
+	    printf("Ea %.6e\n", relerr);
 	    printf("----------------------\n");
 	}
 	//

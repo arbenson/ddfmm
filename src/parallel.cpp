@@ -1,16 +1,9 @@
 #include "parallel.hpp"
 
-using std::ifstream;
-using std::ofstream;
-using std::vector;
-using std::cerr;
-using std::endl;
-
 #define MAX_FILE_NAME_LENGTH 128
 
 //---------------------------------------------------------
-int Separate_Read(string name, istringstream& is)
-{
+int Separate_Read(std::string name, std::istringstream& is) {
 #ifndef RELEASE
     CallStackEntry entry("Separate_Read");
 #endif
@@ -20,22 +13,19 @@ int Separate_Read(string name, istringstream& is)
 
     char filename[MAX_FILE_NAME_LENGTH];
     sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);  
-    cerr << filename << endl;
-    ifstream fin(filename);
+    std::cerr << filename << std::endl;
+    std::ifstream fin(filename);
     if (fin.fail()) {
-	fprintf(stderr, "failed to open input file stream (%s)\n", filename);
+	std::cerr << "failed to open input file stream: " << filename << std::endl;
     }
-    // TODO (Austin): We should probably exit in this case
     is.str( string(std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>()) );
     fin.close();
-    //
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
 //---------------------------------------------------------
-int Separate_Write(string name, ostringstream& os)
-{
+int Separate_Write(std::string name, std::ostringstream& os) {
 #ifndef RELEASE
     CallStackEntry entry("Separate_Write");
 #endif
@@ -46,22 +36,19 @@ int Separate_Write(string name, ostringstream& os)
     //
     char filename[MAX_FILE_NAME_LENGTH];
     sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);
-    cerr << filename << endl;
-    ofstream fout(filename);
+    std::cerr << filename << std::endl;
+    std::ofstream fout(filename);
     if (fout.fail()) {
 	fprintf(stderr, "failed to open output file stream (%s)\n", filename);
     }
-    // TODO (Austin): We should probably exit in this case
     fout<<os.str();
     fout.close();
-    //
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
 //---------------------------------------------------------
-int Shared_Read(string name, istringstream& is)
-{
+int Shared_Read(std::string name, std::istringstream& is) {
 #ifndef RELEASE
     CallStackEntry entry("Shared_Read");
 #endif
@@ -69,14 +56,13 @@ int Shared_Read(string name, istringstream& is)
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
 
-    vector<char> tmpstr;
+    std::vector<char> tmpstr;
     if(mpirank == 0) {
 	char filename[MAX_FILE_NAME_LENGTH];
 	sprintf(filename, "data/%s", name.c_str());
-	cerr << filename << endl;
-	ifstream fin(filename);
+	std::cerr << filename << std::endl;
+	std::ifstream fin(filename);
 	if (fin.fail()) {
-	    // TODO (Austin): We should probably exit in this case
 	    fprintf(stderr, "failed to open input file stream (%s)\n", filename);
 	}
 
@@ -98,8 +84,7 @@ int Shared_Read(string name, istringstream& is)
 }
 
 //---------------------------------------------------------
-int Shared_Write(string name, ostringstream& os)
-{
+int Shared_Write(std::string name, std::ostringstream& os) {
 #ifndef RELEASE
     CallStackEntry entry("Shared_Write");
 #endif
@@ -111,10 +96,9 @@ int Shared_Write(string name, ostringstream& os)
     if(mpirank == 0) {
 	char filename[MAX_FILE_NAME_LENGTH];
 	sprintf(filename, "data/%s", name.c_str());
-	cerr << filename << endl;
-	ofstream fout(filename);
+	std::cerr << filename << std::endl;
+	std::ofstream fout(filename);
 	if (fout.fail()) {
-	    // TODO (Austin): We should probably exit in this case
 	    fprintf(stderr, "failed to open output file stream (%s)\n", filename);
 	}
 	fout << os.str();

@@ -2,11 +2,9 @@
 #include "vecmath.hpp"
 
 double Kernel3d::_mindif = 1e-8;
-using std::polar;
-using std::cerr;
 
 //---------------------------------------------------------------------------
-//exp(i*K*r)/r
+// exp(i*K*r)/r
 int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
                      const DblNumMat& srcnor, CpxNumMat& inter)
 {
@@ -86,7 +84,7 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         }
     } else {
         //-------------------------------
-        cerr << "Unknown kernel type " << _type << std::endl;
+	std::cerr << "Unknown kernel type " << _type << std::endl;
         iA(0);
     }
     return 0;

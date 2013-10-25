@@ -1,12 +1,5 @@
 #include "wave3d.hpp"
 
-using std::istringstream;
-using std::ifstream;
-using std::ofstream;
-using std::set;
-using std::queue;
-using std::cerr;
-
 //---------------------------------------------------------------------
 int Wave3d::setup(map<string,string>& opts)
 {
@@ -16,49 +9,49 @@ int Wave3d::setup(map<string,string>& opts)
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     _self = this;
     int mpirank = getMPIRank();
-    //read optional data
+    // Read optional data
     map<string,string>::iterator mi;
     mi = opts.find("-" + prefix() + "ACCU");
     if (mi != opts.end()) {
-        istringstream ss(mi->second);
+        std::istringstream ss(mi->second);
         ss >> _ACCU;
     }
     mi = opts.find("-" + prefix() + "NPQ");
     if (mi != opts.end()) {
-        istringstream ss(mi->second);
+        std::istringstream ss(mi->second);
         ss >> _NPQ;
     }
     mi = opts.find("-" + prefix() + "K");
     if (mi != opts.end()) {
-        istringstream ss(mi->second);
+        std::istringstream ss(mi->second);
         ss >> _K;
     }
     mi = opts.find("-" + prefix() + "ctr");
     if (mi != opts.end()) {
-        istringstream ss(mi->second);
+        std::istringstream ss(mi->second);
         double x, y, z;
         ss >> x >> y >> z;
         _ctr = Point3(x,y,z);
     }
     mi = opts.find("-" + prefix() + "ptsmax");
     if (mi != opts.end()) {
-        istringstream ss(mi->second);
+        std::istringstream ss(mi->second);
         ss >> _ptsmax;
     }
     mi = opts.find("-" + prefix() + "maxlevel");
     if (mi != opts.end()) {
-        istringstream ss(mi->second);
+        std::istringstream ss(mi->second);
         ss >> _maxlevel;
     }
     //
     if(mpirank == 0) {
-        cerr << _K <<      " | "
-             << _ACCU <<   " | "
-             << _NPQ <<    " | "
-             << _ctr <<    " | "
-             << _ptsmax << " | "
-             << _maxlevel
-             << endl;
+	std::cout << _K <<      " | "
+                  << _ACCU <<   " | "
+                  << _NPQ <<    " | "
+                  << _ctr <<    " | "
+                  << _ptsmax << " | "
+                  << _maxlevel
+                  << std::endl;
     }
     //
     //create the parvecs
@@ -80,8 +73,8 @@ int Wave3d::setup(map<string,string>& opts)
     _valfft.resize(2 * _P, 2 * _P, 2 * _P);
     _bplan = fftw_plan_dft_3d(2 * _P, 2 * _P, 2 * _P,
                               (fftw_complex*) (_valfft.data()),
-                              (fftw_complex*)(_valfft.data()), FFTW_BACKWARD,
-                              FFTW_ESTIMATE); 
+                              (fftw_complex*) (_valfft.data()), FFTW_BACKWARD,
+                                               FFTW_ESTIMATE); 
     iA(_bplan!=NULL);
     setvalue(_valfft,cpx(0,0));
     return 0;
@@ -123,13 +116,13 @@ int Wave3d::setup_tree()
         cellboxtns(idx(0),idx(1),idx(2)).ptidxvec().push_back( key ); //put the points in
     }
     //LEXING: NO MATTER WHETHER IT IS EMPTY OR NOT, ALWAYS IN
-    queue< pair<BoxKey,BoxDat> > tmpq;
+    std::queue< std::pair<BoxKey,BoxDat> > tmpq;
     for (int a = 0; a < numC; a++) {
         for (int b = 0; b < numC; b++) {
             for (int c = 0; c < numC; c++) {
                 if (_geomprtn(a,b,c) == mpirank) {
                     BoxKey key(lvlC, Index3(a,b,c));
-                    tmpq.push( pair<BoxKey,BoxDat>(key, cellboxtns(a,b,c)) );
+                    tmpq.push( std::pair<BoxKey,BoxDat>(key, cellboxtns(a,b,c)) );
                 }
             }
         }
@@ -138,7 +131,7 @@ int Wave3d::setup_tree()
 
     //-------tree, 
     while (!tmpq.empty()) {
-        pair<BoxKey,BoxDat> curent = tmpq.front();
+	std::pair<BoxKey,BoxDat> curent = tmpq.front();
         tmpq.pop();
         BoxKey& curkey = curent.first;
         BoxDat& curdat = curent.second;
@@ -169,7 +162,7 @@ int Wave3d::setup_tree()
                 int c = DIR_3(ind);
                 //if(chdboxtns(a,b,c).ptidxvec().size()>0)
                 BoxKey chdkey = this->chdkey(curkey, Index3(a,b,c));
-                tmpq.push( pair<BoxKey,BoxDat>(chdkey, chdboxtns(a,b,c)) );
+                tmpq.push( std::pair<BoxKey,BoxDat>(chdkey, chdboxtns(a,b,c)) );
             }
             //4. clear my own ptidxvec vector
             curdat.ptidxvec().clear();
@@ -212,7 +205,7 @@ int Wave3d::setup_tree()
     }
 
     //3. get extpos
-    set<BoxKey> reqboxset;
+    std::set<BoxKey> reqboxset;
     for (map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin();
         mi!=_boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
@@ -253,12 +246,12 @@ int Wave3d::setup_tree()
             if (!iscell(curkey)) {
                 BoxKey parkey = this->parkey(curkey);
                 BoxDat& pardat = boxdata(parkey);
-                for (set<Index3>::iterator si = pardat.outdirset().begin();
+                for (std::set<Index3>::iterator si = pardat.outdirset().begin();
                     si != pardat.outdirset().end(); si++) {
                     Index3 nowdir = predir(*si);
                     curdat.outdirset().insert(nowdir);
                 }
-                for (set<Index3>::iterator si = pardat.incdirset().begin();
+                for (std::set<Index3>::iterator si = pardat.incdirset().begin();
                     si != pardat.incdirset().end(); si++) {
                     Index3 nowdir = predir(*si);
                     curdat.incdirset().insert(nowdir);
@@ -295,7 +288,7 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_tree_callowlist");
 #endif
-    set<BoxKey> Uset, Vset, Wset, Xset;
+    std::set<BoxKey> Uset, Vset, Wset, Xset;
     iA(!iscell(curkey)); //LEXING: DO NOT ALLOW WIDTH=1 BOXES TO BE CELLS
     Index3 curpth = curkey.second;
     BoxKey parkey = this->parkey(curkey); //the link to parent
@@ -303,9 +296,9 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
     //
     int L = pow2(curkey.first);  //Index3 minpth(0,0,0);  //Index3 maxpth(L,L,L);
     int il, iu, jl,ju, kl, ku;
-    il = max(2*parpth(0)-2,0);  iu = min(2*parpth(0)+4,L);
-    jl = max(2*parpth(1)-2,0);  ju = min(2*parpth(1)+4,L);
-    kl = max(2*parpth(2)-2,0);  ku = min(2*parpth(2)+4,L);
+    il = std::max(2*parpth(0)-2,0);  iu = std::min(2*parpth(0)+4,L);
+    jl = std::max(2*parpth(1)-2,0);  ju = std::min(2*parpth(1)+4,L);
+    kl = std::max(2*parpth(2)-2,0);  ku = std::min(2*parpth(2)+4,L);
     for (int i = il; i < iu; i++) {
         for (int j = jl; j < ju; j++) {
             for (int k = kl; k < ku; k++) {
@@ -341,7 +334,7 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
 			    Vset.insert(reskey);
 			}
 		    } else if(isterminal(curdat)) {
-			queue<BoxKey> rest;
+			std::queue<BoxKey> rest;
 			rest.push(reskey);
 			while(!rest.empty()) {
 			    BoxKey fntkey = rest.front(); rest.pop();
@@ -370,13 +363,13 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
     if (isterminal(curdat) && has_pts(curdat)) {
 	Uset.insert(curkey);
     }
-    for (set<BoxKey>::iterator si=Uset.begin(); si!=Uset.end(); si++)
+    for (std::set<BoxKey>::iterator si=Uset.begin(); si!=Uset.end(); si++)
         curdat.undeidxvec().push_back(*si);
-    for (set<BoxKey>::iterator si=Vset.begin(); si!=Vset.end(); si++)
+    for (std::set<BoxKey>::iterator si=Vset.begin(); si!=Vset.end(); si++)
         curdat.vndeidxvec().push_back(*si);
-    for (set<BoxKey>::iterator si=Wset.begin(); si!=Wset.end(); si++)
+    for (std::set<BoxKey>::iterator si=Wset.begin(); si!=Wset.end(); si++)
         curdat.wndeidxvec().push_back(*si);
-    for (set<BoxKey>::iterator si=Xset.begin(); si!=Xset.end(); si++)
+    for (std::set<BoxKey>::iterator si=Xset.begin(); si!=Xset.end(); si++)
         curdat.xndeidxvec().push_back(*si);
     return 0;
 }
@@ -457,7 +450,7 @@ bool Wave3d::setup_tree_adjacent(BoxKey meekey, BoxKey youkey)
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_tree_adjacent");
 #endif
-    int md = max(meekey.first,youkey.first);
+    int md = std::max(meekey.first,youkey.first);
     Index3 one(1,1,1);
     Index3 meectr(  (2 * meekey.second+one) * pow2(md - meekey.first)  );
     Index3 youctr(  (2 * youkey.second+one) * pow2(md - youkey.first)  );
@@ -504,15 +497,15 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, vector<int>& pids)
             pids.push_back(i);
         }
     } else {
-        set<int> idset;
+	std::set<int> idset;
         Point3 ctr = center(boxkey);
-        double D = max(4*W*W+4*W, 1.0); //LEXING: THIS TAKE CARES THE LOW FREQUENCY PART
-        int il = max((int)floor((ctr(0)+_K/2-D)/widC),0);
-        int iu = min((int)ceil( (ctr(0)+_K/2+D)/widC),numC);
-        int jl = max((int)floor((ctr(1)+_K/2-D)/widC),0);
-        int ju = min((int)ceil( (ctr(1)+_K/2+D)/widC),numC);
-        int kl = max((int)floor((ctr(2)+_K/2-D)/widC),0);
-        int ku = min((int)ceil( (ctr(2)+_K/2+D)/widC),numC);
+        double D = std::max(4*W*W+4*W, 1.0); //LEXING: THIS TAKE CARES THE LOW FREQUENCY PART
+        int il = std::max((int)floor((ctr(0)+_K/2-D)/widC),0);
+        int iu = std::min((int)ceil( (ctr(0)+_K/2+D)/widC),numC);
+        int jl = std::max((int)floor((ctr(1)+_K/2-D)/widC),0);
+        int ju = std::min((int)ceil( (ctr(1)+_K/2+D)/widC),numC);
+        int kl = std::max((int)floor((ctr(2)+_K/2-D)/widC),0);
+        int ku = std::min((int)ceil( (ctr(2)+_K/2+D)/widC),numC);
         //LEXING: IMPROVE THIS
         for (int i = il; i < iu; i++) {
             for (int j = jl; j < ju; j++) {

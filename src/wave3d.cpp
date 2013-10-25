@@ -1,13 +1,12 @@
 #include "wave3d.hpp"
 
-using std::cerr;
-
 //---------------------------------------------------------------------------
 Wave3d* Wave3d::_self = NULL;
 
 //-----------------------------------
 Wave3d::Wave3d(const string& p): ComObject(p), _posptr(NULL), _mlibptr(NULL),
-                                 _fplan(NULL), _bplan(NULL)
+                                 _fplan(NULL), _bplan(NULL), _ACCU(1), _NPQ(4),
+				 _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100)
 {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::Wave3d");
@@ -49,7 +48,7 @@ Index3 Wave3d::nml2dir(Point3 n, double W)
     Index3 res;
     for (int d = 0; d < 3; d++) {
         int tmp = int(floor(val(d) / Ang));
-        tmp = min(max(tmp, -B), B - 1);
+        tmp = std::min(std::max(tmp, -B), B - 1);
         res(d) = 2 * tmp + 1;
     }
     res(midx) = C * int(round(val(midx))); //val(midx)==1 or -1
@@ -145,7 +144,7 @@ int Wave3d::P() {
 //--------------------------------------------------------------------------------------------------------
 
 //-----------------------------------------------------------
-int serialize(const PtPrtn& val, ostream& os, const vector<int>& mask)
+int serialize(const PtPrtn& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -155,7 +154,7 @@ int serialize(const PtPrtn& val, ostream& os, const vector<int>& mask)
 }
 
 //-----------------------------------------------------------
-int deserialize(PtPrtn& val, istream& is, const vector<int>& mask)
+int deserialize(PtPrtn& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -165,7 +164,7 @@ int deserialize(PtPrtn& val, istream& is, const vector<int>& mask)
 }
 
 //-----------------------------------------------------------
-int serialize(const BoxDat& val, ostream& os, const vector<int>& mask)
+int serialize(const BoxDat& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -200,7 +199,7 @@ int serialize(const BoxDat& val, ostream& os, const vector<int>& mask)
 }
 
 //-----------------------------------------------------------
-int deserialize(BoxDat& val, istream& is, const vector<int>& mask)
+int deserialize(BoxDat& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -235,7 +234,7 @@ int deserialize(BoxDat& val, istream& is, const vector<int>& mask)
 }
 
 //-----------------------------------------------------------
-int serialize(const BndDat& val, ostream& os, const vector<int>& mask)
+int serialize(const BndDat& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -247,7 +246,7 @@ int serialize(const BndDat& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 //-----------------------------------------------------------
-int deserialize(BndDat& val, istream& is, const vector<int>& mask)
+int deserialize(BndDat& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");

@@ -1,8 +1,6 @@
 #include "wave3d.hpp"
 #include "vecmatop.hpp"
 
-using std::cerr;
-
 //---------------------------------------------------------------------
 int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
                   IntNumVec& chkkeys, double& relerr)

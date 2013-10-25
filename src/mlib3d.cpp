@@ -2,11 +2,6 @@
 #include "parallel.hpp"
 #include "serialize.hpp"
 
-using std::istringstream;
-using std::ifstream;
-using std::ofstream;
-using std::cerr;
-
 Point3 shifted_point(int dir_ind, double W) {
 #ifndef RELEASE
     CallStackEntry entry("shifted_point");
@@ -64,26 +59,26 @@ int Mlib3d::setup(map<string,string>& opts)
     map<string,string>::iterator mi;
     mi = opts.find("-" + prefix() + "NPQ");
     if(mi!=opts.end()) {
-        istringstream ss(mi->second);
+        std::istringstream ss(mi->second);
         ss >> _NPQ;
     }
     mi = opts.find("-" + prefix() + "ldname");
     if(mi!=opts.end()) {
-        istringstream ss(mi->second);
+        std::istringstream ss(mi->second);
         ss >> _ldname;
     }
     mi = opts.find("-" + prefix() + "hdname");
     if(mi!=opts.end()) {
-        istringstream ss(mi->second);
+        std::istringstream ss(mi->second);
         ss >> _hdname;
     }
   
     //LEXING: read data in a shared way
     vector<int> all(1,1);
-    istringstream liss;
+    std::istringstream liss;
     iC( Shared_Read(_ldname, liss) );
     iC( deserialize(_w2ldmap, liss, all) );
-    istringstream hiss;
+    std::istringstream hiss;
     iC( Shared_Read(_hdname, hiss) );
     iC( deserialize(_w2hdmap, hiss, all) );
   
@@ -355,7 +350,7 @@ int Mlib3d::highFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& pr
 
 
 //-------------------
-int serialize(const LowFreqEntry& le, ostream& os, const vector<int>& mask)
+int serialize(const LowFreqEntry& le, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -366,7 +361,7 @@ int serialize(const LowFreqEntry& le, ostream& os, const vector<int>& mask)
     iC( serialize(le._ue2dc, os, mask) );
     return 0;
 }
-int deserialize(LowFreqEntry& le, istream& is, const vector<int>& mask)
+int deserialize(LowFreqEntry& le, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -379,7 +374,7 @@ int deserialize(LowFreqEntry& le, istream& is, const vector<int>& mask)
 }
 
 //-------------------
-int serialize(const HghFreqDirEntry& he, ostream& os, const vector<int>& mask)
+int serialize(const HghFreqDirEntry& he, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -390,7 +385,7 @@ int serialize(const HghFreqDirEntry& he, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-int deserialize(HghFreqDirEntry& he, istream& is, const vector<int>& mask)
+int deserialize(HghFreqDirEntry& he, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");

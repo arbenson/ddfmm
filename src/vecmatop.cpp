@@ -2,10 +2,7 @@
 #include "numvec.hpp"
 #include "nummat.hpp"
 #include "numtns.hpp"
-
 #include "vecmatop.hpp"
-
-using std::cerr;
 
 //Y <- a M X + b Y
 // ---------------------------------------------------------------------- 
