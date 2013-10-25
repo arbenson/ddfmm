@@ -1,11 +1,16 @@
-NCPU=4
+#!/usr/bin/bash
+
+# Parameters
+NCPU=2
 WAVE3D_K=64
 NPW=20
-GEOM=SubmarineJ
+GEOM=sphere
 BASE=${GEOM}.wrl_${WAVE3D_K}_${NPW}_${NCPU}
 ACCU=2
 
-mpirun -np ${NCPU} ./tt \
+# Run program
+mpirun \
+-np ${NCPU} ./tt \
 -posfile ${BASE}/pos \
 -denfile ${BASE}/den \
 -geomprtn ${BASE}/geomprtn \
