@@ -258,69 +258,6 @@ function res = aug3d_hghdata(ACCU,NPQ,W,L,respre)
     
     %----------------------------------
     %check
-    test = 0;
-    if(0)
-      Z = 1000;
-      psrnd = (rand(3,Z)-1/2)*W;
-      pa = psrnd;
-      
-      the = rand(1,NT) * (the_rng(2)-the_rng(1)) + the_rng(1);
-      phi = rand(1,NT) * (phi_rng(2)-phi_rng(1)) + phi_rng(1);
-      rho = rand(1,NT) * (rho_rng(2)-rho_rng(1)) + rho_rng(1);
-      tmp = sqrt(tan(the).^2 + tan(phi).^2 + 1);
-      x = tan(the)./tmp .* rho;
-      y = tan(phi)./tmp .* rho;
-      z = 1./tmp .* rho;
-      pb = [x; y; z];
-      tmpd = randn(size(pa,2),1);
-      t1 = kernel3d(pb, pa, 2*pi) * tmpd;
-      FWD = kernel3d(ptidx, pa, 2*pi);
-      t2 = kernel3d(pb, psidx, 2*pi) * (E1 * (E2 * (E3 * (FWD * tmpd))));
-      fprintf(1, 'Error %d %d\n', norm(t1-t2)/norm(t1), max(abs(t1-t2))/max(abs(t1)));
-    end
-    
-    if(0)
-      Z = 100;
-      psrnd = (rand(3,Z)-1/2)*W;
-      pa = psrnd;
-      tmp = sort(abs(ns));
-      good = find( abs(tmp(1,:)-n(1))<=tol & abs(tmp(2,:)-n(2))<=tol & abs(tmp(3,:)-n(3))<=1e-8 );
-      ssa = sfts(:,good);
-      nna = ns(:,good);
-      disa = sqrt(sum(ssa.^2,1));
-      [tmp, clsa] = min(disa);
-      tmpd = randn(size(pa,2),1);
-      for t=[clsa] %ceil(rand(1,1)*size(ssa,2))]        %ssa(:,t)
-        ptrnd = (rand(3,Z)-1/2)*W;
-        %first try
-        pb = ptrnd + ssa(:,t)*ones(1,size(ptrnd,2));
-        [ttt, pat] = sort(abs(nna(:,t)));
-        gsidx = psidx;        gtidx = ptidx;
-        gsidx(pat,:) = psidx;        gtidx(pat,:) = ptidx;
-        sgn = sign(nna(:,t));        sgn(sgn==0) = 1;
-        gsidx = (sgn*ones(1,size(gsidx,2))) .* gsidx;
-        gtidx = (sgn*ones(1,size(gtidx,2))) .* gtidx;
-        t1 = kernel3d(pb, pa, 2*pi) * tmpd;
-        FWD = kernel3d(gtidx, pa, 2*pi);
-        t2 = kernel3d(pb, gsidx, 2*pi) * (E1 * (E2 * (E3 * (FWD * tmpd))));
-        fprintf(1, '%d %d %d %d\n', ssa(1,t), ssa(2,t), ssa(3,t), norm(t1-t2)/norm(t1));
-        %hold on;        plot3(pa(1,:), pa(2,:), pa(3,:), 'r+');        plot3(pb(1,:), pb(2,:), pb(3,:), 'b+');
-        %second try
-        pb = ptrnd + 10*ssa(:,t)*ones(1,size(ptrnd,2));
-        [ttt, pat] = sort(abs(nna(:,t)));
-        gsidx = psidx;        gtidx = ptidx;
-        gsidx(pat,:) = psidx;        gtidx(pat,:) = ptidx;
-        sgn = sign(nna(:,t));        sgn(sgn==0) = 1;
-        gsidx = (sgn*ones(1,size(gsidx,2))) .* gsidx;
-        gtidx = (sgn*ones(1,size(gtidx,2))) .* gtidx;
-        t1 = kernel3d(pb, pa, 2*pi) * tmpd;
-        FWD = kernel3d(gtidx, pa, 2*pi);
-        t2 = kernel3d(pb, gsidx, 2*pi) * (E1 * (E2 * (E3 * (FWD * tmpd))));
-        fprintf(1, '%d %d %d %d\n', ssa(1,t), ssa(2,t), ssa(3,t), norm(t1-t2)/norm(t1));
-        %hold on;        plot3(pa(1,:), pa(2,:), pa(3,:), 'r+');        plot3(pb(1,:), pb(2,:), pb(3,:), 'b+');
-      end
-    end
-    
     uep = psidx;
     ucp = ptidx;
     uc2ue = {E1 E2 E3}; %uc2ud = ESS;
@@ -334,46 +271,6 @@ function res = aug3d_hghdata(ACCU,NPQ,W,L,respre)
     psidx_tmp = psidx;    psidx = -ptidx;    ptidx = -psidx_tmp;
     pscol_tmp = pscol;    pscol = -ptcol;    ptcol = -pscol_tmp;    %ESS = transpose(ESS);
     E1_tmp = E1;    E1 = transpose(E3);    E2 = transpose(E2);    E3 = transpose(E1_tmp);
-    
-    %----------------------------------
-    if(0)
-      ptrnd = (rand(3,Z)-1/2)*W;
-      pb = ptrnd; %pb = ptcol;
-      tmp = sort(abs(ns));
-      good = find( abs(tmp(1,:)-n(1))<=tol & abs(tmp(2,:)-n(2))<=tol & abs(tmp(3,:)-n(3))<=1e-8 );
-      ssa = sfts(:,good);
-      nna = ns(:,good);
-      disa = sqrt(sum(ssa.^2,1));
-      [tmp, clsa] = min(disa);
-      tmpd = rand(size(pa,2),1);
-      for t=[clsa] %ceil(rand(1,1)*size(ssa,2))]
-        psrnd = (rand(3,Z)-1/2)*W;
-        %first try
-        pa = psrnd - ssa(:,t)*ones(1,size(psrnd,2));
-        [ttt, pat] = sort(abs(nna(:,t)));
-        gsidx = psidx;        gtidx = ptidx;
-        gsidx(pat,:) = psidx;        gtidx(pat,:) = ptidx;
-        sgn = sign(nna(:,t));        sgn(sgn==0) = 1;
-        gsidx = (sgn*ones(1,size(gsidx,2))) .* gsidx;
-        gtidx = (sgn*ones(1,size(gtidx,2))) .* gtidx;
-        t1 = kernel3d(pb, pa, 2*pi) * tmpd;
-        FWD = kernel3d(pb, gsidx, 2*pi);        %t2 = FWD * ESS * kernel3d(ptidx, pa, 2*pi) * tmp;
-        t2 = FWD * (E1 * (E2 * (E3 * (kernel3d(gtidx, pa, 2*pi) * tmpd))));
-        fprintf(1, '%d %d %d %d\n', ssa(1,t), ssa(2,t), ssa(3,t), norm(t1-t2)/norm(t1));
-        %seocnd try
-        pa = psrnd - 10*ssa(:,t)*ones(1,size(psrnd,2));
-        [ttt, pat] = sort(abs(nna(:,t)));
-        gsidx = psidx;        gtidx = ptidx;
-        gsidx(pat,:) = psidx;        gtidx(pat,:) = ptidx;
-        sgn = sign(nna(:,t));        sgn(sgn==0) = 1;
-        gsidx = (sgn*ones(1,size(gsidx,2))) .* gsidx;
-        gtidx = (sgn*ones(1,size(gtidx,2))) .* gtidx;
-        t1 = kernel3d(pb, pa, 2*pi) * tmpd;
-        FWD = kernel3d(pb, gsidx, 2*pi);        %t2 = FWD * ESS * kernel3d(ptidx, pa, 2*pi) * tmp;
-        t2 = FWD * (E1 * (E2 * (E3 * (kernel3d(gtidx, pa, 2*pi) * tmpd))));
-        fprintf(1, '%d %d %d %d\n', ssa(1,t), ssa(2,t), ssa(3,t), norm(t1-t2)/norm(t1));
-      end
-    end
     
     %---------------------
     dep = psidx;
