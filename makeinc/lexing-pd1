@@ -10,7 +10,7 @@ INCLUDES =
 LIBS = -lfftw3 -llapack -lblas -lm 
 
 DEFINES = -DRELEASE=1
-DEFINES += -DLIMITED_MEMORY
+#DEFINES += -DLIMITED_MEMORY
 
 AR = ar
 ARFLAGS = rc
