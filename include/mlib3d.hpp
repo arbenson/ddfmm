@@ -7,10 +7,6 @@
 #include "kernel3d.hpp"
 #include "vecmatop.hpp"
 
-using std::vector;
-using std::pair;
-using std::map;
-
 class LowFreqEntry
 {
 public:
@@ -86,10 +82,10 @@ private:
 };
 
 //-------------------
-int serialize(const LowFreqEntry&, ostream&, const vector<int>&);
-int deserialize(LowFreqEntry&, istream&, const vector<int>&);
+int serialize(const LowFreqEntry&, std::ostream&, const std::vector<int>&);
+int deserialize(LowFreqEntry&, std::istream&, const std::vector<int>&);
 //-------------------
-int serialize(const HghFreqDirEntry&, ostream&, const vector<int>&);
-int deserialize(HghFreqDirEntry&, istream&, const vector<int>&);
+int serialize(const HghFreqDirEntry&, std::ostream&, const std::vector<int>&);
+int deserialize(HghFreqDirEntry&, std::istream&, const std::vector<int>&);
 
 #endif

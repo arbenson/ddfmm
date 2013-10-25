@@ -27,31 +27,25 @@
 
 #include "mpi.h"
 
-//complex number
-using std::complex;
-using std::pair;
-using std::istream;
-using std::ostream;
-
-typedef complex<double> cpx;
+typedef std::complex<double> cpx;
 
 //aux functions
 inline int pow2(int l) { assert(l>=0); return (1<<l); }
 
-#define iC(fun)  { int ierr=fun; assert(ierr==0); }
-#define iA(expr) { if((expr)==0) { std::cerr<<"wrong"<<std::endl; assert(expr); } }
+#define iC(fun)  { int ierr = fun; assert(ierr == 0); }
+#define iA(expr) { if((expr) == 0) { std::cerr << "wrong" << std::endl; assert(expr); } }
 
 template <class T, class S>
-istream& operator>>(istream& is, pair<T,S>& a)
+std::istream& operator>>(std::istream& is, std::pair<T,S>& a)
 {
-  is>>a.first;
-  is>>a.second;
+  is >> a.first;
+  is >> a.second;
   return is;
 }
 template <class T, class S>
-ostream& operator<<(ostream& os, const pair<T,S>& a)
+std::ostream& operator<<(std::ostream& os, const std::pair<T,S>& a)
 {
-  os<<a.first<<" "<<a.second;
+  os << a.first << " " << a.second;
   return os;
 }
 

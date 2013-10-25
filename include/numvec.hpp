@@ -3,11 +3,6 @@
 
 #include "commoninc.hpp"
 
-using std::istream;
-using std::ostream;
-using std::ios_base;
-using std::endl;
-
 template <class F>
 class NumVec
 {
@@ -142,17 +137,18 @@ private:
     }
 };
 
-template <class F> inline ostream& operator<<( ostream& os, const NumVec<F>& vec)
+template <class F> inline std::ostream& operator<<( std::ostream& os,
+                                                   const NumVec<F>& vec)
 {
 #ifndef RELEASE
     CallStackEntry entry("operator<<");
 #endif
-    os << vec.m() << endl;
-    os.setf(ios_base::scientific, ios_base::floatfield);
+    os << vec.m() << std::endl;
+    os.setf(std::ios_base::scientific, std::ios_base::floatfield);
     for(int i = 0; i < vec.m(); i++) {
         os << " " << vec(i);
     }
-    os << endl;
+    os << std::endl;
     return os;
 }
 

@@ -147,17 +147,18 @@ private:
     }
 };
 
-template <class F> inline ostream& operator<<( ostream& os, const NumMat<F>& mat)
+template <class F> inline std::ostream& operator<<(std::ostream& os,
+                                                   const NumMat<F>& mat)
 {
 #ifndef RELEASE
     CallStackEntry entry("operator<<");
 #endif
-    os << mat.m() << " " << mat.n() << endl;
-    os.setf(ios_base::scientific, ios_base::floatfield);
+    os << mat.m() << " " << mat.n() << std::endl;
+    os.setf(std::ios_base::scientific, std::ios_base::floatfield);
     for(int i = 0; i < mat.m(); i++) {
         for(int j = 0; j < mat.n(); j++)
             os << " " << mat(i,j);
-        os << endl;
+        os << std::endl;
     }
     return os;
 }

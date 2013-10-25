@@ -11,7 +11,6 @@ enum {
   KNL_EXPR = 1
 };
 
-
 class Kernel3d
 {
 protected:

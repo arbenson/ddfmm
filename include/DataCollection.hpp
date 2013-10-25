@@ -93,11 +93,11 @@ void PrintParData(ParData data, std::string message) {
 #endif
     int mpirank = getMPIRank();
     if (mpirank == 0) {
-        cout << message << endl
-	     << "mean: " << data.mean << endl
-	     << "var: "  << data.var  << endl
-	     << "max: "  << data.max  << endl
-	     << "min: "  << data.min  << endl;
+	std::cout << message << std::endl
+		  << "mean: " << data.mean << std::endl
+		  << "var: "  << data.var  << std::endl
+		  << "max: "  << data.max  << std::endl
+		  << "min: "  << data.min  << std::endl;
     }
 }
 
@@ -107,12 +107,12 @@ void PrintCommData(CommData data, std::string message) {
 #endif
     int mpirank = getMPIRank();
     if (mpirank == 0) {
-        cout << message << endl
-	     << "total: " << data.total << endl
-	     << "mean: " << data.mean << endl
-	     << "var: "  << data.var  << endl
-	     << "max: "  << data.max  << endl
-	     << "min: "  << data.min  << endl;
+	std::cout << message << std::endl
+	          << "total: " << data.total << std::endl
+		  << "mean: " << data.mean << std::endl
+		  << "var: "  << data.var  << std::endl
+		  << "max: "  << data.max  << std::endl
+		  << "min: "  << data.min  << std::endl;
     }
 }
 

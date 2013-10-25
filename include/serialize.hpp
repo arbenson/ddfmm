@@ -4,24 +4,16 @@
 #include "commoninc.hpp"
 #include "wave3d.hpp"
 
-using std::vector;
-using std::set;
-using std::map;
-using std::pair;
-using std::istream;
-using std::ostream;
-using std::istringstream;
-using std::ostringstream;
-using std::string;
-
-template<class T, class S> int serialize(const pair<T,S>& val, ostream& os,
-					 const vector<int>& mask);
-template<class T, class S> int deserialize(pair<T,S>& val, istream& is,
-					   const vector<int>& mask);
+template<class T, class S> int serialize(const std::pair<T,S>& val,
+                                         std::ostream& os,
+					 const std::vector<int>& mask);
+template<class T, class S> int deserialize(std::pair<T,S>& val,
+                                           std::istream& is,
+					   const std::vector<int>& mask);
 
 //-------------------
 //char
-inline int serialize(const char& val, ostream& os, const vector<int>& mask)
+inline int serialize(const char& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -30,7 +22,7 @@ inline int serialize(const char& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(char& val, istream& is, const vector<int>& mask)
+inline int deserialize(char& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -41,7 +33,7 @@ inline int deserialize(char& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //int
-inline int serialize(const int& val, ostream& os, const vector<int>& mask)
+inline int serialize(const int& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -50,7 +42,7 @@ inline int serialize(const int& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(int& val, istream& is, const vector<int>& mask)
+inline int deserialize(int& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -61,7 +53,7 @@ inline int deserialize(int& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //double
-inline int serialize(const double& val, ostream& os, const vector<int>& mask)
+inline int serialize(const double& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -70,7 +62,7 @@ inline int serialize(const double& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(double& val, istream& is, const vector<int>& mask)
+inline int deserialize(double& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -81,7 +73,7 @@ inline int deserialize(double& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //cpx
-inline int serialize(const cpx& val, ostream& os, const vector<int>& mask)
+inline int serialize(const cpx& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -90,7 +82,7 @@ inline int serialize(const cpx& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(cpx& val, istream& is, const vector<int>& mask)
+inline int deserialize(cpx& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -102,7 +94,7 @@ inline int deserialize(cpx& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //Index3
-inline int serialize(const Index3& val, ostream& os, const vector<int>& mask)
+inline int serialize(const Index3& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -111,7 +103,7 @@ inline int serialize(const Index3& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(Index3& val, istream& is, const vector<int>& mask)
+inline int deserialize(Index3& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -122,7 +114,7 @@ inline int deserialize(Index3& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //Point3
-inline int serialize(const Point3& val, ostream& os, const vector<int>& mask)
+inline int serialize(const Point3& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -131,7 +123,7 @@ inline int serialize(const Point3& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(Point3& val, istream& is, const vector<int>& mask)
+inline int deserialize(Point3& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -141,9 +133,9 @@ inline int deserialize(Point3& val, istream& is, const vector<int>& mask)
 }
 
 //-------------------
-//vector
+//std::vector
 template<class T>
-int serialize(const vector<T>& val, ostream& os, const vector<int>& mask)
+int serialize(const std::vector<T>& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -156,7 +148,7 @@ int serialize(const vector<T>& val, ostream& os, const vector<int>& mask)
 }
 
 template<class T>
-int deserialize(vector<T>& val, istream& is, const vector<int>& mask)
+int deserialize(std::vector<T>& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -172,20 +164,20 @@ int deserialize(vector<T>& val, istream& is, const vector<int>& mask)
 //-------------------
 //set
 template<class T>
-int serialize(const set<T>& val, ostream& os, const vector<int>& mask)
+int serialize(const std::set<T>& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif
     int sz = val.size();
     os.write((char*)&sz, sizeof(int));
-    for (typename set<T>::const_iterator mi = val.begin(); mi != val.end(); mi++)
+    for (typename std::set<T>::const_iterator mi = val.begin(); mi != val.end(); mi++)
         serialize((*mi), os, mask);
     return 0;
 }
 
 template<class T>
-int deserialize(set<T>& val, istream& is, const vector<int>& mask)
+int deserialize(std::set<T>& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -203,7 +195,7 @@ int deserialize(set<T>& val, istream& is, const vector<int>& mask)
 //-------------------
 //map
 template<class T, class S>
-int serialize(const map<T,S>& val, ostream& os, const vector<int>& mask)
+int serialize(const map<T,S>& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -219,7 +211,7 @@ int serialize(const map<T,S>& val, ostream& os, const vector<int>& mask)
 }
 
 template<class T, class S>
-int deserialize(map<T,S>& val, istream& is, const vector<int>& mask)
+int deserialize(map<T,S>& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -240,7 +232,7 @@ int deserialize(map<T,S>& val, istream& is, const vector<int>& mask)
 //-------------------
 //pair
 template<class T, class S>
-int serialize(const pair<T,S>& val, ostream& os, const vector<int>& mask)
+int serialize(const std::pair<T,S>& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -251,7 +243,7 @@ int serialize(const pair<T,S>& val, ostream& os, const vector<int>& mask)
 }
 
 template<class T, class S>
-int deserialize(pair<T,S>& val, istream& is, const vector<int>& mask)
+int deserialize(std::pair<T,S>& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -264,7 +256,7 @@ int deserialize(pair<T,S>& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //BolNumVec
-inline int serialize(const BolNumVec& val, ostream& os, const vector<int>& mask)
+inline int serialize(const BolNumVec& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -275,7 +267,7 @@ inline int serialize(const BolNumVec& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(BolNumVec& val, istream& is, const vector<int>& mask)
+inline int deserialize(BolNumVec& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -289,7 +281,7 @@ inline int deserialize(BolNumVec& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //BolNumMat
-inline int serialize(const BolNumMat& val, ostream& os, const vector<int>& mask)
+inline int serialize(const BolNumMat& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -302,7 +294,7 @@ inline int serialize(const BolNumMat& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(BolNumMat& val, istream& is, const vector<int>& mask)
+inline int deserialize(BolNumMat& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -318,7 +310,7 @@ inline int deserialize(BolNumMat& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //BolNumTns
-inline int serialize(const BolNumTns& val, ostream& os, const vector<int>& mask)
+inline int serialize(const BolNumTns& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -331,7 +323,7 @@ inline int serialize(const BolNumTns& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(BolNumTns& val, istream& is, const vector<int>& mask)
+inline int deserialize(BolNumTns& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -348,7 +340,7 @@ inline int deserialize(BolNumTns& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //IntNumVec
-inline int serialize(const IntNumVec& val, ostream& os, const vector<int>& mask)
+inline int serialize(const IntNumVec& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -359,7 +351,7 @@ inline int serialize(const IntNumVec& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(IntNumVec& val, istream& is, const vector<int>& mask)
+inline int deserialize(IntNumVec& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -373,7 +365,7 @@ inline int deserialize(IntNumVec& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //IntNumMat
-inline int serialize(const IntNumMat& val, ostream& os, const vector<int>& mask)
+inline int serialize(const IntNumMat& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -386,7 +378,7 @@ inline int serialize(const IntNumMat& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(IntNumMat& val, istream& is, const vector<int>& mask)
+inline int deserialize(IntNumMat& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -402,7 +394,7 @@ inline int deserialize(IntNumMat& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //IntNumTns
-inline int serialize(const IntNumTns& val, ostream& os, const vector<int>& mask)
+inline int serialize(const IntNumTns& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -415,7 +407,7 @@ inline int serialize(const IntNumTns& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(IntNumTns& val, istream& is, const vector<int>& mask)
+inline int deserialize(IntNumTns& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -432,7 +424,7 @@ inline int deserialize(IntNumTns& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //DblNumVec
-inline int serialize(const DblNumVec& val, ostream& os, const vector<int>& mask)
+inline int serialize(const DblNumVec& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -443,7 +435,7 @@ inline int serialize(const DblNumVec& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(DblNumVec& val, istream& is, const vector<int>& mask)
+inline int deserialize(DblNumVec& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -457,7 +449,7 @@ inline int deserialize(DblNumVec& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //DblNumMat
-inline int serialize(const DblNumMat& val, ostream& os, const vector<int>& mask)
+inline int serialize(const DblNumMat& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -470,7 +462,7 @@ inline int serialize(const DblNumMat& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(DblNumMat& val, istream& is, const vector<int>& mask)
+inline int deserialize(DblNumMat& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -486,7 +478,7 @@ inline int deserialize(DblNumMat& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //DblNumTns
-inline int serialize(const DblNumTns& val, ostream& os, const vector<int>& mask)
+inline int serialize(const DblNumTns& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -499,7 +491,7 @@ inline int serialize(const DblNumTns& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(DblNumTns& val, istream& is, const vector<int>& mask)
+inline int deserialize(DblNumTns& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -515,7 +507,7 @@ inline int deserialize(DblNumTns& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //CpxNumVec
-inline int serialize(const CpxNumVec& val, ostream& os, const vector<int>& mask)
+inline int serialize(const CpxNumVec& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -526,7 +518,7 @@ inline int serialize(const CpxNumVec& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(CpxNumVec& val, istream& is, const vector<int>& mask)
+inline int deserialize(CpxNumVec& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -540,7 +532,7 @@ inline int deserialize(CpxNumVec& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //CpxNumMat
-inline int serialize(const CpxNumMat& val, ostream& os, const vector<int>& mask)
+inline int serialize(const CpxNumMat& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -553,7 +545,7 @@ inline int serialize(const CpxNumMat& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(CpxNumMat& val, istream& is, const vector<int>& mask)
+inline int deserialize(CpxNumMat& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -569,7 +561,7 @@ inline int deserialize(CpxNumMat& val, istream& is, const vector<int>& mask)
 
 //-------------------
 //CpxNumTns
-inline int serialize(const CpxNumTns& val, ostream& os, const vector<int>& mask)
+inline int serialize(const CpxNumTns& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -582,7 +574,7 @@ inline int serialize(const CpxNumTns& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 
-inline int deserialize(CpxNumTns& val, istream& is, const vector<int>& mask)
+inline int deserialize(CpxNumTns& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -599,7 +591,7 @@ inline int deserialize(CpxNumTns& val, istream& is, const vector<int>& mask)
 //-------------------
 //NumVec
 template<class T>
-int inline serialize(const NumVec<T>& val, ostream& os, const vector<int>& mask)
+int inline serialize(const NumVec<T>& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -611,7 +603,7 @@ int inline serialize(const NumVec<T>& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 template<class T>
-int inline deserialize(NumVec<T>& val, istream& is, const vector<int>& mask)
+int inline deserialize(NumVec<T>& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -627,7 +619,7 @@ int inline deserialize(NumVec<T>& val, istream& is, const vector<int>& mask)
 //-------------------
 //NumMat
 template<class T>
-int inline serialize(const NumMat<T>& val, ostream& os, const vector<int>& mask)
+int inline serialize(const NumMat<T>& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -642,7 +634,7 @@ int inline serialize(const NumMat<T>& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 template<class T>
-int inline deserialize(NumMat<T>& val, istream& is, const vector<int>& mask)
+int inline deserialize(NumMat<T>& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -661,7 +653,7 @@ int inline deserialize(NumMat<T>& val, istream& is, const vector<int>& mask)
 //-------------------
 //NumTns
 template<class T>
-int inline serialize(const NumTns<T>& val, ostream& os, const vector<int>& mask)
+int inline serialize(const NumTns<T>& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -679,7 +671,7 @@ int inline serialize(const NumTns<T>& val, ostream& os, const vector<int>& mask)
     return 0;
 }
 template<class T>
-int inline deserialize(NumTns<T>& val, istream& is, const vector<int>& mask)
+int inline deserialize(NumTns<T>& val, std::istream& is, const std::vector<int>& mask)
 {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");

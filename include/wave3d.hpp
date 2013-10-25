@@ -8,13 +8,6 @@
 #include "mlib3d.hpp"
 #include "parvec.hpp"
 
-using std::vector;
-using std::pair;
-using std::map;
-using std::set;
-using std::cerr;
-using std::cout;
-
 #define NUM_DIRS (8)
 #define DIR_1(x) ((x & 4) >> 2)
 #define DIR_2(x) ((x & 2) >> 1)
@@ -47,7 +40,7 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef pair<int, Index3> BoxKey; // level, offset_in_level
+typedef std::pair<int, Index3> BoxKey; // level, offset_in_level
 
 class BoxDat
 {
@@ -74,8 +67,8 @@ public:
 
     // Auxiliarly data structures for FFT
     CpxNumTns _upeqnden_fft;
-    set<Index3> _incdirset;
-    set<Index3> _outdirset;
+    std::set<Index3> _incdirset;
+    std::set<Index3> _outdirset;
 
 
     BoxDat(): _tag(0), _fftnum(0), _fftcnt(0) {;} //by default, no children
@@ -98,8 +91,8 @@ public:
     CpxNumVec& dnchkval() { return _dnchkval; }
     //
     CpxNumTns& upeqnden_fft() { return _upeqnden_fft; }
-    set<Index3>& incdirset() { return _incdirset; }
-    set<Index3>& outdirset() { return _outdirset; }
+    std::set<Index3>& incdirset() { return _incdirset; }
+    std::set<Index3>& outdirset() { return _outdirset; }
     int& fftnum() { return _fftnum; }
     int& fftcnt() { return _fftcnt; }
 };
@@ -150,7 +143,7 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef pair<BoxKey,Index3> BndKey;
+typedef std::pair<BoxKey,Index3> BndKey;
 
 // Boundary data
 class BndDat {
@@ -192,8 +185,8 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef map< Index3, pair< vector<BoxKey>, vector<BoxKey> > > hdmap_t;
-typedef map< double, vector<BoxKey> > ldmap_t;
+typedef std::map< Index3, std::pair< std::vector<BoxKey>, std::vector<BoxKey> > > hdmap_t;
+typedef std::map< double, std::vector<BoxKey> > ldmap_t;
 
 class Wave3d: public ComObject
 {
@@ -316,38 +309,40 @@ private:
     // srcvec is the list of all boxes owned by this processor of width W
     // reqboxset is filled with all boxes whose information this processor needs
     // for the low-frequency downward pass
-    int EvalUpwardLow(double W, vector<BoxKey>& srcvec, set<BoxKey>& reqboxset);
+    int EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
+                      std::set<BoxKey>& reqboxset);
 
     // Travel down the octree and visit the boxes in the low frequency regime.
     //
     // W is the width of the box
-    int EvalDownwardLow(double W, vector<BoxKey>& trgvec);
+    int EvalDownwardLow(double W, std::vector<BoxKey>& trgvec);
 
     
-    int LowFreqUpwardPass(ldmap_t& ldmap, set<BoxKey>& reqboxset);
-    int LowFreqDownwardComm(set<BoxKey>& reqboxset);
+    int LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset);
+    int LowFreqDownwardComm(std::set<BoxKey>& reqboxset);
     int LowFreqDownwardPass(ldmap_t& ldmap);
     int HighFreqPass(hdmap_t& hdmap);
 
     //
     int EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
-                                set<BndKey>& reqbndset);
+                                std::set<BndKey>& reqbndset);
     int EvalDownwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap);
 
 # ifdef LIMITED_MEMORY
     int GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
                             vector< pair<double, Index3> >& compute_info);
-    int LevelCommunication(map< double, vector<BndKey> >& request_bnds,
+    int LevelCommunication(map< double, std::vector<BndKey> >& request_bnds,
                            double W);
 # endif
     
     int EvalUpwardHigh(double W, Index3 dir,
-            pair< vector<BoxKey>, vector<BoxKey> >& hdvecs, set<BndKey>& reqbndset);
+        std::pair< vector<BoxKey>, std::vector<BoxKey> >& hdvecs,
+        std::set<BndKey>& reqbndset);
     int EvalDownwardHigh(double W, Index3 dir,
-                         pair< vector<BoxKey>, vector<BoxKey> >& hdvecs);
+                         std::pair< vector<BoxKey>, std::vector<BoxKey> >& hdvecs);
 
     int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap);
-    int GatherDensities(vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
+    int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
     
     int U_list_compute(BoxDat& trgdat);
     int X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
@@ -357,21 +352,22 @@ private:
                        DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
                        NumTns<CpxNumTns>& ue2dc);
 
-    int get_reqs(Index3 dir, pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
-		 set<BndKey>& reqbndset);
+    int get_reqs(Index3 dir,
+                 std::pair< std::vector<BoxKey>, std::vector<BoxKey> >& hdvecs,
+		 std::set<BndKey>& reqbndset);
 };
 
 //-------------------
-int serialize(const PtPrtn&, ostream&, const vector<int>&);
-int deserialize(PtPrtn&, istream&, const vector<int>&);
+int serialize(const PtPrtn&, std::ostream&, const std::vector<int>&);
+int deserialize(PtPrtn&, std::istream&, const std::vector<int>&);
 //-------------------
-int serialize(const BoxDat&, ostream&, const vector<int>&);
-int deserialize(BoxDat&, istream&, const vector<int>&);
+int serialize(const BoxDat&, std::ostream&, const std::vector<int>&);
+int deserialize(BoxDat&, std::istream&, const std::vector<int>&);
 //-------------------
 //BoxPrtn, not necessary
 //-------------------
-int serialize(const BndDat&, ostream&, const vector<int>&);
-int deserialize(BndDat&, istream&, const vector<int>&);
+int serialize(const BndDat&, std::ostream&, const std::vector<int>&);
+int deserialize(BndDat&, std::istream&, const std::vector<int>&);
 //-------------------
 //BndPrtn, not necessary
 

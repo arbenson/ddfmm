@@ -3,13 +3,10 @@
 
 #include "comobject.hpp"
 
-using std::istringstream;
-using std::ostringstream;
+int Separate_Read(std::string name, std::istringstream& is);
+int Separate_Write(std::string name, std::ostringstream& os);
 
-int Separate_Read(string name, istringstream& is);
-int Separate_Write(string name, ostringstream& os);
-
-int Shared_Read(string name, istringstream& is);
-int Shared_Write(string name, ostringstream& os);
+int Shared_Read(std::string name, std::istringstream& is);
+int Shared_Write(std::string name, std::ostringstream& os);
 
 #endif
