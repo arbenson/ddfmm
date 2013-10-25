@@ -202,7 +202,8 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef std::map< Index3, std::pair< std::vector<BoxKey>, std::vector<BoxKey> > > hdmap_t;
+typedef std::pair< std::vector<BoxKey>, std::vector<BoxKey> > directions_t;
+typedef std::map< Index3, directions_t > hdmap_t;
 typedef std::map< double, std::vector<BoxKey> > ldmap_t;
 
 class Wave3d: public ComObject
@@ -369,9 +370,7 @@ private:
                        DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
                        NumTns<CpxNumTns>& ue2dc);
 
-    int get_reqs(Index3 dir,
-                 std::pair< std::vector<BoxKey>, std::vector<BoxKey> >& hdvecs,
-		 std::set<BndKey>& reqbndset);
+    int get_reqs(Index3 dir, directions_t& hdvecs, std::set<BndKey>& reqbndset);
 };
 
 //-------------------

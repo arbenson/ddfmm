@@ -256,11 +256,10 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
     // ldmap  maps box widths to a list of BoxKeys which correspond
     // to boxes in the low-frequency regime that are owned by this processor
     //
-    // hdmap maps a direction to a pair of lists:
-    //           1. List of BoxKeys of outgoing directions
-    //           2. List of BoxKeys of incoming directions
+    // hdmap maps a direction to a pair of vectors:
+    //           1. Vector of BoxKeys of outgoing directions
+    //           2. Vector of BoxKeys of incoming directions
     //
-    // TODO (Austin): Make the data structure of hdmap clearer
     for (map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
@@ -738,8 +737,7 @@ int Wave3d::GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
 # endif
 
 //---------------------------------------------------------------------
-int Wave3d::EvalUpwardHigh(double W, Index3 dir,
-			   std::pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
+int Wave3d::EvalUpwardHigh(double W, Index3 dir, directions_t& hdvecs,
                            std::set<BndKey>& reqbndset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardHigh");
@@ -768,7 +766,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir,
         CpxNumVec upchkval(ue2uc(0,0,0).m());
         setvalue(upchkval,cpx(0,0));
         // High-frequency M2M
-        if(abs(W-1) < eps) {
+        if (abs(W-1) < eps) {
             // The children boxes only have non-directional equivalent densities
             for (int ind = 0; ind < NUM_DIRS; ind++) {
                 int a = DIR_1(ind);
@@ -776,7 +774,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir,
                 int c = DIR_3(ind);
                 BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
                 BoxDat& chddat = _boxvec.access(chdkey);
-                if(has_pts(chddat)) {
+                if (has_pts(chddat)) {
                     CpxNumVec& chdued = chddat.upeqnden();
                     iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
                 }
@@ -789,7 +787,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir,
                 int c = DIR_3(ind);
                 BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
                 BoxDat& chddat = _boxvec.access(chdkey);
-                if(has_pts(chddat)) {
+                if (has_pts(chddat)) {
                     BndKey bndkey(chdkey, pdir);
                     BndDat& bnddat = _bndvec.access(bndkey);
                     CpxNumVec& chdued = bnddat.dirupeqnden();
