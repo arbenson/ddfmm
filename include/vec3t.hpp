@@ -1,13 +1,25 @@
+/* Distributed Directional Fast Multipole Method
+   Copyright (C) 2013 Austin Benson, Lexing Ying, and Jack Poulson
+
+ This file is part of DDFMM.
+
+    DDFMM is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    DDFMM is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef  _VEC3T_HPP_
 #define  _VEC3T_HPP_
 
 #include "commoninc.hpp"
 
-// TODO (Austin): remove these
-using std::istream;
-using std::ostream;
-using std::min;
-using std::max;
 using std::abs;
 
 // Common VECtor Template
@@ -62,7 +74,7 @@ public:
     Vec3T& operator/=( const F& s )     { _v[0]/=s;       _v[1]/=s;       _v[2]/=s;       return *this; }
     //-----------LENGTH...
     F l1( void )     const  { F sum=F(0); for(int i=0; i<3; i++) sum=sum+abs(_v[i]); return sum; }
-    F linfty( void ) const  { F cur=F(0); for(int i=0; i<3; i++) cur=max(cur,abs(_v[i])); return cur; }
+    F linfty( void ) const  { F cur=F(0); for(int i=0; i<3; i++) cur=std::max(cur,abs(_v[i])); return cur; }
     F l2( void )     const  { F sum=F(0); for(int i=0; i<3; i++) sum=sum+_v[i]*_v[i]; return sqrt(sum); }
 };
 
@@ -152,10 +164,10 @@ template <class F> inline Vec3T<F> cross (const Vec3T<F>& a, const Vec3T<F>& b) 
 
 //-------------ew NUMERICAL OPS
 template <class F> inline Vec3T<F> ewmin(const Vec3T<F>& a, const Vec3T<F>& b) {
-    return Vec3T<F>(min(a[0], b[0]), min(a[1], b[1]), min(a[2], b[2]));
+    return Vec3T<F>(std::min(a[0], b[0]), std::min(a[1], b[1]), std::min(a[2], b[2]));
 }
 template <class F> inline Vec3T<F> ewmax(const Vec3T<F>& a, const Vec3T<F>& b) {
-    return Vec3T<F>(max(a[0], b[0]), max(a[1], b[1]), max(a[2], b[2]));
+    return Vec3T<F>(std::max(a[0], b[0]), std::max(a[1], b[1]), std::max(a[2], b[2]));
 }
 template <class F> inline Vec3T<F> ewabs(const Vec3T<F>& a) {
     return Vec3T<F>(abs(a[0]), abs(a[1]), abs(a[2]));
@@ -171,12 +183,12 @@ template <class F> inline Vec3T<F> ewrnd(const Vec3T<F>&a) { //round
 }
 
 //---------------INOUT
-template <class F> istream& operator>>(istream& is, Vec3T<F>& a) {
+template <class F> std::istream& operator>>(std::istream& is, Vec3T<F>& a) {
     for(int i=0; i<3; i++)
         is >> a[i];
     return is;
 }
-template <class F> ostream& operator<<(ostream& os, const Vec3T<F>& a) { 
+template <class F> std::ostream& operator<<(std::ostream& os, const Vec3T<F>& a) { 
     for(int i=0; i<3; i++)
         os << a[i] << " ";
     return os;
