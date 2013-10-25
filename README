@@ -11,6 +11,8 @@ u_i = G(p_i, p_1)f_1 + ... + G(p_i, p_N)f_N,
 where G(p_i, p_j) = exp(i|p_i - p_j|) / |p_i - p_j| is the Green's function of the Helmholtz equation.
 Our code also supports the kernel G(p_i, p_j) = exp(i|p_i - p_j|).
 
+The code is liencensed under GPLv3.  Please see the COPYING file for details of the license.
+
 Pre-computation and data generation
 -----
 The files in the matlab directory are tools for the pre-computation and data generation.
