@@ -1,6 +1,6 @@
 Distributed Directional Fast Multipole Method
-=====
-### Austin R. Benson, Jack Poulson, Lexing Ying
+-----
+Austin R. Benson, Jack Poulson, Lexing Ying
 
 This code provides a distributed memory implementation of the directional Fast Multipole Method.
 Given a set of N points p_1, ..., p_N and N densities f_1, ..., f_N, we want to compute the potentials
@@ -20,13 +20,13 @@ The pre-computation contains all of the translation matrices for the low and hig
 The generated data are the points and densities sampled from one of the geometries.
 We provide sphere, F16, and submarine geometries.
 
-# Generate the translation matrices for high and low frequency
-cd matlab
-matlab < aug3d_script.m
+Generate the translation matrices for high and low frequency:
+    cd matlab
+    matlab < aug3d_script.m
 
-# Generate the points, densities, and partitions for different geometries
-cd matlab
-matlab < data_script.m
+Generate the points, densities, and partitions for different geometries
+    cd matlab
+    matlab < data_script.m
 
 
 Building and running the code
@@ -41,8 +41,8 @@ There is also support for MKL.  You need to compile with the variable MKL define
 See the file makeinc/lonestar for an example.
 
 To build the program:
-1. Define the environment variable HOST and create the file corresponding file makeinc/${HOST}.
-2. make tt
+* Define the environment variable HOST and create the file corresponding file makeinc/${HOST}.
+* make tt
 
 Running the code
 -----
