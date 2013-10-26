@@ -21,10 +21,12 @@ The generated data are the points and densities sampled from one of the geometri
 We provide sphere, F16, and submarine geometries.
 
 Generate the translation matrices for high and low frequency:
+
     cd matlab
     matlab < aug3d_script.m
 
-Generate the points, densities, and partitions for different geometries
+Generate the points, densities, and partitions for different geometries:
+
     cd matlab
     matlab < data_script.m
 
