@@ -6,7 +6,7 @@ This code provides a distributed memory implementation of the directional Fast M
 Given a set of N points p_1, ..., p_N and N densities f_1, ..., f_N, we want to compute the potentials
 u_1, ..., u_N defined by
 
-u_i = G(p_i, p_1)f_1 + ... + G(p_i, p_N)f_N,
+    u_i = G(p_i, p_1)f_1 + ... + G(p_i, p_N)f_N,
 
 where G(p_i, p_j) = exp(i|p_i - p_j|) / |p_i - p_j| is the Green's function of the Helmholtz equation.
 Our code also supports the kernel G(p_i, p_j) = exp(i|p_i - p_j|).
@@ -44,7 +44,7 @@ See the file makeinc/lonestar for an example.
 
 To build the program:
 * Define the environment variable HOST and create the file corresponding file makeinc/${HOST}.
-* make tt
+* `make tt`
 
 Running the code
 -----
