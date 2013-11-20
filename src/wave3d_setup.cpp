@@ -18,8 +18,7 @@
 #include "wave3d.hpp"
 
 //---------------------------------------------------------------------
-int Wave3d::setup(map<string,string>& opts)
-{
+int Wave3d::setup(map<string,string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup");
 #endif
@@ -98,8 +97,7 @@ int Wave3d::setup(map<string,string>& opts)
 }
 
 //---------------------------------------------------------------------
-int Wave3d::setup_tree()
-{
+int Wave3d::setup_tree() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_tree");
 #endif
@@ -109,12 +107,10 @@ int Wave3d::setup_tree()
     // pos contains all data read by this processor
     ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
 
-    //1. call get
     // 1.  Get all of the geometry information needed for this processor
     vector<int> all(1,1);
     iC( pos.getBegin(&(Wave3d::setup_Q1_wrapper), all) );
     iC( pos.getEnd(all) );
-    //iC( pos.get(&(Wave3d::setup_Q1_wrapper), all) );
 
     //2. _tree
     int numC = _geomprtn.m();
@@ -300,8 +296,7 @@ int Wave3d::setup_tree()
 }
 
 //---------------------------------------------------------------------
-int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
-{
+int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_tree_callowlist");
 #endif
@@ -392,24 +387,23 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat)
 }
 
 //---------------------------------------------------------------------
-int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
-{
+int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_tree_calhghlist");
 #endif
     Point3 curctr = center(curkey);
     double W = width(curkey);
     double eps = 1e-12;
-    double D = W * W + W;
+    double D = W * W + W; // Far field distance
     double threshold = D - eps;
     if (iscell(curkey)) {
         //LEXING: CHECK THE FOLLOWING
         for (map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin();
              iscell(mi->first); mi++) {
             BoxKey othkey = mi->first;
-            BoxDat& othdat = _boxvec.access(othkey);
+            BoxDat& othdat = boxdata(othkey);
             if (has_pts(othdat)) {
-                //LEXING: ALWAYS target - source //Point3 diff = curctr - center(othkey);
+                //LEXING: ALWAYS target - source
                 Point3 diff = curctr - center(othkey);
                 if (diff.l2() >= threshold) {
                     Index3 dir = nml2dir(diff / diff.l2(), W);
@@ -426,17 +420,16 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
             BoxKey trykey = pardata.endeidxvec()[k];
             for (int ind = 0; ind < NUM_DIRS; ind++) {
                 BoxKey othkey = chdkey(trykey, Index3(DIR_1(ind), DIR_2(ind), DIR_3(ind)));
-                BoxDat& othdat = _boxvec.access(othkey);
-                if (!has_pts(othdat)) {
-                    continue;
-                }
-                //LEXING: ALWAYS target - source
-                Point3 diff = curctr - center(othkey);
-                if (diff.l2() >= threshold) {
-                    Index3 dir = nml2dir(diff/diff.l2(), W);
-                    curdat.fndeidxvec()[dir].push_back(othkey);
-                } else {
-                    curdat.endeidxvec().push_back(othkey);
+                BoxDat& othdat = boxdata(othkey);
+                if (has_pts(othdat)) {
+		    //LEXING: ALWAYS target - source
+		    Point3 diff = curctr - center(othkey);
+		    if (diff.l2() >= threshold) {
+                        Index3 dir = nml2dir(diff / diff.l2(), W);
+                        curdat.fndeidxvec()[dir].push_back(othkey);
+		    } else {
+                        curdat.endeidxvec().push_back(othkey);
+		    }
                 }
             }
         }
@@ -445,16 +438,16 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat)
 }
 
 // ----------------------------------------------------------------------
-bool Wave3d::setup_tree_find(BoxKey wntkey, BoxKey& trykey)
-{
+bool Wave3d::setup_tree_find(BoxKey wntkey, BoxKey& trykey) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_tree_find");
 #endif
     trykey = wntkey;
     while(!iscell(trykey)) {
         map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().find(trykey);
-        if (mi!=_boxvec.lclmap().end())
+        if (mi!=_boxvec.lclmap().end()) {
             return true; //found
+	}
         trykey = parkey(trykey);
     }
     map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().find(trykey);
@@ -462,8 +455,7 @@ bool Wave3d::setup_tree_find(BoxKey wntkey, BoxKey& trykey)
 }
 
 // ----------------------------------------------------------------------
-bool Wave3d::setup_tree_adjacent(BoxKey meekey, BoxKey youkey)
-{
+bool Wave3d::setup_tree_adjacent(BoxKey meekey, BoxKey youkey) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_tree_adjacent");
 #endif
@@ -480,8 +472,7 @@ bool Wave3d::setup_tree_adjacent(BoxKey meekey, BoxKey youkey)
 }
 
 //---------------------------------------------------------------------
-int Wave3d::setup_Q1(int key, Point3& pos, vector<int>& pids)
-{
+int Wave3d::setup_Q1(int key, Point3& pos, vector<int>& pids) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_Q1");
 #endif
@@ -498,8 +489,7 @@ int Wave3d::setup_Q1(int key, Point3& pos, vector<int>& pids)
 }
 
 //---------------------------------------------------------------------
-int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, vector<int>& pids)
-{
+int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, vector<int>& pids) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_Q2");
 #endif
@@ -538,16 +528,14 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, vector<int>& pids)
 }
 
 //---------------------------------------------------------------------
-int Wave3d::setup_Q1_wrapper(int key, Point3& dat, vector<int>& pids)
-{
+int Wave3d::setup_Q1_wrapper(int key, Point3& dat, vector<int>& pids) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_Q1_wrapper");
 #endif
     return (Wave3d::_self)->setup_Q1(key, dat, pids);
 }
 
-int Wave3d::setup_Q2_wrapper(BoxKey key, BoxDat& dat, vector<int>& pids)
-{
+int Wave3d::setup_Q2_wrapper(BoxKey key, BoxDat& dat, vector<int>& pids) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_Q2_wrapper");
 #endif

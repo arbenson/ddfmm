@@ -257,8 +257,8 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
     // to boxes in the low-frequency regime that are owned by this processor
     //
     // hdmap maps a direction to a pair of vectors:
-    //           1. Vector of BoxKeys of outgoing directions
-    //           2. Vector of BoxKeys of incoming directions
+    //     1. BoxKeys that have the direction in its outgoing direction list
+    //     2. BoxKeys that have the direction in its incoming direction list
     //
     for (map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); mi++) {
@@ -295,8 +295,7 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
 
 
 //---------------------------------------------------------------------
-int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
-{
+int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::eval");
 #endif
@@ -377,8 +376,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val)
 
 //---------------------------------------------------------------------
 int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
-                          std::set<BoxKey>& reqboxset)
-{
+                          std::set<BoxKey>& reqboxset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardLow");
 #endif
@@ -454,8 +452,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
 }
 
 //---------------------------------------------------------------------
-int Wave3d::EvalDownwardLow(double W, vector<BoxKey>& trgvec)
-{
+int Wave3d::EvalDownwardLow(double W, vector<BoxKey>& trgvec) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardLow");
 #endif
@@ -549,8 +546,7 @@ int Wave3d::EvalDownwardLow(double W, vector<BoxKey>& trgvec)
     return 0;
 }
 
-int Wave3d::U_list_compute(BoxDat& trgdat)
-{
+int Wave3d::U_list_compute(BoxDat& trgdat) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::U_list_compute");
 #endif
@@ -567,8 +563,7 @@ int Wave3d::U_list_compute(BoxDat& trgdat)
 }
 
 int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNumMat& uep,
-                           DblNumMat& dcp, CpxNumVec& dnchkval, NumTns<CpxNumTns>& ue2dc)
-{
+                           DblNumMat& dcp, CpxNumVec& dnchkval, NumTns<CpxNumTns>& ue2dc) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::V_list_compute");
 #endif
@@ -628,8 +623,7 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
 }
 
 int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
-                           CpxNumVec& dnchkval)
-{
+                           CpxNumVec& dnchkval) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::X_list_compute");
 #endif
@@ -652,8 +646,7 @@ int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
     return 0;
 }
 
-int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep)
-{
+int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::W_list_compute");
 #endif
@@ -737,7 +730,7 @@ int Wave3d::GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
 # endif
 
 //---------------------------------------------------------------------
-int Wave3d::EvalUpwardHigh(double W, Index3 dir, directions_t& hdvecs,
+int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
                            std::set<BndKey>& reqbndset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardHigh");
@@ -812,14 +805,14 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, directions_t& hdvecs,
         iC( zgemv(1.0, E1, tmp1, 0.0, upeqnden) );
     }
 
-    iC( get_reqs(dir, hdvecs, reqbndset) );
+    iC( GetFarFieldDirKeys(dir, hdvecs, reqbndset) );
     return 0;
 }
 
-int Wave3d::get_reqs(Index3 dir, std::pair< vector<BoxKey>, vector<BoxKey> >& hdvecs,
-                     std::set<BndKey>& reqbndset) {
+int Wave3d::GetFarFieldDirKeys(Index3 dir, box_lists_t& hdvecs,
+                               std::set<BndKey>& reqbndset) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::get_reqs");
+  CallStackEntry entry("Wave3d::GetFarFieldDirKeys");
 #endif
   // Fill reqbndset
   vector<BoxKey>& trgvec = hdvecs.second;
@@ -836,8 +829,7 @@ int Wave3d::get_reqs(Index3 dir, std::pair< vector<BoxKey>, vector<BoxKey> >& hd
 }
 
 //---------------------------------------------------------------------
-int Wave3d::EvalDownwardHigh(double W, Index3 dir,
-			     std::pair< std::vector<BoxKey>, std::vector<BoxKey> >& hdvecs) {
+int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardHigh");
 #endif
