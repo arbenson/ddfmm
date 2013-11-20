@@ -37,8 +37,7 @@ enum {
 
 //---------------------------------------------------------------------------
 
-class PtPrtn
-{
+class PtPrtn {
 public:
     vector<int> _ownerinfo;
 public:
@@ -59,8 +58,7 @@ public:
 //---------------------------------------------------------------------------
 typedef std::pair<int, Index3> BoxKey; // level, offset_in_level
 
-class BoxDat
-{
+class BoxDat {
 public:
     // TODO (Austin): Some of these should be private
     int _fftnum;
@@ -79,8 +77,10 @@ public:
     vector<BoxKey> _vndeidxvec;  // V List
     vector<BoxKey> _wndeidxvec;  // W List
     vector<BoxKey> _xndeidxvec;  // X List
-    vector<BoxKey> _endeidxvec;  // Close directions
-    map< Index3, vector<BoxKey> > _fndeidxvec; // Far away directions
+    vector<BoxKey> _endeidxvec;  // Boxes in near field
+    // _fndeidxvec maps a direction to a vector of boxes
+    // that are in the far field of this box 
+    map< Index3, vector<BoxKey> > _fndeidxvec;
 
     // Auxiliarly data structures for FFT
     CpxNumTns _upeqnden_fft;
@@ -202,8 +202,8 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef std::pair< std::vector<BoxKey>, std::vector<BoxKey> > directions_t;
-typedef std::map< Index3, directions_t > hdmap_t;
+typedef std::pair< std::vector<BoxKey>, std::vector<BoxKey> > box_lists_t;
+typedef std::map< Index3, box_lists_t > hdmap_t;
 typedef std::map< double, std::vector<BoxKey> > ldmap_t;
 
 class Wave3d: public ComObject
@@ -356,8 +356,7 @@ private:
     int EvalUpwardHigh(double W, Index3 dir,
         std::pair< vector<BoxKey>, std::vector<BoxKey> >& hdvecs,
         std::set<BndKey>& reqbndset);
-    int EvalDownwardHigh(double W, Index3 dir,
-                         std::pair< vector<BoxKey>, std::vector<BoxKey> >& hdvecs);
+    int EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs);
 
     int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap);
     int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
@@ -370,7 +369,8 @@ private:
                        DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
                        NumTns<CpxNumTns>& ue2dc);
 
-    int get_reqs(Index3 dir, directions_t& hdvecs, std::set<BndKey>& reqbndset);
+    int GetFarFieldDirKeys(Index3 dir, box_lists_t& hdvecs,
+                           std::set<BndKey>& reqbndset);
 };
 
 //-------------------
