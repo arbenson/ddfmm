@@ -2,7 +2,7 @@ Distributed Directional Fast Multipole Method
 -----
 Austin R. Benson, Jack Poulson, Lexing Ying
 
-This code provides a distributed memory implementation of the directional Fast Multipole Method.
+This code provides a distributed memory implementation of the directional Fast Multipole Method described in [A parallel directional Fast Multipole Method](http://arxiv.org/abs/1311.4257):
 Given a set of N points p_1, ..., p_N and N densities f_1, ..., f_N, we want to compute the potentials
 u_1, ..., u_N defined by
 
