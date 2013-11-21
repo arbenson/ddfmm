@@ -21,8 +21,6 @@
 #include "nummat.hpp"
 #include "vec3t.hpp"
 
-using std::vector;
-
 enum {
   KNL_HELM = 0,
   KNL_EXPR = 1

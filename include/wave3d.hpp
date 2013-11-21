@@ -39,19 +39,20 @@ enum {
 
 class PtPrtn {
 public:
-    vector<int> _ownerinfo;
+    std::vector<int> _ownerinfo;
 public:
     PtPrtn() {;}
     ~PtPrtn() {;}
-    vector<int>& ownerinfo() { return _ownerinfo; }
+    std::vector<int>& ownerinfo() { return _ownerinfo; }
     int owner(int key) {
 #ifndef RELEASE
 	CallStackEntry entry("PtPrtn::owner");
 #endif
         iA(key<_ownerinfo[_ownerinfo.size()-1]);
-        //get the proc which owns the current point
-        vector<int>::iterator vi = lower_bound(_ownerinfo.begin(), _ownerinfo.end(), key+1);
-        return (vi-_ownerinfo.begin())-1;
+        // Get the process which owns the current point
+	std::vector<int>::iterator vi = lower_bound(_ownerinfo.begin(),
+                                                    _ownerinfo.end(), key + 1);
+        return (vi - _ownerinfo.begin()) - 1;
     }
 };
 
@@ -71,16 +72,16 @@ public:
     CpxNumVec _dnchkval; // Downward check potential
 
     int _tag;
-    vector<int> _ptidxvec;
+    std::vector<int> _ptidxvec;
     //
-    vector<BoxKey> _undeidxvec;  // U List
-    vector<BoxKey> _vndeidxvec;  // V List
-    vector<BoxKey> _wndeidxvec;  // W List
-    vector<BoxKey> _xndeidxvec;  // X List
-    vector<BoxKey> _endeidxvec;  // Boxes in near field
-    // _fndeidxvec maps a direction to a vector of boxes
-    // that are in the far field of this box 
-    map< Index3, vector<BoxKey> > _fndeidxvec;
+    std::vector<BoxKey> _undeidxvec;  // U List
+    std::vector<BoxKey> _vndeidxvec;  // V List
+    std::vector<BoxKey> _wndeidxvec;  // W List
+    std::vector<BoxKey> _xndeidxvec;  // X List
+    std::vector<BoxKey> _endeidxvec;  // Boxes in near field
+    // _fndeidxvec maps a direction to a vector of boxes that are in the
+    // interaction list of this box in that direction
+    std::map< Index3, std::vector<BoxKey> > _fndeidxvec;
 
     // Auxiliarly data structures for FFT
     CpxNumTns _upeqnden_fft;
@@ -92,14 +93,14 @@ public:
     ~BoxDat() {;}
     //
     int& tag() { return _tag; }
-    vector<int>& ptidxvec() { return _ptidxvec; }
+    std::vector<int>& ptidxvec() { return _ptidxvec; }
     //
-    vector<BoxKey>& undeidxvec() { return _undeidxvec; }
-    vector<BoxKey>& vndeidxvec() { return _vndeidxvec; }
-    vector<BoxKey>& wndeidxvec() { return _wndeidxvec; }
-    vector<BoxKey>& xndeidxvec() { return _xndeidxvec; }
-    vector<BoxKey>& endeidxvec() { return _endeidxvec; }
-    map< Index3, vector<BoxKey> >& fndeidxvec() { return _fndeidxvec; }
+    std::vector<BoxKey>& undeidxvec() { return _undeidxvec; }
+    std::vector<BoxKey>& vndeidxvec() { return _vndeidxvec; }
+    std::vector<BoxKey>& wndeidxvec() { return _wndeidxvec; }
+    std::vector<BoxKey>& xndeidxvec() { return _xndeidxvec; }
+    std::vector<BoxKey>& endeidxvec() { return _endeidxvec; }
+    std::map< Index3, std::vector<BoxKey> >& fndeidxvec() { return _fndeidxvec; }
     //
     DblNumMat& extpos() { return _extpos; }
     CpxNumVec& extden() { return _extden; }
@@ -230,7 +231,7 @@ public:
     //
     static Wave3d* _self;
 public:
-    Wave3d(const string& p);
+    Wave3d(const std::string& p);
     ~Wave3d();
     //member access
     ParVec<int, Point3, PtPrtn>*& posptr() { return _posptr; }
@@ -245,7 +246,7 @@ public:
     int& maxlevel() { return _maxlevel; }
 
     //main functions
-    int setup(map<string,string>& opts);
+    int setup(std::map<std::string, std::string>& opts);
 
     // Compute the potentials at the target points.
     // den contains the density information
@@ -303,14 +304,14 @@ private:
     //
     // dir is the child direction
     Index3 predir(Index3 dir);
-    vector<Index3> chddir(Index3 dir);
+    std::vector<Index3> chddir(Index3 dir);
     double dir2width(Index3 dir);
 
     int setup_tree();
-    static int setup_Q1_wrapper(int key, Point3& dat, vector<int>& pids);
-    static int setup_Q2_wrapper(BoxKey key, BoxDat& dat, vector<int>& pids);
-    int setup_Q1(int key, Point3& dat, vector<int>& pids);
-    int setup_Q2(BoxKey key, BoxDat& dat, vector<int>& pids);
+    static int setup_Q1_wrapper(int key, Point3& dat, std::vector<int>& pids);
+    static int setup_Q2_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids);
+    int setup_Q1(int key, Point3& dat, std::vector<int>& pids);
+    int setup_Q2(BoxKey key, BoxDat& dat, std::vector<int>& pids);
     int setup_tree_callowlist( BoxKey, BoxDat& );
     int setup_tree_calhghlist( BoxKey, BoxDat& );
     bool setup_tree_find(BoxKey wntkey, BoxKey& reskey);
@@ -348,13 +349,13 @@ private:
 
 # ifdef LIMITED_MEMORY
     int GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
-                            vector< pair<double, Index3> >& compute_info);
+                            std::vector< pair<double, Index3> >& compute_info);
     int LevelCommunication(map< double, std::vector<BndKey> >& request_bnds,
                            double W);
 # endif
     
     int EvalUpwardHigh(double W, Index3 dir,
-        std::pair< vector<BoxKey>, std::vector<BoxKey> >& hdvecs,
+        std::pair< std::vector<BoxKey>, std::vector<BoxKey> >& hdvecs,
         std::set<BndKey>& reqbndset);
     int EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs);
 

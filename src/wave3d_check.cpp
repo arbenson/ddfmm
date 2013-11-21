@@ -32,31 +32,32 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
   
     //1. get pos
-    vector<int> all(1,1);
-    vector<int> chkkeyvec;
-    for(int i = 0; i < chkkeys.m(); i++) {
+    std::vector<int> all(1,1);
+    std::vector<int> chkkeyvec;
+    for (int i = 0; i < chkkeys.m(); i++) {
         chkkeyvec.push_back( chkkeys(i) );
     }
     pos.getBegin(chkkeyvec, all);
     pos.getEnd(all);
-    vector<Point3> tmpsrcpos;
-    for(map<int,Point3>::iterator mi = pos.lclmap().begin();
+    std::vector<Point3> tmpsrcpos;
+    for (std::map<int,Point3>::iterator mi = pos.lclmap().begin();
         mi != pos.lclmap().end(); mi++) {
         if(pos.prtn().owner(mi->first) == mpirank) {
             tmpsrcpos.push_back(mi->second);
         }
     }
-    vector<cpx> tmpsrcden;
-    for(map<int,cpx>::iterator mi = den.lclmap().begin();
+    std::vector<cpx> tmpsrcden;
+    for (std::map<int,cpx>::iterator mi = den.lclmap().begin();
         mi != den.lclmap().end(); mi++) {
         if(den.prtn().owner(mi->first) == mpirank) {
             tmpsrcden.push_back(mi->second);
         }
     }
   
-    vector<Point3> tmptrgpos;
-    for(int i=0; i<chkkeyvec.size(); i++)
+    std::vector<Point3> tmptrgpos;
+    for (int i = 0; i < chkkeyvec.size(); i++) {
         tmptrgpos.push_back( pos.access(chkkeyvec[i]) );
+    }
 
     DblNumMat srcpos(3, tmpsrcpos.size(), false, (double*)&(tmpsrcpos[0]));
     CpxNumVec srcden(tmpsrcden.size(), false, (cpx*)&(tmpsrcden[0]));

@@ -212,14 +212,14 @@ int deserialize(std::set<T>& val, std::istream& is, const std::vector<int>& mask
 //-------------------
 //map
 template<class T, class S>
-int serialize(const map<T,S>& val, std::ostream& os, const std::vector<int>& mask)
-{
+int serialize(const std::map<T, S>& val, std::ostream& os,
+              const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif
     int sz = val.size();
     os.write((char*)&sz, sizeof(int));
-    for (typename map<T,S>::const_iterator mi = val.begin(); mi != val.end();
+    for (typename std::map<T, S>::const_iterator mi = val.begin(); mi != val.end();
          mi++) {
         serialize(mi->first, os, mask);
         serialize(mi->second, os, mask);
@@ -228,8 +228,8 @@ int serialize(const map<T,S>& val, std::ostream& os, const std::vector<int>& mas
 }
 
 template<class T, class S>
-int deserialize(map<T,S>& val, std::istream& is, const std::vector<int>& mask)
-{
+int deserialize(std::map<T, S>& val, std::istream& is,
+                const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
 #endif

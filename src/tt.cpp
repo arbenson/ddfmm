@@ -21,18 +21,18 @@
 
 #define CLOCK_DIFF_SECS(ck1, ck0) (double(ck1-ck0) / CLOCKS_PER_SEC)
 
-int optionsCreate(int argc, char** argv, map<string,string>& options)
-{
+int optionsCreate(int argc, char** argv, std::map<std::string,
+                  std::string>& options) {
     options.clear();
     for(int k=1; k<argc; k=k+2) {
-        options[ string(argv[k]) ] = string(argv[k+1]);
+      options[ std::string(argv[k]) ] = std::string(argv[k+1]);
     }
     return 0;
 }
 
-string findOption(map<string,string>& opts, string option)
-{
-    map<string,string>::iterator mi = opts.find(option);
+std::string findOption(std::map<std::string, std::string>& opts,
+                  std::string option) {
+    std::map<std::string, std::string>::iterator mi = opts.find(option);
     if (mi == opts.end()) {
 	std::cerr << "Missing option " << option << std::endl;
         return "";
@@ -56,11 +56,11 @@ int main(int argc, char** argv)
 	iA(argc % 1 == 0);
         clock_t ck0, ck1;
         time_t t0, t1;
-        vector<int> all(1,1);
-        map<string,string> opts;
+	std::vector<int> all(1,1);
+	std::map<std::string, std::string> opts;
 	optionsCreate(argc, argv, opts);
-        map<string,string>::iterator mi;
-        string opt;
+	std::map<std::string, std::string>::iterator mi;
+	std::string opt;
 
         //1. read data
         ParVec<int, Point3, PtPrtn> pos;
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
         }
 
 	std::istringstream piss;
-        iC( Separate_Read(opt, piss) );
+        iC( SeparateRead(opt, piss) );
         iC( deserialize(pos, piss, all) );
 	std::vector<int>& tmpinfo = pos.prtn().ownerinfo();
 	// LEXING: numpts CONTAINS THE TOTAL NUMBER OF POINTS
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
             return 0;
         }
 
-	std::istringstream diss; iC( Separate_Read(opt, diss) );
+	std::istringstream diss; iC( SeparateRead(opt, diss) );
         iC( deserialize(den, diss, all) );
         if(mpirank==0) {
             std::cerr << "Done reading den " << den.lclmap().size() << " "
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
         }
         ParVec<int, cpx, PtPrtn> val; //preset val to be the same as den
         val = den;
-        if(mpirank==0) {
+        if (mpirank==0) {
             std::cerr << "Done setting val " << val.lclmap().size() << " "
 		 << val.prtn().ownerinfo().size() << std::endl;
         }
@@ -122,7 +122,7 @@ int main(int argc, char** argv)
             return 0;
         }
   
-	std::istringstream giss;  iC( Shared_Read(opt, giss) );
+	std::istringstream giss;  iC( SharedRead(opt, giss) );
         iC( deserialize(geomprtn, giss, all) );
         if(mpirank==0) {
             std::cerr << "Done reading geomprtn " << geomprtn.m() << " "
@@ -161,7 +161,7 @@ int main(int argc, char** argv)
 	if (opt.empty()) {
 	    return 0;
 	}
-	iC( Separate_Write(opt, oss) );
+	iC( SeparateWrite(opt, oss) );
 
 	//4. check
 	IntNumVec chkkeyvec;
@@ -170,7 +170,7 @@ int main(int argc, char** argv)
 	    return 0;
 	}
         std::istringstream iss;
-	iC( Shared_Read(opt, iss) );
+	iC( SharedRead(opt, iss) );
 	iC( deserialize(chkkeyvec, iss, all) );
 	int numchk = chkkeyvec.m();
 	double relerr;

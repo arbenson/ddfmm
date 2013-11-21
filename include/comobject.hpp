@@ -20,18 +20,14 @@
 
 #include "commoninc.hpp"
 
-using std::string;
-using std::map;
-
-class ComObject
-{
+class ComObject {
 protected:
-  string _prefix;
+  std::string _prefix;
 public:
-  ComObject(const string& prefix): _prefix(prefix) {;}
+  ComObject(const std::string& prefix): _prefix(prefix) {;}
   virtual ~ComObject() {;}
   //-------------------------
-  const string& prefix() { return _prefix; }
+  const std::string& prefix() { return _prefix; }
 };
 
 #endif

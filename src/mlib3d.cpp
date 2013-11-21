@@ -67,13 +67,13 @@ int negate(DblNumMat& src) {
 }
 
 //-----------------------------------
-int Mlib3d::setup(map<string,string>& opts)
+int Mlib3d::setup(std::map<std::string, std::string>& opts)
 {
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::setup");
 #endif
     //get params
-    map<string,string>::iterator mi;
+    std::map<std::string, std::string>::iterator mi;
     mi = opts.find("-" + prefix() + "NPQ");
     if(mi!=opts.end()) {
         std::istringstream ss(mi->second);
@@ -91,12 +91,12 @@ int Mlib3d::setup(map<string,string>& opts)
     }
   
     //LEXING: read data in a shared way
-    vector<int> all(1,1);
+    std::vector<int> all(1,1);
     std::istringstream liss;
-    iC( Shared_Read(_ldname, liss) );
+    iC( SharedRead(_ldname, liss) );
     iC( deserialize(_w2ldmap, liss, all) );
     std::istringstream hiss;
-    iC( Shared_Read(_hdname, hiss) );
+    iC( SharedRead(_hdname, hiss) );
     iC( deserialize(_w2hdmap, hiss, all) );
   
     return 0;
@@ -104,8 +104,7 @@ int Mlib3d::setup(map<string,string>& opts)
 
 //-----------------------------------
 int Mlib3d::upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
-			   NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
-{
+			   NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc) {
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::upwardLowFetch");
 #endif
@@ -130,7 +129,6 @@ int Mlib3d::upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
 	apply_shift(tmp, uepchd, shifted_point(ind, W));
         iC( _knl.kernel(ucp, tmp, tmp, ue2uc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
     }
-  
     return 0;
 }
 
@@ -188,7 +186,7 @@ int Mlib3d::upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
     CallStackEntry entry("Mlib3d::upwardHighFetch");
 #endif
     iA(_w2hdmap.find(W) != _w2hdmap.end());
-    map<Index3, HghFreqDirEntry>& curmap = _w2hdmap[W];
+    std::map<Index3, HghFreqDirEntry>& curmap = _w2hdmap[W];
   
     Index3 srt, sgn, prm;
     iC( highFetchIndex3Sort(dir, srt, sgn, prm) );
@@ -211,7 +209,7 @@ int Mlib3d::upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
         uepchd = le.uep();
     } else { //large box
 	iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
-        map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W / 2];
+	std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W / 2];
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;
@@ -240,7 +238,7 @@ int Mlib3d::downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
     CallStackEntry entry("Mlib3d::downwardHighFetch");
 #endif
     iA(_w2hdmap.find(W) != _w2hdmap.end());
-    map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
+    std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
     Index3 srt, sgn, prm;
     iC( highFetchIndex3Sort(dir, srt, sgn, prm) );
@@ -266,7 +264,7 @@ int Mlib3d::downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
         dcpchd = le.uep();
     } else { //large box
 	iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
-        map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
+	std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;  iC( highFetchIndex3Sort(pdr, srt, sgn, prm) );

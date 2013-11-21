@@ -16,11 +16,12 @@
     You should have received a copy of the GNU General Public License
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
 #include "parallel.hpp"
+#include <sstream>
 
 #define MAX_FILE_NAME_LENGTH 128
 
 //---------------------------------------------------------
-int Separate_Read(std::string name, std::istringstream& is) {
+int SeparateRead(std::string name, std::istringstream& is) {
 #ifndef RELEASE
     CallStackEntry entry("Separate_Read");
 #endif
@@ -34,15 +35,16 @@ int Separate_Read(std::string name, std::istringstream& is) {
     std::ifstream fin(filename);
     if (fin.fail()) {
 	std::cerr << "failed to open input file stream: " << filename << std::endl;
+	return -1;
     }
-    is.str( string(std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>()) );
+    is.str( std::string(std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>()) );
     fin.close();
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
 //---------------------------------------------------------
-int Separate_Write(std::string name, std::ostringstream& os) {
+int SeparateWrite(std::string name, std::ostringstream& os) {
 #ifndef RELEASE
     CallStackEntry entry("Separate_Write");
 #endif
@@ -50,13 +52,13 @@ int Separate_Write(std::string name, std::ostringstream& os) {
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
 
-    //
     char filename[MAX_FILE_NAME_LENGTH];
     sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);
     std::cerr << filename << std::endl;
     std::ofstream fout(filename);
     if (fout.fail()) {
 	fprintf(stderr, "failed to open output file stream (%s)\n", filename);
+	return -1;
     }
     fout<<os.str();
     fout.close();
@@ -65,7 +67,7 @@ int Separate_Write(std::string name, std::ostringstream& os) {
 }
 
 //---------------------------------------------------------
-int Shared_Read(std::string name, std::istringstream& is) {
+int SharedRead(std::string name, std::istringstream& is) {
 #ifndef RELEASE
     CallStackEntry entry("Shared_Read");
 #endif
@@ -81,6 +83,7 @@ int Shared_Read(std::string name, std::istringstream& is) {
 	std::ifstream fin(filename);
 	if (fin.fail()) {
 	    fprintf(stderr, "failed to open input file stream (%s)\n", filename);
+	    return -1;
 	}
 
 	tmpstr.insert(tmpstr.end(), std::istreambuf_iterator<char>(fin),
@@ -95,13 +98,13 @@ int Shared_Read(std::string name, std::istringstream& is) {
 	tmpstr.resize(size);
 	iC( MPI_Bcast((void*)&(tmpstr[0]), size, MPI_BYTE, 0, MPI_COMM_WORLD) );
     }
-    is.str( string(tmpstr.begin(), tmpstr.end()) );
+    is.str( std::string(tmpstr.begin(), tmpstr.end()) );
     iC( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
 //---------------------------------------------------------
-int Shared_Write(std::string name, std::ostringstream& os) {
+int SharedWrite(std::string name, std::ostringstream& os) {
 #ifndef RELEASE
     CallStackEntry entry("Shared_Write");
 #endif
@@ -117,6 +120,7 @@ int Shared_Write(std::string name, std::ostringstream& os) {
 	std::ofstream fout(filename);
 	if (fout.fail()) {
 	    fprintf(stderr, "failed to open output file stream (%s)\n", filename);
+	    return -1;
 	}
 	fout << os.str();
 	fout.close();

@@ -61,32 +61,32 @@ public:
     //PARAM required
     Kernel3d _knl;
     int _NPQ;
-    string _ldname;
-    string _hdname;
+    std::string _ldname;
+    std::string _hdname;
   
-    Mlib3d(const string& p): ComObject(p) {}
+    Mlib3d(const std::string& p): ComObject(p) {}
     ~Mlib3d() {}
   
     Kernel3d& knl() { return _knl; }
     int& NPQ() { return _NPQ; }
-    string& ldname() { return _ldname; }
-    string& hdname() { return _hdname; }
+    std::string& ldname() { return _ldname; }
+    std::string& hdname() { return _hdname; }
   
-    map<double, LowFreqEntry>& w2ldmap() { return _w2ldmap; }
-    map<double, map<Index3, HghFreqDirEntry> >& w2hdmap() { return _w2hdmap; }
+    std::map<double, LowFreqEntry>& w2ldmap() { return _w2ldmap; }
+    std::map<double, std::map<Index3, HghFreqDirEntry> >& w2hdmap() { return _w2hdmap; }
   
-    int setup(map<string,string>& opts);
+    int setup(std::map<std::string, std::string>& opts);
   
     int upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
                         NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
     int downwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
-                        NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-                        NumTns<CpxNumTns>& ue2dc, DblNumMat& uep);
+                         NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+                         NumTns<CpxNumTns>& ue2dc, DblNumMat& uep);
     int upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
                         NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
     int downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp,
-                        NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-                        DblNumMat& uep);
+                          NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+                          DblNumMat& uep);
   
     int highFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& res);
     int highFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& prm);
@@ -94,8 +94,8 @@ public:
     Index3 predir(Index3);
 
 private:
-    map<double, LowFreqEntry> _w2ldmap;
-    map<double, map<Index3, HghFreqDirEntry> > _w2hdmap;
+    std::map<double, LowFreqEntry> _w2ldmap;
+    std::map<double, std::map<Index3, HghFreqDirEntry> > _w2hdmap;
 };
 
 //-------------------

@@ -21,18 +21,16 @@
 Wave3d* Wave3d::_self = NULL;
 
 //-----------------------------------
-Wave3d::Wave3d(const string& p): ComObject(p), _posptr(NULL), _mlibptr(NULL),
-                                 _fplan(NULL), _bplan(NULL), _ACCU(1), _NPQ(4),
-				 _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100)
-{
+Wave3d::Wave3d(const std::string& p): ComObject(p), _posptr(NULL), _mlibptr(NULL),
+                                      _fplan(NULL), _bplan(NULL), _ACCU(1), _NPQ(4),
+			              _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::Wave3d");
 #endif
     _self = this;
 }
 //-----------------------------------
-Wave3d::~Wave3d()
-{
+Wave3d::~Wave3d() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::~Wave3d");
 #endif
@@ -42,8 +40,7 @@ Wave3d::~Wave3d()
 }
 
 //-----------------------------------
-Index3 Wave3d::nml2dir(Point3 n, double W)
-{
+Index3 Wave3d::nml2dir(Point3 n, double W) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::nml2dir");
 #endif
@@ -73,15 +70,18 @@ Index3 Wave3d::nml2dir(Point3 n, double W)
 }
 
 //-----------------------------------
-Index3 Wave3d::predir(Index3 dir)
-{
+Index3 Wave3d::predir(Index3 dir) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::predir");
 #endif
     int C = dir.linfty();
     int B = C/2;
     int midx = -1;
-    for(int d=0; d<3; d++)	if(abs(dir(d))==C) midx = d;
+    for (int d = 0; d < 3; d++) {
+      if (abs(dir(d)) == C) {
+	midx = d;
+      }
+    }
     assert(midx!=-1);
     //midx gives the direction
     Index3 res;
@@ -94,19 +94,18 @@ Index3 Wave3d::predir(Index3 dir)
 }
 
 //-----------------------------------
-vector<Index3> Wave3d::chddir(Index3 dir)
-{
+std::vector<Index3> Wave3d::chddir(Index3 dir) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::chddir");
 #endif
     int C = dir.linfty();
-    vector<int> oidx;
+    std::vector<int> oidx;
     for (int d = 0; d < 3; d++) {
 	if(abs(dir(d)) != C) {
 	    oidx.push_back(d);
 	}
     }
-    vector<Index3> res;
+    std::vector<Index3> res;
     for (int a = 0; a < 2; a++) {
 	for (int b = 0; b < 2; b++) {
 	    Index3 tmp = 2*dir;
@@ -171,8 +170,7 @@ int serialize(const PtPrtn& val, std::ostream& os, const std::vector<int>& mask)
 }
 
 //-----------------------------------------------------------
-int deserialize(PtPrtn& val, std::istream& is, const std::vector<int>& mask)
-{
+int deserialize(PtPrtn& val, std::istream& is, const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
 #endif
@@ -181,8 +179,7 @@ int deserialize(PtPrtn& val, std::istream& is, const std::vector<int>& mask)
 }
 
 //-----------------------------------------------------------
-int serialize(const BoxDat& val, std::ostream& os, const std::vector<int>& mask)
-{
+int serialize(const BoxDat& val, std::ostream& os, const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif
@@ -216,8 +213,7 @@ int serialize(const BoxDat& val, std::ostream& os, const std::vector<int>& mask)
 }
 
 //-----------------------------------------------------------
-int deserialize(BoxDat& val, std::istream& is, const std::vector<int>& mask)
-{
+int deserialize(BoxDat& val, std::istream& is, const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
 #endif
