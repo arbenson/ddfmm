@@ -331,18 +331,12 @@ private:
     int EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
                       std::set<BoxKey>& reqboxset);
 
-    // Travel down the octree and visit the boxes in the low frequency regime.
-    //
-    // W is the width of the box
     int EvalDownwardLow(double W, std::vector<BoxKey>& trgvec);
-
-    
     int LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset);
     int LowFreqDownwardComm(std::set<BoxKey>& reqboxset);
     int LowFreqDownwardPass(ldmap_t& ldmap);
     int HighFreqPass(hdmap_t& hdmap);
 
-    //
     int EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
                                 std::set<BndKey>& reqbndset);
     int EvalDownwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap);
@@ -354,9 +348,8 @@ private:
                            double W);
 # endif
     
-    int EvalUpwardHigh(double W, Index3 dir,
-        std::pair< std::vector<BoxKey>, std::vector<BoxKey> >& hdvecs,
-        std::set<BndKey>& reqbndset);
+    int EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
+                       std::set<BndKey>& reqbndset);
     int EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs);
 
     int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap);
@@ -370,8 +363,12 @@ private:
                        DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
                        NumTns<CpxNumTns>& ue2dc);
 
-    int GetFarFieldDirKeys(Index3 dir, box_lists_t& hdvecs,
-                           std::set<BndKey>& reqbndset);
+    // Add keys to reqbndset for high-frequency M2L computations
+    // For every target box, add all the keys corresponding to
+    // directional boundaries in the high-frequency interaction lists
+    // of the target boxes.  dir specifies the direction of the boundaries.
+    int GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
+                               std::set<BndKey>& reqbndset);
 };
 
 //-------------------

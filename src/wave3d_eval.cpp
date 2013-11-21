@@ -805,22 +805,21 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
         iC( zgemv(1.0, E1, tmp1, 0.0, upeqnden) );
     }
 
-    iC( GetFarFieldDirKeys(dir, hdvecs, reqbndset) );
+    
+    iC( GetInteractionListKeys(dir, hdvecs.second, reqbndset) );
     return 0;
 }
 
-int Wave3d::GetFarFieldDirKeys(Index3 dir, box_lists_t& hdvecs,
-                               std::set<BndKey>& reqbndset) {
+int Wave3d::GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
+                                   std::set<BndKey>& reqbndset) {
 #ifndef RELEASE
-  CallStackEntry entry("Wave3d::GetFarFieldDirKeys");
+  CallStackEntry entry("Wave3d::GetInteractionListKeys");
 #endif
-  // Fill reqbndset
-  std::vector<BoxKey>& trgvec = hdvecs.second;
-  for (int k = 0; k < trgvec.size(); k++) {
-      BoxKey trgkey = trgvec[k];
+  for (int k = 0; k < target_boxes.size(); ++k) {
+      BoxKey trgkey = target_boxes[k];
       BoxDat& trgdat = _boxvec.access(trgkey);
       std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-      for (int i = 0; i < tmpvec.size(); i++) {
+      for (int i = 0; i < tmpvec.size(); ++i) {
           BoxKey srckey = tmpvec[i];
           reqbndset.insert(BndKey(srckey, dir));
       }
