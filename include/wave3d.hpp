@@ -25,10 +25,10 @@
 #include "mlib3d.hpp"
 #include "parvec.hpp"
 
-#define NUM_DIRS (8)
-#define DIR_1(x) ((x & 4) >> 2)
-#define DIR_2(x) ((x & 2) >> 1)
-#define DIR_3(x) ((x & 1))
+#define NUM_CHILDREN (8)
+#define CHILD_IND1(x) ((x & 4) >> 2)
+#define CHILD_IND2(x) ((x & 2) >> 1)
+#define CHILD_IND3(x) ((x & 1))
 
 enum {
     WAVE3D_PTS = 1,

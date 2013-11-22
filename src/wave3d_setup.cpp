@@ -170,10 +170,10 @@ int Wave3d::setup_tree() {
                 chdboxtns(idx(0),idx(1),idx(2)).ptidxvec().push_back(tmpidx);
             }
             // 2. put non-empty ones into queue
-            for (int ind = 0; ind < NUM_DIRS; ind++) {
-                int a = DIR_1(ind);
-                int b = DIR_2(ind);
-                int c = DIR_3(ind);
+            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+                int a = CHILD_IND1(ind);
+                int b = CHILD_IND2(ind);
+                int c = CHILD_IND3(ind);
                 // TODO(Austin): We should be smarter about the empty children
                 BoxKey chdkey = this->chdkey(curkey, Index3(a,b,c));
                 tmpq.push( std::pair<BoxKey,BoxDat>(chdkey, chdboxtns(a,b,c)) );
@@ -362,10 +362,10 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat) {
                                 Uset.insert(fntkey);
                             }
                             if (adj && !isterminal(fntdat)) {
-                                for (int ind = 0; ind < NUM_DIRS; ind++) {
-                                    rest.push( chdkey(fntkey, Index3(DIR_1(ind),
-                                                                     DIR_2(ind),
-                                                                     DIR_3(ind))) );
+                                for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+                                    rest.push( chdkey(fntkey, Index3(CHILD_IND1(ind),
+                                                                     CHILD_IND2(ind),
+                                                                     CHILD_IND3(ind))) );
                                 }
                             }
                         }
@@ -420,8 +420,9 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat) {
         BoxDat& pardata = boxdata(parkey);
         for (int k = 0; k < pardata.endeidxvec().size(); k++) {
             BoxKey trykey = pardata.endeidxvec()[k];
-            for (int ind = 0; ind < NUM_DIRS; ind++) {
-                BoxKey othkey = chdkey(trykey, Index3(DIR_1(ind), DIR_2(ind), DIR_3(ind)));
+            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+                BoxKey othkey = chdkey(trykey, Index3(CHILD_IND1(ind),
+                                       CHILD_IND2(ind), CHILD_IND3(ind)));
                 BoxDat& othdat = boxdata(othkey);
                 if (has_pts(othdat)) {
                     //LEXING: ALWAYS target - source

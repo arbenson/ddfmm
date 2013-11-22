@@ -432,10 +432,10 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
             iC( _knl.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
             iC( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
         } else {
-            for (int ind = 0; ind < NUM_DIRS; ind++) {
-                int a = DIR_1(ind);
-                int b = DIR_2(ind);
-                int c = DIR_3(ind);
+            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+                int a = CHILD_IND1(ind);
+                int b = CHILD_IND2(ind);
+                int c = CHILD_IND3(ind);
                 BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
                 std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
                 if (data.first) {
@@ -542,10 +542,10 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
             iC( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
         } else {
             //put stuff to children
-            for (int ind = 0; ind < NUM_DIRS; ind++) {
-                int a = DIR_1(ind);
-                int b = DIR_2(ind);
-                int c = DIR_3(ind);
+            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+                int a = CHILD_IND1(ind);
+                int b = CHILD_IND2(ind);
+                int c = CHILD_IND3(ind);
                 BoxKey chdkey = this->chdkey(trgkey, Index3(a, b, c));
                 std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
                 if (!data.first) {
@@ -765,7 +765,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
     iC( _mlibptr->upwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
     //---------------
     std::vector<BoxKey>& srcvec = hdvecs.first;
-    for(int k = 0; k < srcvec.size(); k++) {
+    for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
         iA(has_pts(srcdat));  // Should have points
@@ -780,10 +780,10 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
         // High-frequency M2M
         if (abs(W-1) < eps) {
             // The children boxes only have non-directional equivalent densities
-            for (int ind = 0; ind < NUM_DIRS; ind++) {
-                int a = DIR_1(ind);
-                int b = DIR_2(ind);
-                int c = DIR_3(ind);
+            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+                int a = CHILD_IND1(ind);
+                int b = CHILD_IND2(ind);
+                int c = CHILD_IND3(ind);
                 BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
                 // Do not compute unless _boxvec has the child key
                 std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
@@ -795,11 +795,13 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
                 }
             }
         } else {
-            Index3 pdir = predir(dir); // parent direction
-            for (int ind = 0; ind < NUM_DIRS; ind++) {
-                int a = DIR_1(ind);
-                int b = DIR_2(ind);
-                int c = DIR_3(ind);
+            // Pick the direction such that the child wedges in that direction
+            // contain the parent wedge in direction dir
+            Index3 pdir = predir(dir);
+            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+                int a = CHILD_IND1(ind);
+                int b = CHILD_IND2(ind);
+                int c = CHILD_IND3(ind);
                 BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
                 std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
                 if (data.first) {
@@ -819,9 +821,9 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
         CpxNumMat& E3 = uc2ue(2);
         cpx dat0[DVMAX], dat1[DVMAX];
         CpxNumVec tmp0(E3.m(), false, dat0);
-        iA(DVMAX>=E3.m());
+        iA(DVMAX >= E3.m());
         CpxNumVec tmp1(E2.m(), false, dat1);
-        iA(DVMAX>=E2.m());
+        iA(DVMAX >= E2.m());
         upeqnden.resize(E1.m());
         setvalue(upeqnden,cpx(0,0));
         iC( zgemv(1.0, E3, upchkval, 0.0, tmp0) );
@@ -934,10 +936,10 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
         dnchkval.resize(0); //LEXING: SAVE SPACE
         //eval
         if (abs(W - 1)<eps) {
-            for (int ind = 0; ind < NUM_DIRS; ind++) {
-                int a = DIR_1(ind);
-                int b = DIR_2(ind);
-                int c = DIR_3(ind);             
+            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+                int a = CHILD_IND1(ind);
+                int b = CHILD_IND2(ind);
+                int c = CHILD_IND3(ind);             
                 BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
 		std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
                 // If the box was empty, it will not be stored
@@ -954,10 +956,10 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
             }
         } else {
             Index3 pdir = predir(dir); //LEXING: CHECK
-            for (int ind = 0; ind < NUM_DIRS; ind++) {
-                int a = DIR_1(ind);
-                int b = DIR_2(ind);
-                int c = DIR_3(ind);             
+            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+                int a = CHILD_IND1(ind);
+                int b = CHILD_IND2(ind);
+                int c = CHILD_IND3(ind);             
                 BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
 		std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
                 // If the box was empty, it will not be stored

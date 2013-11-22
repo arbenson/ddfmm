@@ -23,9 +23,9 @@ Point3 shifted_point(int dir_ind, double W) {
 #ifndef RELEASE
     CallStackEntry entry("shifted_point");
 #endif
-    int a = DIR_1(dir_ind);
-    int b = DIR_2(dir_ind);
-    int c = DIR_3(dir_ind);
+    int a = CHILD_IND1(dir_ind);
+    int b = CHILD_IND2(dir_ind);
+    int c = CHILD_IND3(dir_ind);
     return Point3((a - 0.5) * W / 2, (b - 0.5) * W / 2, (c - 0.5) * W / 2);
 }
 
@@ -114,9 +114,9 @@ int Mlib3d::upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
     uep = le.uep();
     ucp = le.ucp();
     uc2ue.resize(3);
-    uc2ue(0) = le.uc2ue()(0);
-    uc2ue(1) = le.uc2ue()(1);
-    uc2ue(2) = le.uc2ue()(2);
+    for (int i = 0; i < 3; ++i) {
+      uc2ue(i) = le.uc2ue()(i);
+    }
   
     DblNumMat uepchd;
     {
@@ -124,10 +124,11 @@ int Mlib3d::upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
         uepchd = le.uep();
     }
     ue2uc.resize(2,2,2);
-    for (int ind = 0; ind < NUM_DIRS; ind++) {
+    for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
 	apply_shift(tmp, uepchd, shifted_point(ind, W));
-        iC( _knl.kernel(ucp, tmp, tmp, ue2uc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
+        iC( _knl.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
+                                             CHILD_IND3(ind))) );
     }
     return 0;
 }
@@ -159,10 +160,10 @@ int Mlib3d::downwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
     }
   
     de2dc.resize(2,2,2);
-    for (int ind = 0; ind < NUM_DIRS; ind++) {
+    for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
 	apply_shift(tmp, dcpchd, shifted_point(ind, W));
-        iC( _knl.kernel(tmp, dep, dep, de2dc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
+        iC( _knl.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind), CHILD_IND3(ind))) );
     }
   
     ue2dc.resize(7,7,7);
@@ -220,10 +221,11 @@ int Mlib3d::upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
         iC( highFetchShuffle(prm, sgn, ueptmp, uepchd) );
     }
     ue2uc.resize(2,2,2);
-    for (int ind = 0; ind < NUM_DIRS; ind++) {
+    for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
 	apply_shift(tmp, uepchd, shifted_point(ind, W));
-        iC( _knl.kernel(ucp, tmp, tmp, ue2uc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
+        iC( _knl.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
+                                             CHILD_IND3(ind))) );
     }
   
     return 0;
@@ -276,10 +278,11 @@ int Mlib3d::downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
     }
   
     de2dc.resize(2,2,2);
-    for (int ind = 0; ind < NUM_DIRS; ind++) {
+    for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
 	apply_shift(tmp, dcpchd, shifted_point(ind, W));
-        iC( _knl.kernel(tmp, dep, dep, de2dc(DIR_1(ind), DIR_2(ind), DIR_3(ind))) );
+        iC( _knl.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
+                                             CHILD_IND3(ind))) );
     }
   
     return 0;
