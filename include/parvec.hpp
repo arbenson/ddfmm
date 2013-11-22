@@ -39,6 +39,8 @@ public:
     // Get the data associated with Key from the local map
     Data& access(Key);
 
+    std::pair<bool, Data&> contains(Key);
+
     // gather all entries st pid contains this proc
     // e2ps is a function that takes as input a Key-Data pair, and a vector of
     // ints to be filled with processor IDs.
@@ -196,6 +198,21 @@ Data& ParVec<Key,Data,Partition>::access(Key key) {
     typename std::map<Key,Data>::iterator mi = _lclmap.find(key);
     iA(mi != _lclmap.end());
     return mi->second;
+}
+
+//--------------------------------------------
+template <class Key, class Data, class Partition>
+std::pair<bool, Data&> ParVec<Key,Data,Partition>::contains(Key key) {
+#ifndef RELEASE
+    CallStackEntry entry("ParVec::contains");
+#endif
+    typename std::map<Key,Data>::iterator mi = _lclmap.find(key);
+    bool found = (mi  != _lclmap.end());
+    if (found) {
+      return std::pair<bool, Data&>(found, mi->second);
+    }
+    Data dummy;
+    return std::pair<bool, Data&>(found, dummy);
 }
 
 //--------------------------------------------

@@ -50,7 +50,8 @@ typedef std::complex<double> cpx;
 inline int pow2(int l) { assert(l>=0); return (1<<l); }
 
 #define iC(fun)  { int ierr = fun; assert(ierr == 0); }
-#define iA(expr) { if((expr) == 0) { std::cerr << "wrong" << std::endl; assert(expr); } }
+// #define iA(expr) { if((expr) == 0) { std::cerr << "wrong" << std::endl; assert(expr); } }
+#define iA(expr) { if((expr) == 0) { std::cerr << "wrong" << std::endl; throw new std::exception(); } }
 
 template <class T, class S>
 std::istream& operator>>(std::istream& is, std::pair<T,S>& a)
@@ -75,17 +76,14 @@ void PushCallStack( std::string s );
 void PopCallStack();
 void DumpCallStack( std::ostream& os=std::cerr );
 
-class CallStackEntry 
-{
+class CallStackEntry {
 public:
-    CallStackEntry( std::string s ) 
-    { 
+    CallStackEntry( std::string s ) { 
         if( !std::uncaught_exception() )
             PushCallStack(s); 
     }
-    ~CallStackEntry() 
-    { 
-        if( !std::uncaught_exception() )
+    ~CallStackEntry() { 
+        if( !std::uncaught_exception() ) 
             PopCallStack(); 
     }
 };
