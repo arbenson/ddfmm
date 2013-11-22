@@ -35,9 +35,9 @@ int Transpose(CpxNumMat& trg, CpxNumMat& src) {
 #endif
     trg.resize(src.n(),src.m());
     for(int i = 0; i < trg.m(); i++) {
-	for(int j = 0; j < trg.n(); j++) {
-	    trg(i,j) = src(j,i);
-	}
+        for(int j = 0; j < trg.n(); j++) {
+            trg(i, j) = src(j, i);
+        }
     }
     return 0;
 }
@@ -47,9 +47,9 @@ int ApplyShift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
     CallStackEntry entry("ApplyShift");
 #endif
     for(int k = 0; k < src.n(); k++) {
-	for(int d = 0; d < 3; d++) {
-	    trg(d,k) = src(d,k) + shift(d);
-	}
+        for(int d = 0; d < 3; d++) {
+            trg(d, k) = src(d, k) + shift(d);
+        }
     }
     return 0;
 }
@@ -60,8 +60,8 @@ int negate(DblNumMat& src) {
 #endif
     for (int i = 0; i < src.n(); i++) {
         for (int d = 0; d < 3; d++) {
-	    src(d,i) = -src(d,i);
-	}
+            src(d, i) = -src(d, i);
+        }
     }
     return 0;
 }
@@ -104,7 +104,7 @@ int Mlib3d::setup(std::map<std::string, std::string>& opts)
 
 //-----------------------------------
 int Mlib3d::UpwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
-			   NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc) {
+                           NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc) {
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::UpwardLowFetch");
 #endif
@@ -118,15 +118,12 @@ int Mlib3d::UpwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
       uc2ue(i) = le.uc2ue()(i);
     }
   
-    DblNumMat uepchd;
-    {
-        LowFreqEntry& le = _w2ldmap[W/2];
-        uepchd = le.uep();
-    }
+    DblNumMat uepchd = _w2ldmap[W / 2].uep();
+
     ue2uc.resize(2, 2, 2);
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
-	ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
+        ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
         iC( _knl.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
@@ -135,8 +132,8 @@ int Mlib3d::UpwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
 
 //-----------------------------------
 int Mlib3d::DownwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
-			     NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-			     NumTns<CpxNumTns>& ue2dc, DblNumMat& uep) {
+                             NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+                             NumTns<CpxNumTns>& ue2dc, DblNumMat& uep) {
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::DownwardLowFetch");
 #endif
@@ -152,16 +149,12 @@ int Mlib3d::DownwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
     Transpose(dc2de(0), tmp2);
     dc2de(1) = le.uc2ue()(1);
     Transpose(dc2de(2), tmp0);
-    DblNumMat dcpchd;
-    {
-        LowFreqEntry& le = _w2ldmap[W/2];
-        dcpchd = le.uep();
-    }
+    DblNumMat dcpchd = _w2ldmap[W / 2].uep();
   
     de2dc.resize(2,2,2);
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
-	ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
+        ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
         iC( _knl.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
@@ -199,22 +192,22 @@ int Mlib3d::UpwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
     iC( HighFetchShuffle(prm, sgn, ucptmp, ucp) );
     uc2ue.resize(3);
     for (int i = 0; i < 3; i++) {
-	uc2ue(i) = he.uc2ue()(i);
+        uc2ue(i) = he.uc2ue()(i);
     }
   
     DblNumMat uepchd;
     if (W == 1.0) { //unit box
-	iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
+        iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
         LowFreqEntry& le = _w2ldmap[W / 2];
         uepchd = le.uep();
     } else { //large box
-	iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
-	std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W / 2];
+        iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
+        std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W / 2];
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;
         iC( HighFetchIndex3Sort(pdr, srt, sgn, prm) );
-	iA(curmap.find(srt) != curmap.end());
+        iA(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
         iC( HighFetchShuffle(prm, sgn, ueptmp, uepchd) );
@@ -222,7 +215,7 @@ int Mlib3d::UpwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
     ue2uc.resize(2,2,2);
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
-	ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
+        ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
         iC( _knl.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
@@ -255,30 +248,30 @@ int Mlib3d::DownwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
     dc2de.resize(3);
     for (int k = 0; k < 3; k++) {
         CpxNumMat tmp( he.uc2ue()(2 - k) );
-	Transpose(dc2de(k), tmp);
+        Transpose(dc2de(k), tmp);
     }
     DblNumMat dcpchd;
     if (W == 1.0) { //unit box
-	iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
-        LowFreqEntry& le = _w2ldmap[W/2];
+        iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
+        LowFreqEntry& le = _w2ldmap[W / 2];
         dcpchd = le.uep();
     } else { //large box
-	iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
-	std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
+        iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
+        std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W / 2];
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;  iC( HighFetchIndex3Sort(pdr, srt, sgn, prm) );
-	iA(curmap.find(srt) != curmap.end());
+        iA(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
         iC( HighFetchShuffle(prm, sgn, ueptmp, dcpchd) );
-	negate(dcpchd);
+        negate(dcpchd);
     }
   
     de2dc.resize(2,2,2);
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
-	ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
+        ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
         iC( _knl.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
@@ -296,8 +289,8 @@ Index3 Mlib3d::predir(Index3 dir) {
     int midx = -1;
     for (int d = 0; d < 3; d++) {
         if (abs(dir(d)) == C) {
-	    midx = d;
-	}
+            midx = d;
+        }
     }
     //midx gives the direction
     Index3 res;
