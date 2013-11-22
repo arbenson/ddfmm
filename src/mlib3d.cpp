@@ -19,9 +19,9 @@
 #include "parallel.hpp"
 #include "serialize.hpp"
 
-Point3 shifted_point(int dir_ind, double W) {
+Point3 ShiftedPoint(int dir_ind, double W) {
 #ifndef RELEASE
-    CallStackEntry entry("shifted_point");
+    CallStackEntry entry("ShiftedPoint");
 #endif
     int a = CHILD_IND1(dir_ind);
     int b = CHILD_IND2(dir_ind);
@@ -29,9 +29,9 @@ Point3 shifted_point(int dir_ind, double W) {
     return Point3((a - 0.5) * W / 2, (b - 0.5) * W / 2, (c - 0.5) * W / 2);
 }
 
-int transpose(CpxNumMat& trg, CpxNumMat& src) {
+int Transpose(CpxNumMat& trg, CpxNumMat& src) {
 #ifndef RELEASE
-    CallStackEntry entry("transpose");
+    CallStackEntry entry("Transpose");
 #endif
     trg.resize(src.n(),src.m());
     for(int i = 0; i < trg.m(); i++) {
@@ -42,9 +42,9 @@ int transpose(CpxNumMat& trg, CpxNumMat& src) {
     return 0;
 }
 
-int apply_shift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
+int ApplyShift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
 #ifndef RELEASE
-    CallStackEntry entry("apply_shift");
+    CallStackEntry entry("ApplyShift");
 #endif
     for(int k = 0; k < src.n(); k++) {
 	for(int d = 0; d < 3; d++) {
@@ -103,10 +103,10 @@ int Mlib3d::setup(std::map<std::string, std::string>& opts)
 }
 
 //-----------------------------------
-int Mlib3d::upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
+int Mlib3d::UpwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
 			   NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc) {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::upwardLowFetch");
+    CallStackEntry entry("Mlib3d::UpwardLowFetch");
 #endif
     iA(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
@@ -123,10 +123,10 @@ int Mlib3d::upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
         LowFreqEntry& le = _w2ldmap[W/2];
         uepchd = le.uep();
     }
-    ue2uc.resize(2,2,2);
+    ue2uc.resize(2, 2, 2);
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
-	apply_shift(tmp, uepchd, shifted_point(ind, W));
+	ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
         iC( _knl.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
@@ -134,12 +134,11 @@ int Mlib3d::upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
 }
 
 //-----------------------------------
-int Mlib3d::downwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
+int Mlib3d::DownwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
 			     NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-			     NumTns<CpxNumTns>& ue2dc, DblNumMat& uep)
-{
+			     NumTns<CpxNumTns>& ue2dc, DblNumMat& uep) {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::downwardLowFetch");
+    CallStackEntry entry("Mlib3d::DownwardLowFetch");
 #endif
     iA(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
@@ -150,9 +149,9 @@ int Mlib3d::downwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
     CpxNumMat tmp0( le.uc2ue()(0) );
     CpxNumMat tmp2( le.uc2ue()(2) );
     dc2de.resize(3);
-    transpose(dc2de(0), tmp2);
+    Transpose(dc2de(0), tmp2);
     dc2de(1) = le.uc2ue()(1);
-    transpose(dc2de(2), tmp0);
+    Transpose(dc2de(2), tmp0);
     DblNumMat dcpchd;
     {
         LowFreqEntry& le = _w2ldmap[W/2];
@@ -162,8 +161,9 @@ int Mlib3d::downwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
     de2dc.resize(2,2,2);
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
-	apply_shift(tmp, dcpchd, shifted_point(ind, W));
-        iC( _knl.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind), CHILD_IND3(ind))) );
+	ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
+        iC( _knl.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
+                                             CHILD_IND3(ind))) );
     }
   
     ue2dc.resize(7,7,7);
@@ -180,24 +180,23 @@ int Mlib3d::downwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
 }
 
 //-----------------------------------
-int Mlib3d::upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
-                            NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc)
-{
+int Mlib3d::UpwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
+                            NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc) {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::upwardHighFetch");
+    CallStackEntry entry("Mlib3d::UpwardHighFetch");
 #endif
     iA(_w2hdmap.find(W) != _w2hdmap.end());
     std::map<Index3, HghFreqDirEntry>& curmap = _w2hdmap[W];
   
     Index3 srt, sgn, prm;
-    iC( highFetchIndex3Sort(dir, srt, sgn, prm) );
+    iC( HighFetchIndex3Sort(dir, srt, sgn, prm) );
     iA(curmap.count(srt) != 0);
 
     HghFreqDirEntry& he = curmap[srt];
     DblNumMat ueptmp( he.uep() );
     DblNumMat ucptmp( he.ucp() );
-    iC( highFetchShuffle(prm, sgn, ueptmp, uep) );
-    iC( highFetchShuffle(prm, sgn, ucptmp, ucp) );
+    iC( HighFetchShuffle(prm, sgn, ueptmp, uep) );
+    iC( HighFetchShuffle(prm, sgn, ucptmp, ucp) );
     uc2ue.resize(3);
     for (int i = 0; i < 3; i++) {
 	uc2ue(i) = he.uc2ue()(i);
@@ -214,16 +213,16 @@ int Mlib3d::upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;
-        iC( highFetchIndex3Sort(pdr, srt, sgn, prm) );
+        iC( HighFetchIndex3Sort(pdr, srt, sgn, prm) );
 	iA(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
-        iC( highFetchShuffle(prm, sgn, ueptmp, uepchd) );
+        iC( HighFetchShuffle(prm, sgn, ueptmp, uepchd) );
     }
     ue2uc.resize(2,2,2);
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
-	apply_shift(tmp, uepchd, shifted_point(ind, W));
+	ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
         iC( _knl.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
@@ -232,32 +231,31 @@ int Mlib3d::upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
 }
 
 //-----------------------------------
-int Mlib3d::downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp,
+int Mlib3d::DownwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp,
                               NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-                              DblNumMat& uep)
-{
+                              DblNumMat& uep) {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::downwardHighFetch");
+    CallStackEntry entry("Mlib3d::DownwardHighFetch");
 #endif
     iA(_w2hdmap.find(W) != _w2hdmap.end());
     std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
     Index3 srt, sgn, prm;
-    iC( highFetchIndex3Sort(dir, srt, sgn, prm) );
+    iC( HighFetchIndex3Sort(dir, srt, sgn, prm) );
     iA(curmap.find(srt) != curmap.end());
     HghFreqDirEntry& he = curmap[srt];
   
     DblNumMat ueptmp( he.uep() );
     DblNumMat ucptmp( he.ucp() );
-    iC( highFetchShuffle(prm, sgn, ucptmp, dep) ); //ucp->dep
+    iC( HighFetchShuffle(prm, sgn, ucptmp, dep) ); //ucp->dep
     negate(dep);
-    iC( highFetchShuffle(prm, sgn, ueptmp, dcp) ); //uep->dcp
+    iC( HighFetchShuffle(prm, sgn, ueptmp, dcp) ); //uep->dcp
     negate(dcp);
-    iC( highFetchShuffle(prm, sgn, ueptmp, uep) ); //uep->uep
+    iC( HighFetchShuffle(prm, sgn, ueptmp, uep) ); //uep->uep
     dc2de.resize(3);
     for (int k = 0; k < 3; k++) {
         CpxNumMat tmp( he.uc2ue()(2 - k) );
-	transpose(dc2de(k), tmp);
+	Transpose(dc2de(k), tmp);
     }
     DblNumMat dcpchd;
     if (W == 1.0) { //unit box
@@ -269,18 +267,18 @@ int Mlib3d::downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
 	std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W/2];
         
         Index3 pdr = predir(dir);
-        Index3 srt, sgn, prm;  iC( highFetchIndex3Sort(pdr, srt, sgn, prm) );
+        Index3 srt, sgn, prm;  iC( HighFetchIndex3Sort(pdr, srt, sgn, prm) );
 	iA(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
-        iC( highFetchShuffle(prm, sgn, ueptmp, dcpchd) );
+        iC( HighFetchShuffle(prm, sgn, ueptmp, dcpchd) );
 	negate(dcpchd);
     }
   
     de2dc.resize(2,2,2);
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
-	apply_shift(tmp, dcpchd, shifted_point(ind, W));
+	ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
         iC( _knl.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
@@ -289,8 +287,7 @@ int Mlib3d::downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
 }
 
 //-----------------------------------
-Index3 Mlib3d::predir(Index3 dir)
-{
+Index3 Mlib3d::predir(Index3 dir) {
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::predir");
 #endif
@@ -315,10 +312,10 @@ Index3 Mlib3d::predir(Index3 dir)
 
 
 //---------------------------------------------------------------------
-int Mlib3d::highFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& res)
-{
+int Mlib3d::HighFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp,
+                             DblNumMat& res) {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::highFetchShuffle");
+    CallStackEntry entry("Mlib3d::HighFetchShuffle");
 #endif
     res.resize(3, tmp.n());
     for (int k = 0; k < res.n(); k++) {
@@ -335,10 +332,10 @@ int Mlib3d::highFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& 
 }
 
 //---------------------------------------------------------------------
-int Mlib3d::highFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& prm)
-{
+int Mlib3d::HighFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn,
+                                Index3& prm) {
 #ifndef RELEASE
-    CallStackEntry entry("Mlib3d::highFetchIndex3Sort");
+    CallStackEntry entry("Mlib3d::HighFetchIndex3Sort");
 #endif
     //make it positive
     for (int d = 0; d < 3; d++) {
@@ -368,8 +365,8 @@ int Mlib3d::highFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& pr
 
 
 //-------------------
-int serialize(const LowFreqEntry& le, std::ostream& os, const std::vector<int>& mask)
-{
+int serialize(const LowFreqEntry& le, std::ostream& os,
+              const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif
@@ -379,8 +376,8 @@ int serialize(const LowFreqEntry& le, std::ostream& os, const std::vector<int>& 
     iC( serialize(le._ue2dc, os, mask) );
     return 0;
 }
-int deserialize(LowFreqEntry& le, std::istream& is, const std::vector<int>& mask)
-{
+int deserialize(LowFreqEntry& le, std::istream& is,
+                const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
 #endif
@@ -392,8 +389,8 @@ int deserialize(LowFreqEntry& le, std::istream& is, const std::vector<int>& mask
 }
 
 //-------------------
-int serialize(const HghFreqDirEntry& he, std::ostream& os, const std::vector<int>& mask)
-{
+int serialize(const HghFreqDirEntry& he, std::ostream& os,
+              const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif

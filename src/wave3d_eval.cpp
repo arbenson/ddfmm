@@ -406,7 +406,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
     DblNumMat ucp;
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
-    iC( _mlibptr->upwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
+    iC( _mlibptr->UpwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
     //---------------
     int tdof = 1;
     for (int k = 0; k < srcvec.size(); k++) {
@@ -482,7 +482,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
     NumTns<CpxNumMat> de2dc;
     NumTns<CpxNumTns> ue2dc;
     DblNumMat uep;
-    iC( _mlibptr->downwardLowFetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
+    iC( _mlibptr->DownwardLowFetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
     //------------------
     int _P = P();
     for (int k = 0; k < trgvec.size(); k++) {
@@ -762,7 +762,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
     DblNumMat ucp;
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
-    iC( _mlibptr->upwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
+    iC( _mlibptr->UpwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
     //---------------
     std::vector<BoxKey>& srcvec = hdvecs.first;
     for (int k = 0; k < srcvec.size(); ++k) {
@@ -986,7 +986,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
     NumVec<CpxNumMat> dc2de;
     NumTns<CpxNumMat> de2dc;
     DblNumMat uep;
-    iC( _mlibptr->downwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
+    iC( _mlibptr->DownwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     //LEXING: IMPORTANT
     std::vector<BoxKey>& trgvec = hdvecs.second;
     for (int k = 0; k < trgvec.size(); k++) {

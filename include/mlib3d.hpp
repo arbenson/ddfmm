@@ -77,19 +77,19 @@ public:
   
     int setup(std::map<std::string, std::string>& opts);
   
-    int upwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
+    int UpwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
                         NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
-    int downwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
+    int DownwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
                          NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
                          NumTns<CpxNumTns>& ue2dc, DblNumMat& uep);
-    int upwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
+    int UpwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp,
                         NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
-    int downwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp,
+    int DownwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& dcp,
                           NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
                           DblNumMat& uep);
   
-    int highFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& res);
-    int highFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& prm);
+    int HighFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp, DblNumMat& res);
+    int HighFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn, Index3& prm);
 
     Index3 predir(Index3);
 
