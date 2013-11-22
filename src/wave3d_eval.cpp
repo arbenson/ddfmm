@@ -835,6 +835,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
     return 0;
 }
 
+//---------------------------------------------------------------------
 int Wave3d::GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
                                    std::set<BndKey>& reqbndset) {
 #ifndef RELEASE
@@ -854,13 +855,132 @@ int Wave3d::GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes
 }
 
 //---------------------------------------------------------------------
+int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
+                             DblNumMat& dcp, DblNumMat& uep) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::HighFrequencyM2L");
+#endif
+    iA(has_pts(trgdat));  // should have points
+    Point3 trgctr = center(trgkey);
+    //1. mix
+    //get target
+    DblNumMat tmpdcp(dcp.m(), dcp.n());
+    for (int k = 0; k < tmpdcp.n(); k++) {
+        for (int d = 0; d < 3; d++) {
+            tmpdcp(d,k) = dcp(d,k) + trgctr(d);
+        }
+    }
+    BndKey bndkey(trgkey, dir);
+    BndDat& bnddat = _bndvec.access(bndkey);
+    CpxNumVec& dcv = bnddat.dirdnchkval();
+    std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
+    for (int i = 0; i < tmpvec.size(); i++) {
+        BoxKey srckey = tmpvec[i];
+	Point3 srcctr = center(srckey);
+	//difference vector
+	Point3 diff = trgctr - srcctr;
+	diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
+	iA( nml2dir(diff, W) == dir );
+	//get source
+	DblNumMat tmpuep(uep.m(),uep.n());
+	for (int k = 0; k < tmpuep.n(); k++) {
+	    for (int d = 0; d < 3; d++) {
+	        tmpuep(d, k) = uep(d, k) + srcctr(d);
+	    }
+	}
+	BndKey bndkey(srckey, dir);
+	BndDat& bnddat = _bndvec.access(bndkey);
+	CpxNumVec& ued = bnddat.dirupeqnden();
+	//mateix
+	CpxNumMat Mts;
+	iC( _knl.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
+	//allocate space if necessary
+	if (dcv.m() == 0) {
+	    dcv.resize(Mts.m());
+	    setvalue(dcv, cpx(0,0)); //LEXING: CHECK
+	}
+	//iC( ued.m() != 0 );
+	if (ued.m() == 0) {
+	    ued.resize(Mts.n());
+	    setvalue(ued, cpx(0, 0));
+	}
+	iC( zgemv(1.0, Mts, ued, 1.0, dcv) );
+    }
+    return 0;
+}
+
+//---------------------------------------------------------------------
+int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
+                             NumVec<CpxNumMat>& dc2de,
+                             NumTns<CpxNumMat>& de2dc) {
+    double eps = 1e-12;
+    BndKey bndkey(trgkey, dir);
+    BndDat& bnddat = _bndvec.access(bndkey);
+    CpxNumVec& dnchkval = bnddat.dirdnchkval();
+    CpxNumMat& E1 = dc2de(0);
+    CpxNumMat& E2 = dc2de(1);
+    CpxNumMat& E3 = dc2de(2);
+    cpx dat0[DVMAX], dat1[DVMAX], dat2[DVMAX];
+    CpxNumVec tmp0(E3.m(), false, dat0);
+    CpxNumVec tmp1(E2.m(), false, dat1);
+    CpxNumVec dneqnden(E1.m(), false, dat2);
+    iC( zgemv(1.0, E3, dnchkval, 0.0, tmp0) );
+    iC( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
+    iC( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
+    dnchkval.resize(0); //LEXING: SAVE SPACE
+
+    if (abs(W - 1) < eps) {
+        for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+	    int a = CHILD_IND1(ind);
+	    int b = CHILD_IND2(ind);
+	    int c = CHILD_IND3(ind);             
+	    BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
+	    std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
+	    // If the box was empty, it will not be stored
+	    if (!data.first) {
+	        continue;
+	    }
+	    BoxDat& chddat = data.second;
+	    CpxNumVec& chddcv = chddat.dnchkval();
+	    if (chddcv.m() == 0) {
+	        chddcv.resize(de2dc(a,b,c).m());
+		setvalue(chddcv,cpx(0,0));
+	    }
+	    iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
+	}
+    } else {
+        Index3 pdir = predir(dir); //LEXING: CHECK
+	for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+	    int a = CHILD_IND1(ind);
+	    int b = CHILD_IND2(ind);
+	    int c = CHILD_IND3(ind);             
+	    BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
+	    std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
+	    // If the box was empty, it will not be stored
+	    if (!data.first) {
+	        continue;
+	    }
+	    BoxDat& chddat = data.second;
+	    BndKey bndkey(chdkey, pdir);
+	    BndDat& bnddat = _bndvec.access(bndkey);
+	    CpxNumVec& chddcv = bnddat.dirdnchkval();
+	    if (chddcv.m() == 0) {
+	        chddcv.resize(de2dc(a,b,c).m());
+		setvalue(chddcv,cpx(0,0));
+	    }
+	    iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
+	}
+    }
+    return 0;
+}
+
+//---------------------------------------------------------------------
 int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardHigh");
 #endif
     int mpirank = getMPIRank();
 
-    double eps = 1e-12;
     DblNumMat dep;
     DblNumMat dcp;
     NumVec<CpxNumMat> dc2de;
@@ -869,117 +989,14 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
     iC( _mlibptr->downwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     //LEXING: IMPORTANT
     std::vector<BoxKey>& trgvec = hdvecs.second;
-
     for (int k = 0; k < trgvec.size(); k++) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
-        iA(has_pts(trgdat));  // should have points
+	iC( HighFrequencyM2L(W, dir, trgkey, trgdat, dcp, uep) );
+	iC( HighFrequencyL2L(W, dir, trgkey, dc2de, de2dc) );
+     }
 
-        Point3 trgctr = center(trgkey);
-        //1. mix
-        //get target
-        DblNumMat tmpdcp(dcp.m(),dcp.n());
-        for (int k = 0; k < tmpdcp.n(); k++) {
-            for (int d = 0; d < 3; d++) {
-                tmpdcp(d,k) = dcp(d,k) + trgctr(d);
-            }
-        }
-        BndKey bndkey(trgkey, dir);
-        BndDat& bnddat = _bndvec.access(bndkey);
-        CpxNumVec& dcv = bnddat.dirdnchkval();
-        std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-        for (int i = 0; i < tmpvec.size(); i++) {
-            BoxKey srckey = tmpvec[i];
-            Point3 srcctr = center(srckey);
-            //difference vector
-            Point3 diff = trgctr - srcctr;
-            diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
-            iA( nml2dir(diff, W) == dir );
-            //get source
-            DblNumMat tmpuep(uep.m(),uep.n());
-            for (int k = 0; k < tmpuep.n(); k++) {
-                for (int d = 0; d < 3; d++) {
-                    tmpuep(d,k) = uep(d,k) + srcctr(d);
-                }
-            }
-            BndKey bndkey(srckey, dir);
-            BndDat& bnddat = _bndvec.access(bndkey);
-            CpxNumVec& ued = bnddat.dirupeqnden();
-            //mateix
-            CpxNumMat Mts;
-            iC( _knl.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
-            //allocate space if necessary
-            if (dcv.m() == 0) {
-                dcv.resize(Mts.m());
-                setvalue(dcv,cpx(0,0)); //LEXING: CHECK
-            }
-            //iC( ued.m() != 0 );
-            if (ued.m() == 0) {
-                ued.resize(Mts.n());
-                setvalue(ued, cpx(0, 0));
-            }
-            iC( zgemv(1.0, Mts, ued, 1.0, dcv) );
-        }
-        //2. to children
-        CpxNumVec& dnchkval = dcv;
-        //dc2de
-        CpxNumMat& E1 = dc2de(0);
-        CpxNumMat& E2 = dc2de(1);
-        CpxNumMat& E3 = dc2de(2);
-        cpx dat0[DVMAX], dat1[DVMAX], dat2[DVMAX];
-        CpxNumVec tmp0(E3.m(), false, dat0);
-        CpxNumVec tmp1(E2.m(), false, dat1);
-        CpxNumVec dneqnden(E1.m(), false, dat2);
-        iC( zgemv(1.0, E3, dnchkval, 0.0, tmp0) );
-        iC( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
-        iC( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
-        dnchkval.resize(0); //LEXING: SAVE SPACE
-        //eval
-        if (abs(W - 1)<eps) {
-            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);             
-                BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
-		std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
-                // If the box was empty, it will not be stored
-                if (!data.first) {
-                  continue;
-                }
-                BoxDat& chddat = data.second;
-                CpxNumVec& chddcv = chddat.dnchkval();
-                if (chddcv.m() == 0) {
-                    chddcv.resize(de2dc(a,b,c).m());
-                    setvalue(chddcv,cpx(0,0));
-                }
-                iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
-            }
-        } else {
-            Index3 pdir = predir(dir); //LEXING: CHECK
-            for (int ind = 0; ind < NUM_CHILDREN; ind++) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);             
-                BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
-		std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
-                // If the box was empty, it will not be stored
-                if (!data.first) {
-                    continue;
-                }
-                BoxDat& chddat = data.second;
-                BndKey bndkey(chdkey, pdir);
-                BndDat& bnddat = _bndvec.access(bndkey);
-                CpxNumVec& chddcv = bnddat.dirdnchkval();
-                if (chddcv.m()==0) {
-                    chddcv.resize(de2dc(a,b,c).m());
-                    setvalue(chddcv,cpx(0,0));
-                }
-                iC( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
-            }
-        }
-    }
-    //-----------------
-    //EXTRA WORK, change role
+    // Now that we are done at this level, clear data to save on memory.
     std::vector<BoxKey>& srcvec = hdvecs.first;
     for (int k = 0; k < srcvec.size(); k++) {
         BoxKey srckey = srcvec[k];

@@ -363,6 +363,12 @@ private:
                        DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
                        NumTns<CpxNumTns>& ue2dc);
 
+    int HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
+                         DblNumMat& dcp, DblNumMat& uep);
+
+    int HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
+                         NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc);
+
     // Add keys to reqbndset for high-frequency M2L computations
     // For every target box, add all the keys corresponding to
     // directional boundaries in the high-frequency interaction lists
