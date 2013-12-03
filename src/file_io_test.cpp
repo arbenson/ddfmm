@@ -4,10 +4,10 @@
 #include <vector>
 
 int main() {
+#if 0
     std::vector<Point3> points;
     std::vector<Point3> coords;
 	
-#if 0
     ReadWrl("F16.wrl", points, coords);
     std::cout << "size of points (should be 1165): " << points.size() << std::endl;
     std::cout << "size of coords (should be 2162): " << coords.size() << std::endl;
@@ -18,14 +18,11 @@ int main() {
 
     points.clear();
     coords.clear();
-#endif
-
 
     ReadWrl("SubmarineJ.wrl", points, coords);
     std::cout << "size of points (should be 459): " << points.size() << std::endl;
     std::cout << "size of coords (should be 640): " << coords.size() << std::endl;
 
-#if 0
     points.clear();
     coords.clear();
 
@@ -33,4 +30,11 @@ int main() {
     std::cout << "size of points (should be 1681): " << points.size() << std::endl;
     std::cout << "size of coords (should be 3200): " << coords.size() << std::endl;
 #endif
+
+    std::string geom = "F16.wrl";
+    double K = 64;
+    double NPW = 10;
+    int NCPU = 8;
+    int NC = 8;
+    NewData(geom, K, NPW, NCPU, NC);
 }

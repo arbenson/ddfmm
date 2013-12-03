@@ -1,13 +1,31 @@
+/* Distributed Directional Fast Multipole Method
+   Copyright (C) 2013 Austin Benson, Lexing Ying, and Jack Poulson
+
+ This file is part of DDFMM.
+
+    DDFMM is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    DDFMM is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
 #include "file_io.h"
 #include "vec3t.hpp"
 #include "commoninc.hpp"
+#include "nummat.hpp"
 
+#include <algorithm>
 #include <stdio>
 #include <string>
 #include <vector>
 
 #include <math.h>
-
 #include <stdio.h>
 #include <string.h>
 
@@ -39,7 +57,6 @@ int ReadWrl(std::string fname, std::vector<Point3>& points,
     //         x1   x2   x3
     float x1, x2, x3;
     while (fscanf(geom_file, "%f %f %f", &x1, &x2, &x3) == 3) {
-      std::cout << x1 << " " << x2 << " " << x3 << std::endl;
 	points.push_back(Point3(x1, x2, x3));
     }
     // Should fail on an empty line.  The next line is coords.
@@ -88,20 +105,26 @@ int ReadWrl(std::string fname, std::vector<Point3>& points,
     return 0;
 }
 
-bool comp_pair_descend(std::pair<int, int> a, std::pair<int, int> b) {
+// Sort pairs of ints by the second item in the pair in descending order.
+bool CompPairDescend(std::pair<int, int> a, std::pair<int, int> b) {
     return a.second > b.second;
 }
 
-bool comp_pair_ascend(std::pair<int, int> a, std::pair<int, int> b) {
+// Sort pairs of ints by the second item in the pair in ascending order.
+bool CompPairAscend(std::pair<int, int> a, std::pair<int, int> b) {
     return a.second < b.second;
 }
 
-int LloydsAlgorithm(std::vector<int>& assignment, int num_its, int NCPU) {
+int LloydsAlgorithm(std::vector<int>& assignment, int num_its, int NCPU,
+                    std::vector<Point3>& centers, std::vector<int> num_points,
+                    std::vector<Point3>& proc_centers, 
+		    std::vector< std::pair<int, int> >& sorted_num_points,
+                    int num_coords) {
     for (int iter = 0; iter < num_its; ++iter) {
 	// Fill in distances
-        distances = NumMat(num_coords, NCPU);
+        NumMat<double> distances(num_coords, NCPU);
 	for (int i = 0; i < NCPU; ++i) {
-	    Point3 proc_center = cs[i];
+	    Point3 proc_center = proc_centers[i];
 	    for (int j = 0; j < num_coords; ++j) {
 		Point3 curr_center = centers[j];
 		Point3 diff = curr_center - proc_center;
@@ -109,25 +132,24 @@ int LloydsAlgorithm(std::vector<int>& assignment, int num_its, int NCPU) {
 	    }
 	}
 	
-	std::vector<int> assignment;
 	assignment.insert(assignment.begin(), num_coords, -1);
-	double total_points = 0;
+	int total_points = 0;
 	for (int i = 0; i < num_points.size(); ++i) {
 	    total_points += num_points[i];
 	}
-	double avg_weight = std::static_cast<double>(total_points) / NCPU;
+	double avg_weight = ((double) total_points) / NCPU;
 	std::vector<double> curr_weights;
 	curr_weights.insert(curr_weights.begin(), NCPU, 0);
 	
-	for (k = 0; k < num_coords; ++k) {
+	for (int k = 0; k < num_coords; ++k) {
 	    int curr_index = sorted_num_points[k].first;
 	    int curr_points = sorted_num_points[k].second;
 	    // Get distances from the k-th center
 	    std::vector< std::pair<int, double> > dist;
 	    for (int m = 0; m < NCPU; ++m) {
-		dist.push_back(std::pair<int, double>(m, distances(coords, m)));
+		dist.push_back(std::pair<int, double>(m, distances(curr_index, m)));
 	    }
-	    std::sort(dist.begin(), dist.end(), comp_pair_ascend);
+	    std::sort(dist.begin(), dist.end(), CompPairAscend);
 	    for (int p = 0; p < NCPU; ++p) {
 		int curr_proc = dist[p].first;
 		if (curr_weights[curr_proc] <= avg_weight * 1.05) {
@@ -147,32 +169,35 @@ int LloydsAlgorithm(std::vector<int>& assignment, int num_its, int NCPU) {
     return 0;
 }
 
-int AssignPoints(std::vector<int>& assignment, int NCPU) {
+int AssignPoints(std::vector<int>& assignment, int NCPU,
+                 std::vector<Point3>& centers, std::vector<int>& num_points,
+                 int num_coords) {
     // Pick NCPU random centers
     if (NCPU > num_coords) {
 	std::cerr << "More processors than coordinates!" << std::cout;
 	return -1;
     }
     std::vector<Point3> tmp = centers;
-    std::shuffle(tmp.begin(), tmp.end());
-    std::vector<Point3> cs(NCPU);
+    std::random_shuffle(tmp.begin(), tmp.end());
+    std::vector<Point3> proc_centers(NCPU);
     for (int i = 0; i < NCPU; ++i) {
-	cs[i] = tmp[i];
+	proc_centers[i] = tmp[i];
     }
 
-    std::vector<std::pair<int, int>> sorted_num_points;
+    std::vector< std::pair<int, int> > sorted_num_points;
     for (int i = 0; i < num_points.size(); ++i) {
 	sorted_num_points.push_back(std::pair<int, int>(i, num_points[i]));
     }
     std::sort(sorted_num_points.begin(), sorted_num_points.end(),
-              comp_pair_descend);
+              CompPairDescend);
     
-    iC( LloydsAlg(assignment, 4 * NCPU, NCPU) );
+    iC( LloydsAlgorithm(assignment, 4 * NCPU, NCPU, centers, num_points,
+                        proc_centers, sorted_num_points, num_coords) );
 
     return 0;
 }
 
-int new_data(std::string fname, double K, double NPW, int NCPU, int NC) {
+int NewData(std::string fname, double K, double NPW, int NCPU, int NC) {
     iA (NCPU > 0 && NPW > 0 && NC > 0 && K >= 1);
 
     std::vector<Point3> points;
@@ -188,7 +213,7 @@ int new_data(std::string fname, double K, double NPW, int NCPU, int NC) {
     std::vector<Point3> centers(num_coords);
     std::vector<int> num_points(num_coords);
 
-    for (int k = 0; i < num_coords; ++k) {
+    for (int k = 0; k < num_coords; ++k) {
 	Point3 index = coords[k];
 	Point3 p1 = points[index[0]];
 	Point3 p2 = points[index[1]];
@@ -206,7 +231,7 @@ int new_data(std::string fname, double K, double NPW, int NCPU, int NC) {
     }
 
     std::vector<int> assignment;
-    iC( AssignPoints(assignment, NCPU) );
+    iC( AssignPoints(assignment, NCPU, centers, num_points, num_coords) );
     for (int i = 0; i < assignment.size(); ++i) {
 	std::cout << assignment[i] << std::endl;
     }
