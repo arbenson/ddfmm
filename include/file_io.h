@@ -18,6 +18,11 @@
 #ifndef _FILE_IO_
 #define _FILE_IO_
 
+#include <string>
+#include <vector>
+
+#include "vec3t.hpp"
+
 // Read the geometry file named fname.
 // The points and coords vectors are filled with data.
 int ReadWrl(std::string fname, std::vector<Point3>& points,
