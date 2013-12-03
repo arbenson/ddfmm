@@ -33,7 +33,9 @@ LIB_SRC = src/wave3d.cpp \
           src/vecmatop.cpp \
           src/parallel.cpp \
           src/global.cpp \
-          src/utility.cpp
+          src/utility.cpp \
+          src/file_io.cpp
+
 
 LIB_OBJ = $(LIB_SRC:.cpp=.o)
 
@@ -42,6 +44,9 @@ libwave.a: ${LIB_OBJ}
 	$(RANLIB) $@
 
 tt: src/tt.o libwave.a 
+	${CXX} -o $@ $^ ${LDFLAGS}
+
+file_io_test: src/file_io_test.o libwave.a
 	${CXX} -o $@ $^ ${LDFLAGS}
 
 #------------------------------------------------------
