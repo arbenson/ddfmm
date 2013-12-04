@@ -31,10 +31,10 @@ int main() {
     std::cout << "size of coords (should be 3200): " << coords.size() << std::endl;
 #endif
 
-    std::string geom = "sphere.wrl";
-    double K = 1024;
+    std::string geom = "SubmarineJ.wrl";
+    double K = 256;
     double NPW = 10;
-    int NCPU = 8;
-    int NC = 8;
+    int NCPU = 4;
+    int NC = 16;
     NewData(geom, K, NPW, NCPU, NC);
 }

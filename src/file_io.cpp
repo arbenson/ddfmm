@@ -211,24 +211,30 @@ int SamplesInArea(double NPW, Point3 p1, Point3 p2, Point3 p3) {
     return ceil(area * NPW * NPW);
 }
 
-int AssignGeom(IntNumTns& geom, int NC, int NCPU, double K) {
-    std::vector<DblNumTns> coef;
+int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
+               std::vector<int>& assignment, std::vector<Point3>& centers,
+               int NC, int NCPU, double K, int num_coords) {
+    std::vector<IntNumTns> coef;
     std::vector< std::pair<int, int> > all_weights;
-    for (int i = 0; i < NC * NC * NC, ++i) {
-	all_weights.push_back(std::pair<i, 0>);
+    for (int i = 0; i < NC * NC * NC; ++i) {
+      all_weights.push_back(std::pair<int, int>(i, 0));
     }
     
     for (int i = 0; i < NCPU; ++i) {
-	coef.pushback(DblNumTns(NC, NC, NC));
+	coef.push_back(IntNumTns(NC, NC, NC));
 	setvalue(coef[i], 0);
     }
     for (int k = 0; k < num_coords; ++k) {
         Point3 pt = centers[k];
-        pt += K / 2;
+	for (int i = 0; i < 3; ++i) {
+	  pt[i] += (K / 2);
+	}
 	pt /= (K / NC);
-	pt += 1;
-	coef[assignment[k]](pt[0], pt[1], pt[2]) += num_points[k];
-	all_weights[pt[0] + pt[1] * NC + pt[2] * NC * NC].second += num_points[k];
+	int a = static_cast<int>(floor(pt[0]));
+	int b = static_cast<int>(floor(pt[1]));
+	int c = static_cast<int>(floor(pt[2]));
+	coef[assignment[k]](a, b, c) += num_points[k];
+	all_weights[a + b * NC + c * NC * NC].second += num_points[k];
     }
     int non_empty = 0;
     for (int i = 0; i < all_weights.size(); ++i) {
@@ -236,28 +242,32 @@ int AssignGeom(IntNumTns& geom, int NC, int NCPU, double K) {
 	    ++non_empty;
 	}
     }
+    std::cout << non_empty << " non-empty cells." << std::endl;
     
-    geom.reshape(NC, NC, NC);
+    geom.resize(NC, NC, NC);
     setvalue(geom, -1);
     std::vector<int> curr_weights;
     curr_weights.insert(curr_weights.begin(), NCPU, 0);
 
-    std::sort(all_weights.begin(), all_weights.end(), PairCompDescend);
+    std::sort(all_weights.begin(), all_weights.end(), CompPairDescend);
+    for (int i = 0; i < all_weights.size(); ++i) {
+      std::cout << "all weights " << i << " " << all_weights[i].second << std::endl;
+    }
     for (int k = 0; k < all_weights.size(); ++k) {
-	int index = all_weights[k].first;
-	if (all_weights[index] == 0) {
+	if (all_weights[k].second == 0) {
 	    // No cells with points left to assign.
 	    break;
 	}
 	// Sort by number of points owned in this cell
+	int index = all_weights[k].first;
 	int i1 = (index % NC);
 	int i2 = ((index - i1) % (NC * NC)) / NC;
 	int i3 = (index - i1 - i2) / (NC * NC);
 	std::vector< std::pair<int, int> > procs_and_pts;
 	for (int j = 0; j < NCPU; ++j) {
-	    procs_and_pts.push_back<std::pair(j, coef[j](i1, i2, i3))>;
+            procs_and_pts.push_back(std::pair<int, int>(j, coef[j](i1, i2, i3)));
 	}
-	std::sort(procs_and_pts.begin(), procs_and_pts.end(), PairCompDescend);
+	std::sort(procs_and_pts.begin(), procs_and_pts.end(), CompPairDescend);
 	for (int j = 0; j < NCPU; ++j) {
 	    int proc = procs_and_pts[j].first;
 	    if (curr_weights[proc] <= (non_empty + 1) / NCPU) {
@@ -285,7 +295,7 @@ int AssignGeom(IntNumTns& geom, int NC, int NCPU, double K) {
                   << " cells." << std::endl;
     }
 
-    std::cout << "Geometry-------" << std::endl;
+    std::cout << "Geometry-------" << std::endl << std::endl;
     for (int k = 0; k < NC; ++k) {
 	for (int i = 0; i < NC; ++i) {
 	    std::stringstream row;
@@ -294,6 +304,7 @@ int AssignGeom(IntNumTns& geom, int NC, int NCPU, double K) {
 	    }
 	    std::cout << row.str() << std::endl;
 	}
+	std::cout << std::endl;
     }
 
     return 0;
@@ -327,12 +338,14 @@ int NewData(std::string fname, double K, double NPW, int NCPU, int NC) {
 
     std::vector<int> assignment;
 
-    iC( AssignPoints(assignment, geometry, NCPU, centers, num_points, num_coords) );
+    iC( AssignPoints(assignment, NCPU, centers, num_points, num_coords) );
+#if 0
     for (int i = 0; i < assignment.size(); ++i) {
 	std::cout << assignment[i] << std::endl;
     }
+#endif
 
     // TODO: get the partition
-    NumTns geometry(NC, NC, NC);
-    
+    IntNumTns geom(NC, NC, NC);
+    iC ( AssignGeom(geom, num_points, assignment, centers, NC, NCPU, K, num_coords) );
 }
