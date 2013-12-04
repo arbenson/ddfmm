@@ -19,6 +19,7 @@
 #include "vec3t.hpp"
 #include "commoninc.hpp"
 #include "nummat.hpp"
+#include "numtns.hpp"
 
 #include <algorithm>
 #include <stdio>
@@ -137,6 +138,7 @@ int LloydsAlgorithm(std::vector<int>& assignment, int num_its, int NCPU,
 	for (int i = 0; i < num_points.size(); ++i) {
 	    total_points += num_points[i];
 	}
+	std::cout << total_points << " total points." << std::endl;
 	double avg_weight = ((double) total_points) / NCPU;
 	std::vector<double> curr_weights;
 	curr_weights.insert(curr_weights.begin(), NCPU, 0);
@@ -197,6 +199,106 @@ int AssignPoints(std::vector<int>& assignment, int NCPU,
     return 0;
 }
 
+// Determine the number of samples in the area of the triangle given by p1, p2,
+// and p3.  NPW is the number of samples per wavelength, and is typically
+// around 10.
+int SamplesInArea(double NPW, Point3 p1, Point3 p2, Point3 p3) {
+    Point3 a = p1 - p2;
+    Point3 b = p2 - p3;
+    Point3 c = p3 - p1;
+    double s = (a.l2() + b.l2() + c.l2()) / 2;
+    double area = sqrt(s * (s - a.l2()) * (s - b.l2()) * (s - c.l2()));
+    return ceil(area * NPW * NPW);
+}
+
+int AssignGeom(IntNumTns& geom, int NC, int NCPU, double K) {
+    std::vector<DblNumTns> coef;
+    std::vector< std::pair<int, int> > all_weights;
+    for (int i = 0; i < NC * NC * NC, ++i) {
+	all_weights.push_back(std::pair<i, 0>);
+    }
+    
+    for (int i = 0; i < NCPU; ++i) {
+	coef.pushback(DblNumTns(NC, NC, NC));
+	setvalue(coef[i], 0);
+    }
+    for (int k = 0; k < num_coords; ++k) {
+        Point3 pt = centers[k];
+        pt += K / 2;
+	pt /= (K / NC);
+	pt += 1;
+	coef[assignment[k]](pt[0], pt[1], pt[2]) += num_points[k];
+	all_weights[pt[0] + pt[1] * NC + pt[2] * NC * NC].second += num_points[k];
+    }
+    int non_empty = 0;
+    for (int i = 0; i < all_weights.size(); ++i) {
+	if (all_weights[i].second > 0) {
+	    ++non_empty;
+	}
+    }
+    
+    geom.reshape(NC, NC, NC);
+    setvalue(geom, -1);
+    std::vector<int> curr_weights;
+    curr_weights.insert(curr_weights.begin(), NCPU, 0);
+
+    std::sort(all_weights.begin(), all_weights.end(), PairCompDescend);
+    for (int k = 0; k < all_weights.size(); ++k) {
+	int index = all_weights[k].first;
+	if (all_weights[index] == 0) {
+	    // No cells with points left to assign.
+	    break;
+	}
+	// Sort by number of points owned in this cell
+	int i1 = (index % NC);
+	int i2 = ((index - i1) % (NC * NC)) / NC;
+	int i3 = (index - i1 - i2) / (NC * NC);
+	std::vector< std::pair<int, int> > procs_and_pts;
+	for (int j = 0; j < NCPU; ++j) {
+	    procs_and_pts.push_back<std::pair(j, coef[j](i1, i2, i3))>;
+	}
+	std::sort(procs_and_pts.begin(), procs_and_pts.end(), PairCompDescend);
+	for (int j = 0; j < NCPU; ++j) {
+	    int proc = procs_and_pts[j].first;
+	    if (curr_weights[proc] <= (non_empty + 1) / NCPU) {
+		geom(i1, i2, i3) = proc;
+		curr_weights[proc] += 1;
+	    }
+	}
+    }
+
+    // Fill in empty cells
+    int curr_proc = 0;
+    for (int i = 0; i < NC; ++i) {
+	for (int j = 0; j < NC; ++j) {
+	    for (int k = 0; k < NC; ++k) {
+		if (geom(i, j, k) == -1) {
+		    geom(i, j, k) = curr_proc % NCPU;
+		    ++curr_proc;
+		}
+	    }
+	}
+    }
+
+    for (int i = 0; i < NCPU; ++i) {
+	std::cout << "Process " << i << " has " << curr_weights[i]
+                  << " cells." << std::endl;
+    }
+
+    std::cout << "Geometry-------" << std::endl;
+    for (int k = 0; k < NC; ++k) {
+	for (int i = 0; i < NC; ++i) {
+	    std::stringstream row;
+	    for (int j = 0; j < NC; ++j) {
+		row << geom(i, j, k) << " ";
+	    }
+	    std::cout << row.str() << std::endl;
+	}
+    }
+
+    return 0;
+}
+
 int NewData(std::string fname, double K, double NPW, int NCPU, int NC) {
     iA (NCPU > 0 && NPW > 0 && NC > 0 && K >= 1);
 
@@ -220,19 +322,17 @@ int NewData(std::string fname, double K, double NPW, int NCPU, int NC) {
 	Point3 p3 = points[index[2]];
 	centers[k] = p1 + p2 + p3;
 	centers[k] /= 3;
-
-	// Compute number of points near that point
-	Point3 a = p1 - p2;
-	Point3 b = p2 - p3;
-	Point3 c = p3 - p1;
-        double s = (a.l2() + b.l2() + c.l2()) / 2;
-	double area = sqrt(s * (s - a.l2()) * (s - b.l2()) * (s - c.l2()));
-	num_points[k] = ceil(area * NPW * NPW);
+	num_points[k] = SamplesInArea(NPW, p1, p2, p3);
     }
 
     std::vector<int> assignment;
-    iC( AssignPoints(assignment, NCPU, centers, num_points, num_coords) );
+
+    iC( AssignPoints(assignment, geometry, NCPU, centers, num_points, num_coords) );
     for (int i = 0; i < assignment.size(); ++i) {
 	std::cout << assignment[i] << std::endl;
     }
+
+    // TODO: get the partition
+    NumTns geometry(NC, NC, NC);
+    
 }

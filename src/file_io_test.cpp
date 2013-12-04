@@ -31,8 +31,8 @@ int main() {
     std::cout << "size of coords (should be 3200): " << coords.size() << std::endl;
 #endif
 
-    std::string geom = "F16.wrl";
-    double K = 64;
+    std::string geom = "sphere.wrl";
+    double K = 1024;
     double NPW = 10;
     int NCPU = 8;
     int NC = 8;
