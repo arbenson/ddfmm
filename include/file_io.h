@@ -18,6 +18,7 @@
 #ifndef _FILE_IO_
 #define _FILE_IO_
 
+#include "numtns.hpp"
 #include "vec3t.hpp"
 
 #include <string>
@@ -28,6 +29,7 @@
 int ReadWrl(std::string fname, std::vector<Point3>& points,
             std::vector<Point3>& coords);
 
-int NewData(std::string fname, double K, double NPW, int NCPU, int NC);
+int NewData(std::string fname, double K, double NPW, int NCPU, int NC,
+	    IntNumTns& geom);
 
 #endif  // _FILE_IO_
