@@ -21,8 +21,7 @@
 #include "numvec.hpp"
 
 template <class F>
-class NumMat
-{
+class NumMat {
 public:
     NumMat(int m=0, int n=0): _m(m), _n(n), _owndata(true) {
 #ifndef RELEASE
@@ -31,14 +30,15 @@ public:
 	allocate();
     }
 
-    NumMat(int m, int n, bool owndata, F* data): _m(m), _n(n), _owndata(owndata) {
+    NumMat(int m, int n, bool owndata, F* data): _m(m), _n(n),
+                                                 _owndata(owndata) {
 #ifndef RELEASE
         CallStackEntry entry("NumMat::NumMat");
 #endif
         if (_owndata) {
 	    allocate();
-            if (checkDimensions()) {
-                for(int i = 0; i < _m * _n; i++) {
+            if (ValidDimensions()) {
+                for (int i = 0; i < _m * _n; ++i) {
                     _data[i] = data[i]; 
                 }
             }
@@ -91,7 +91,7 @@ public:
 #endif
         assert(_owndata);
         if (_m != m || _n != n) {
-            if (checkDimensions()) {
+            if (ValidDimensions()) {
                 delete[] _data;
                 _data = NULL;
             }
@@ -128,13 +128,13 @@ private:
     bool _owndata;
     F* _data;
 
-    bool checkDimensions() const { return _m > 0 && _n > 0; }
+    bool ValidDimensions() const { return _m > 0 && _n > 0; }
 
     void allocate() {
 #ifndef RELEASE
         CallStackEntry entry("NumMat::allocate");
 #endif
-	if (checkDimensions()) {
+	if (ValidDimensions()) {
 	    _data = new F[_m * _n];
 	    assert( _data != NULL );
 	} else {
@@ -146,7 +146,7 @@ private:
 #ifndef RELEASE
         CallStackEntry entry("NumMat::deallocate");
 #endif
-	if (checkDimensions()) {
+	if (ValidDimensions()) {
 	    delete[] _data;
 	    _data = NULL;
 	}
@@ -156,8 +156,8 @@ private:
 #ifndef RELEASE
         CallStackEntry entry("NumMat::fill");
 #endif
-	if (checkDimensions()) {
-	    for (int i = 0; i < _m * _n; i++) {
+	if (ValidDimensions()) {
+	    for (int i = 0; i < _m * _n; ++i) {
 		_data[i] = C._data[i];
 	    }
 	}
@@ -165,39 +165,36 @@ private:
 };
 
 template <class F> inline std::ostream& operator<<(std::ostream& os,
-                                                   const NumMat<F>& mat)
-{
+                                                   const NumMat<F>& mat) {
 #ifndef RELEASE
     CallStackEntry entry("operator<<");
 #endif
     os << mat.m() << " " << mat.n() << std::endl;
     os.setf(std::ios_base::scientific, std::ios_base::floatfield);
-    for(int i = 0; i < mat.m(); i++) {
-        for(int j = 0; j < mat.n(); j++)
+    for (int i = 0; i < mat.m(); ++i) {
+        for (int j = 0; j < mat.n(); ++j)
             os << " " << mat(i,j);
         os << std::endl;
     }
     return os;
 }
-template <class F> inline void setvalue(NumMat<F>& M, F val)
-{
+template <class F> inline void setvalue(NumMat<F>& M, F val) {
 #ifndef RELEASE
     CallStackEntry entry("setvalue");
 #endif
-    for (int i = 0; i < M.m(); i++) {
-        for (int j = 0; j < M.n(); j++) {
+    for (int i = 0; i < M.m(); ++i) {
+        for (int j = 0; j < M.n(); ++j) {
             M(i,j) = val;
         }
     }
 }
-template <class F> inline double energy(NumMat<F>& M)
-{
+template <class F> inline double energy(NumMat<F>& M) {
 #ifndef RELEASE
     CallStackEntry entry("energy");
 #endif
     double sum = 0;
-    for (int i = 0; i < M.m(); i++) {
-        for (int j = 0; j < M.n(); j++)  {
+    for (int i = 0; i < M.m(); ++i) {
+        for (int j = 0; j < M.n(); ++j)  {
             sum += abs(M(i,j) * M(i,j));
         }
     }
