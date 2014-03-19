@@ -22,7 +22,7 @@ WAVE3D_K=64
 NPW=10
 GEOM=F16
 BASE=${GEOM}.wrl_${WAVE3D_K}_${NPW}_${NCPU}
-ACCU=1
+ACCU=2
 
 # Run program
 mpirun \
