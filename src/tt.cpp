@@ -130,15 +130,23 @@ int main(int argc, char** argv)
         if (opt.empty()) {
             return 0;
         }
-  
-	std::istringstream giss;
-        SAFE_FUNC_EVAL( SharedRead(opt, giss) );
-        SAFE_FUNC_EVAL( deserialize(geomprtn, giss, all) );
-        if (mpirank == 0) {
-            std::cerr << "Done reading geomprtn " << geomprtn.m() << " "
-		 << geomprtn.n() << " " << geomprtn.p() << std::endl
-		 << geomprtn << std::endl;
+	std::istringstream ss(opt);
+	ss >> K;
+	
+	double NPW;
+	opt = findOption(opts, "-wave3d_NPW");
+        if (opt.empty()) {
+            return 0;
         }
+	std::istringstream ss2(opt);
+	ss2 >> NPW;
+
+	// TODO: Make this an argument
+	int NC = 8;
+
+	std::string geomfile;
+	opt = findOption(opts, "-geomfile");
+
 	std::istringstream ss2(opt);
 	ss2 >> NPW;
 
