@@ -15,9 +15,16 @@
 
     You should have received a copy of the GNU General Public License
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
-#include "wave3d.hpp"
+#include "file_io.h"
 #include "parallel.hpp"
+#include "numtns.hpp"
+#include "wave3d.hpp"
+
+
 #include <exception>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 #define CLOCK_DIFF_SECS(ck1, ck0) (double(ck1-ck0) / CLOCKS_PER_SEC)
 
@@ -75,7 +82,7 @@ int main(int argc, char** argv)
 	std::vector<int>& tmpinfo = pos.prtn().ownerinfo();
 	// LEXING: numpts CONTAINS THE TOTAL NUMBER OF POINTS
         int numpts = tmpinfo[tmpinfo.size()-1];
-        if (mpirank==0) {
+        if (mpirank == 0) {
 	    std::cerr << "Total number of points: " << numpts << std::endl;
 	    std::cerr << "Done reading pos " << pos.lclmap().size() << " "
 		      << pos.prtn().ownerinfo().size() << std::endl;
@@ -117,8 +124,9 @@ int main(int argc, char** argv)
             std::cerr << "Done reading mlib " << mlib.w2ldmap().size() << " "
 		 << mlib.w2hdmap().size() << std::endl;
         }
-        IntNumTns geomprtn;
-        opt = findOption(opts, "-geomprtn");
+
+        double K;
+        opt = findOption(opts, "-wave3d_K");
         if (opt.empty()) {
             return 0;
         }
@@ -131,6 +139,30 @@ int main(int argc, char** argv)
 		 << geomprtn.n() << " " << geomprtn.p() << std::endl
 		 << geomprtn << std::endl;
         }
+	std::istringstream ss2(opt);
+	ss2 >> NPW;
+
+	// TODO: Make this an argument
+	int NC = 8;
+
+	std::string geomfile;
+	opt = findOption(opts, "-geomfile");
+        if (opt.empty()) {
+            return 0;
+        }
+	geomfile = opt;
+
+        IntNumTns geomprtn;
+	NewData(geomfile, K, NPW, mpisize, NC, geomprtn);
+
+        if (mpirank == 0) {
+            std::cerr << "Done reading geomprtn "
+		      << geomprtn.m() << " "
+		      << geomprtn.n() << " " 
+		      << geomprtn.p() << std::endl
+		      << geomprtn << std::endl;
+        }
+
         Wave3d wave("wave3d_");
         wave.posptr() = &pos;
         wave.kernel() = kernel;
