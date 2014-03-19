@@ -17,12 +17,12 @@
 #    along with DDFMM.  If not, see <http://www.gnu.org/licenses/>.
 
 # Parameters
-NCPU=4
-WAVE3D_K=64
-NPW=20
-GEOM=SubmarineJ
+NCPU=2
+WAVE3D_K=32
+NPW=10
+GEOM=sphere
 BASE=${GEOM}.wrl_${WAVE3D_K}_${NPW}_${NCPU}
-ACCU=1
+ACCU=2
 
 # Run program
 mpirun \
@@ -30,6 +30,7 @@ mpirun \
 -posfile ${BASE}/pos \
 -denfile ${BASE}/den \
 -geomprtn ${BASE}/geomprtn \
+-geomfile ${GEOM}.wrl \
 -valfile ${BASE}/val \
 -chkfile ${BASE}/chk \
 -knl 0 \
@@ -39,5 +40,6 @@ mpirun \
 -wave3d_ACCU ${ACCU} \
 -wave3d_NPQ 4 \
 -wave3d_K ${WAVE3D_K} \
+-wave3d_NPW ${NPW} \
 -wave3d_ptsmax 80 \
 -wave3d_maxlevel 12
