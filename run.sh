@@ -19,8 +19,8 @@
 # Parameters
 NCPU=4
 WAVE3D_K=64
-NPW=20
-GEOM=SubmarineJ
+NPW=10
+GEOM=F16
 BASE=${GEOM}.wrl_${WAVE3D_K}_${NPW}_${NCPU}
 ACCU=1
 

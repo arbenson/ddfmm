@@ -1,5 +1,5 @@
 # Distributed Directional Fast Multipole Method
-#   Copyright (C) 2013 Austin Benson, Lexing Ying, and Jack Poulson
+#   Copyright (C) 2014 Austin Benson, Lexing Ying, and Jack Poulson
 #
 # This file is part of DDFMM.
 #
@@ -15,6 +15,7 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with DDFMM.  If not, see <http://www.gnu.org/licenses/>.
+HOST=wave4
 ifndef HOST
   $(error "$${HOST} is not defined")
 endif
