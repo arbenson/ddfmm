@@ -43,7 +43,8 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
   
   tmp = floor(rand(1,NCPU) * (numxs-NCPU)) + [1:NCPU];
   cs = xs(:,tmp);
-  
+
+  % Lloyd's Algorithm for point assignment
   for it=1:4*NCPU
     ds = zeros(numxs, NCPU);
     for g=1:NCPU
@@ -114,7 +115,6 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
     coef(tmp(1),tmp(2),tmp(3),is(k)) = coef(tmp(1),tmp(2),tmp(3),is(k)) + ws(k);
   end
 
-  % Lloyd's Algorithm for geometry assignment  
   coef = reshape(coef, [NC*NC*NC, NCPU]);
   aws = sum(coef,2);
   geom = -ones(1,NC*NC*NC);
@@ -174,7 +174,7 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
     gud = find(is==g);
     tws = ws(:,gud);
     
-    pts = zeros(3,30*1000*1000);        
+    pts = zeros(3,30*1000*1000);
     cnt = 0;
     
     %get all the points;
