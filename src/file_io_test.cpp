@@ -4,37 +4,15 @@
 #include <vector>
 
 int main() {
-#if 0
-    std::vector<Point3> points;
-    std::vector<Point3> coords;
-	
-    ReadWrl("F16.wrl", points, coords);
-    std::cout << "size of points (should be 1165): " << points.size() << std::endl;
-    std::cout << "size of coords (should be 2162): " << coords.size() << std::endl;
-
-    for (int i = 0; i < points.size(); ++i) {
-	std::cout << points[i] << std::endl;
-    }
-
-    points.clear();
-    coords.clear();
-
-    ReadWrl("SubmarineJ.wrl", points, coords);
-    std::cout << "size of points (should be 459): " << points.size() << std::endl;
-    std::cout << "size of coords (should be 640): " << coords.size() << std::endl;
-
-    points.clear();
-    coords.clear();
-
-    ReadWrl("sphere.wrl", points, coords);
-    std::cout << "size of points (should be 1681): " << points.size() << std::endl;
-    std::cout << "size of coords (should be 3200): " << coords.size() << std::endl;
-#endif
-
-    std::string geom = "SubmarineJ.wrl";
-    double K = 256;
+    std::string geomfile = "F16.wrl";
+    double K = 512;
     double NPW = 10;
     int NCPU = 4;
-    int NC = 16;
-    NewData(geom, K, NPW, NCPU, NC);
+    int NC = 8;
+    IntNumTns geom;
+
+    NewData(geomfile, K, NPW, NCPU, NC, geom);
+
+    std::cout << "Geometry-------" << std::endl
+	      << geom << std::endl;
 }
