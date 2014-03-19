@@ -138,7 +138,6 @@ int LloydsAlgorithm(std::vector<int>& assignment, int num_its, int NCPU,
 	for (int i = 0; i < num_points.size(); ++i) {
 	    total_points += num_points[i];
 	}
-	std::cout << total_points << " total points." << std::endl;
 	double avg_weight = ((double) total_points) / NCPU;
 	std::vector<double> curr_weights;
 	curr_weights.insert(curr_weights.begin(), NCPU, 0);
@@ -250,9 +249,6 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
     curr_weights.insert(curr_weights.begin(), NCPU, 0);
 
     std::sort(all_weights.begin(), all_weights.end(), CompPairDescend);
-    for (int i = 0; i < all_weights.size(); ++i) {
-      std::cout << "all weights " << i << " " << all_weights[i].second << std::endl;
-    }
     for (int k = 0; k < all_weights.size(); ++k) {
 	if (all_weights[k].second == 0) {
 	    // No cells with points left to assign.
@@ -290,21 +286,12 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
 	}
     }
 
-    for (int i = 0; i < NCPU; ++i) {
+    int mpirank = getMPIRank();
+    if (mpirank == 0) {
+      for (int i = 0; i < NCPU; ++i) {
 	std::cout << "Process " << i << " has " << curr_weights[i]
                   << " cells." << std::endl;
-    }
-
-    std::cout << "Geometry-------" << std::endl << std::endl;
-    for (int k = 0; k < NC; ++k) {
-	for (int i = 0; i < NC; ++i) {
-	    std::stringstream row;
-	    for (int j = 0; j < NC; ++j) {
-		row << geom(i, j, k) << " ";
-	    }
-	    std::cout << row.str() << std::endl;
-	}
-	std::cout << std::endl;
+      }
     }
 
     return 0;
@@ -344,4 +331,5 @@ int NewData(std::string fname, double K, double NPW, int NCPU, int NC) {
     IntNumTns geom(NC, NC, NC);
     SAFE_FUNC_EVAL ( AssignGeom(geom, num_points, assignment, centers, NC, NCPU,
                                 K, num_coords) );
+    return 0;
 }
