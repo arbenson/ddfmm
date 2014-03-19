@@ -297,8 +297,13 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
     return 0;
 }
 
-int NewData(std::string fname, double K, double NPW, int NCPU, int NC) {
-    CHECK_TRUE (NCPU > 0 && NPW > 0 && NC > 0 && K >= 1);
+int NewData(std::string fname, double K, double NPW, int NCPU, int NC,
+	    IntNumTns& geom) {
+    std::cout << "K: "    << K    << std::endl
+	      << "NPW: "  << NPW  << std::endl
+	      << "NCPU: " << NCPU << std::endl
+	      << "NC: "   << NC   << std::endl;
+    CHECK_TRUE(NCPU > 0 && NPW > 0 && NC > 0 && K >= 1);
 
     std::vector<Point3> points;
     std::vector<Point3> coords;
@@ -326,10 +331,6 @@ int NewData(std::string fname, double K, double NPW, int NCPU, int NC) {
     std::vector<int> assignment;
 
     SAFE_FUNC_EVAL( AssignPoints(assignment, NCPU, centers, num_points, num_coords) );
-
-    // TODO: get the partition
-    IntNumTns geom(NC, NC, NC);
-    SAFE_FUNC_EVAL ( AssignGeom(geom, num_points, assignment, centers, NC, NCPU,
-                                K, num_coords) );
+    SAFE_FUNC_EVAL( AssignGeom(geom, num_points, assignment, centers, NC, NCPU, K, num_coords) );
     return 0;
 }
