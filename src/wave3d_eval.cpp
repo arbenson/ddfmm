@@ -29,10 +29,10 @@ bool CompareDownwardHighInfo(pair<double, Index3> a, pair<double, Index3> b) {
     return a.first < b.first;
 }
 
-int Wave3d::LevelCommunication(std::map< double, vector<BndKey> >& request_bnds,
+int Wave3d::LevelCommunication(std::map< double, vector<HFBoxAndDirectionKey> >& request_bnds,
                                double W) {
-    vector<int> mask(BndDat_Number, 0);
-    mask[BndDat_dirupeqnden] = 1;
+    vector<int> mask(HFBoxAndDirectionDat_Number, 0);
+    mask[HFBoxAndDirectionDat_dirupeqnden] = 1;
     _bndvec.initialize_data();
     iC( _bndvec.getBegin(request_bnds[W], mask) );
     iC( _bndvec.getEnd(mask) );
@@ -132,27 +132,27 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     double max_W = 1;
     MPI_Allreduce(&local_max_W, &max_W, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
-    set<BndKey> reqbndset;
-    for(int i = 0; i < basedirs.size(); i++) {
+    set<HFBoxAndDirectionKey> reqbndset;
+    for(int i = 0; i < basedirs.size(); ++i) {
         iC( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
     }
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
     t0 = time(0);
-    vector<BndKey> reqbnd;
+    vector<HFBoxAndDirectionKey> reqbnd;
     reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
 
     // Requests by level
-    std::map< double, vector<BndKey> > request_bnds;
+    std::map< double, vector<HFBoxAndDirectionKey> > request_bnds;
     while (!reqbnd.empty()) {
-        BndKey key = reqbnd.back();
+        HFBoxAndDirectionKey key = reqbnd.back();
         request_bnds[width(key.first)].push_back(key);
         reqbnd.pop_back();
     }
 
     list< vector< pair<double, Index3> > > all_info;
-    for (int i = 0; i < basedirs.size(); i++) {
+    for (int i = 0; i < basedirs.size(); ++i) {
         vector< pair<double, Index3> > curr_info;
         Index3 dir = basedirs[i];
         iC( GetDownwardHighInfo(1, dir, hdmap, curr_info) );
@@ -205,7 +205,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
         }
     }
 
-    std::set<BndKey> reqbndset;
+    std::set<HFBoxAndDirectionKey> reqbndset;
     for (int i = 0; i < basedirs.size(); i++) {
         iC( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
     }
@@ -213,9 +213,9 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
     t0 = time(0);
-    std::vector<int> mask(BndDat_Number,0);
-    mask[BndDat_dirupeqnden] = 1;
-    std::vector<BndKey> reqbnd;
+    std::vector<int> mask(HFBoxAndDirectionDat_Number,0);
+    mask[HFBoxAndDirectionDat_dirupeqnden] = 1;
+    std::vector<HFBoxAndDirectionKey> reqbnd;
     reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
     iC( _bndvec.getBegin(reqbnd, mask) );
     iC( _bndvec.getEnd(mask) );
@@ -272,20 +272,20 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
                 ldmap[W].push_back(curkey);
             } else {
                 // High frequency regime
-                BndDat dummy;
+                HFBoxAndDirectionDat dummy;
                 // For each outgoing direction of this box, add to the first list
                 for (std::set<Index3>::iterator si = curdat.outdirset().begin();
                     si != curdat.outdirset().end(); si++) {
                     hdmap[*si].first.push_back(curkey);
                     // into bndvec
-                    _bndvec.insert(BndKey(curkey, *si), dummy);
+                    _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
                 }
                 // For each incoming direction of this box, add to the second list
                 for (std::set<Index3>::iterator si = curdat.incdirset().begin();
                     si != curdat.incdirset().end(); si++) {
                     hdmap[*si].second.push_back(curkey);
                     // into bndvec
-                    _bndvec.insert(BndKey(curkey, *si), dummy);
+                    _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
                 }
             }
         }
@@ -429,7 +429,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
             }
             //mul
             CpxNumMat mat;
-            iC( _knl.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
+            iC( _kernel.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
             iC( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
         } else {
             for (int ind = 0; ind < NUM_CHILDREN; ind++) {
@@ -538,7 +538,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
             }
             //mul
             CpxNumMat mat;
-            iC( _knl.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
+            iC( _kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
             iC( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
         } else {
             //put stuff to children
@@ -575,7 +575,7 @@ int Wave3d::U_list_compute(BoxDat& trgdat) {
         iA(has_pts(neidat));
         //mul
         CpxNumMat mat;
-        iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+        iC( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
         iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
     }
     return 0;
@@ -655,12 +655,12 @@ int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
         Point3 neictr = center(neikey);
         if(isterminal(trgdat) && trgdat.extpos().n() < dcp.n()) {
             CpxNumMat mat;
-            iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+            iC( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
             //mul
             CpxNumMat mat;
-            iC( _knl.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
+            iC( _kernel.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
             iC( zgemv(1.0, mat, neidat.extden(), 1.0, dnchkval) );
         }
     }
@@ -680,7 +680,7 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep) {
         //upchkpos
         if (isterminal(neidat) && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
-            iC( _knl.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+            iC( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             iC( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
             double coef = width(neikey) / W; //LEXING: SUPER IMPORTANT
@@ -692,7 +692,7 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep) {
             }
             //mul
             CpxNumMat mat;
-            iC( _knl.kernel(trgdat.extpos(), upeqnpos, upeqnpos, mat) );
+            iC( _kernel.kernel(trgdat.extpos(), upeqnpos, upeqnpos, mat) );
             iC( zgemv(1.0, mat, neidat.upeqnden(), 1.0, trgdat.extval()) );
         }
     }
@@ -701,7 +701,7 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep) {
 
 //---------------------------------------------------------------------
 int Wave3d::EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
-                                    std::set<BndKey>& reqbndset) {
+                                    std::set<HFBoxAndDirectionKey>& reqbndset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardHighRecursive");
 #endif
@@ -753,7 +753,7 @@ int Wave3d::GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
 
 //---------------------------------------------------------------------
 int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
-                           std::set<BndKey>& reqbndset) {
+                           std::set<HFBoxAndDirectionKey>& reqbndset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardHigh");
 #endif
@@ -771,8 +771,8 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
         iA(has_pts(srcdat));  // Should have points
 
         Point3 srcctr = center(srckey);
-        BndKey bndkey(srckey, dir);
-        BndDat& bnddat = _bndvec.access( bndkey );
+        HFBoxAndDirectionKey bndkey(srckey, dir);
+        HFBoxAndDirectionDat& bnddat = _bndvec.access( bndkey );
         CpxNumVec& upeqnden = bnddat.dirupeqnden();
         //eval
         CpxNumVec upchkval(ue2uc(0,0,0).m());
@@ -807,8 +807,8 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
                 if (data.first) {
                     BoxDat& chddat = data.second;
                     iA(has_pts(chddat));
-                    BndKey bndkey(chdkey, pdir);
-                    BndDat& bnddat = _bndvec.access(bndkey);
+                    HFBoxAndDirectionKey bndkey(chdkey, pdir);
+                    HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
                     CpxNumVec& chdued = bnddat.dirupeqnden();
                     iC( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
                 }
@@ -837,7 +837,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
 
 //---------------------------------------------------------------------
 int Wave3d::GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
-                                   std::set<BndKey>& reqbndset) {
+                                   std::set<HFBoxAndDirectionKey>& reqbndset) {
 #ifndef RELEASE
   CallStackEntry entry("Wave3d::GetInteractionListKeys");
 #endif
@@ -848,7 +848,7 @@ int Wave3d::GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes
       std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
       for (int i = 0; i < tmpvec.size(); ++i) {
           BoxKey srckey = tmpvec[i];
-          reqbndset.insert(BndKey(srckey, dir));
+          reqbndset.insert(HFBoxAndDirectionKey(srckey, dir));
       }
   }
   return 0;
@@ -865,16 +865,16 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
     //1. mix
     //get target
     DblNumMat tmpdcp(dcp.m(), dcp.n());
-    for (int k = 0; k < tmpdcp.n(); k++) {
-        for (int d = 0; d < 3; d++) {
-            tmpdcp(d,k) = dcp(d,k) + trgctr(d);
+    for (int k = 0; k < tmpdcp.n(); ++k) {
+        for (int d = 0; d < 3; ++d) {
+            tmpdcp(d, k) = dcp(d, k) + trgctr(d);
         }
     }
-    BndKey bndkey(trgkey, dir);
-    BndDat& bnddat = _bndvec.access(bndkey);
+    HFBoxAndDirectionKey bndkey(trgkey, dir);
+    HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
     CpxNumVec& dcv = bnddat.dirdnchkval();
     std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-    for (int i = 0; i < tmpvec.size(); i++) {
+    for (int i = 0; i < tmpvec.size(); ++i) {
         BoxKey srckey = tmpvec[i];
 	Point3 srcctr = center(srckey);
 	//difference vector
@@ -883,17 +883,17 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
 	iA( nml2dir(diff, W) == dir );
 	//get source
 	DblNumMat tmpuep(uep.m(),uep.n());
-	for (int k = 0; k < tmpuep.n(); k++) {
-	    for (int d = 0; d < 3; d++) {
+	for (int k = 0; k < tmpuep.n(); ++k) {
+	    for (int d = 0; d < 3; ++d) {
 	        tmpuep(d, k) = uep(d, k) + srcctr(d);
 	    }
 	}
-	BndKey bndkey(srckey, dir);
-	BndDat& bnddat = _bndvec.access(bndkey);
+	HFBoxAndDirectionKey bndkey(srckey, dir);
+	HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
 	CpxNumVec& ued = bnddat.dirupeqnden();
 	//mateix
 	CpxNumMat Mts;
-	iC( _knl.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
+	iC( _kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
 	//allocate space if necessary
 	if (dcv.m() == 0) {
 	    dcv.resize(Mts.m());
@@ -914,8 +914,8 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
                              NumVec<CpxNumMat>& dc2de,
                              NumTns<CpxNumMat>& de2dc) {
     double eps = 1e-12;
-    BndKey bndkey(trgkey, dir);
-    BndDat& bnddat = _bndvec.access(bndkey);
+    HFBoxAndDirectionKey bndkey(trgkey, dir);
+    HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
     CpxNumVec& dnchkval = bnddat.dirdnchkval();
     CpxNumMat& E1 = dc2de(0);
     CpxNumMat& E2 = dc2de(1);
@@ -961,8 +961,8 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
 	        continue;
 	    }
 	    BoxDat& chddat = data.second;
-	    BndKey bndkey(chdkey, pdir);
-	    BndDat& bnddat = _bndvec.access(bndkey);
+	    HFBoxAndDirectionKey bndkey(chdkey, pdir);
+	    HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
 	    CpxNumVec& chddcv = bnddat.dirdnchkval();
 	    if (chddcv.m() == 0) {
 	        chddcv.resize(de2dc(a,b,c).m());
@@ -989,7 +989,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
     iC( _mlibptr->DownwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     //LEXING: IMPORTANT
     std::vector<BoxKey>& trgvec = hdvecs.second;
-    for (int k = 0; k < trgvec.size(); k++) {
+    for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
 	iC( HighFrequencyM2L(W, dir, trgkey, trgdat, dcp, uep) );
@@ -998,23 +998,23 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
 
     // Now that we are done at this level, clear data to save on memory.
     std::vector<BoxKey>& srcvec = hdvecs.first;
-    for (int k = 0; k < srcvec.size(); k++) {
+    for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
         iA(has_pts(srcdat));  // should have points
-        BndKey bndkey(srckey, dir);
-        BndDat& bnddat = _bndvec.access( bndkey );
+        HFBoxAndDirectionKey bndkey(srckey, dir);
+        HFBoxAndDirectionDat& bnddat = _bndvec.access( bndkey );
         bnddat.dirupeqnden().resize(0);
     }
-    for (int k = 0; k < trgvec.size(); k++) {
+    for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
         iA(has_pts(trgdat));  // should have points
         std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-        for (int i = 0; i < tmpvec.size(); i++) {
+        for (int i = 0; i < tmpvec.size(); ++i) {
             BoxKey srckey = tmpvec[i];
-            BndKey bndkey(srckey, dir);
-            BndDat& bnddat = _bndvec.access(bndkey);
+            HFBoxAndDirectionKey bndkey(srckey, dir);
+            HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
             bnddat.dirupeqnden().resize(0);
         }
     }

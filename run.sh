@@ -1,5 +1,5 @@
 # Distributed Directional Fast Multipole Method
-#   Copyright (C) 2013 Austin Benson, Lexing Ying, and Jack Poulson
+#   Copyright (C) 2013-2014 Austin Benson, Lexing Ying, and Jack Poulson
 #
 # This file is part of DDFMM.
 #
@@ -32,7 +32,7 @@ mpirun \
 -geomprtn ${BASE}/geomprtn \
 -valfile ${BASE}/val \
 -chkfile ${BASE}/chk \
--knl 0 \
+-kernel 0 \
 -mlib3d_NPQ 4 \
 -mlib3d_ldname helm3d_ld_${ACCU}.bin \
 -mlib3d_hdname helm3d_hd_${ACCU}_4.bin \

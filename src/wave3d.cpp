@@ -241,32 +241,32 @@ int deserialize(BoxDat& val, std::istream& is, const std::vector<int>& mask) {
     if (mask[i] == 1) deserialize(val._fftnum, is, mask);  i++;
     if (mask[i] == 1) deserialize(val._fftcnt, is, mask);  i++;
   
-    iA(i==BoxDat_Number);
+    iA(i == BoxDat_Number);
   
     return 0;
 }
 
 //-----------------------------------------------------------
-int serialize(const BndDat& val, std::ostream& os, const std::vector<int>& mask)
-{
+int serialize(const HFBoxAndDirectionDat& val, std::ostream& os,
+              const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif
     int i = 0;
     if (mask[i] == 1) serialize(val._dirupeqnden, os, mask);  i++;
     if (mask[i] == 1) serialize(val._dirdnchkval, os, mask);  i++;
-    iA(i == BndDat_Number);
+    iA(i == HFBoxAndDirectionDat_Number);
     return 0;
 }
 //-----------------------------------------------------------
-int deserialize(BndDat& val, std::istream& is, const std::vector<int>& mask)
-{
+int deserialize(HFBoxAndDirectionDat& val, std::istream& is,
+                const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
 #endif
     int i = 0;
     if (mask[i] == 1) deserialize(val._dirupeqnden, is, mask);  i++;
     if (mask[i] == 1) deserialize(val._dirdnchkval, is, mask);  i++;
-    iA(i == BndDat_Number);
+    iA(i == HFBoxAndDirectionDat_Number);
     return 0;
 }

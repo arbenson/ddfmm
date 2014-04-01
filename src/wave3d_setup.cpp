@@ -73,7 +73,7 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     //create the parvecs
     BoxPrtn bp;  bp.ownerinfo() = _geomprtn;
     _boxvec.prtn() = bp;
-    BndPrtn tp;  tp.ownerinfo() = _geomprtn;
+    HFBoxAndDirectionPrtn tp;  tp.ownerinfo() = _geomprtn;
     _bndvec.prtn() = tp;
     //generate octree
     iC( setup_tree() );

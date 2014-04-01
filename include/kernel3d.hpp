@@ -22,8 +22,8 @@
 #include "vec3t.hpp"
 
 enum {
-  KNL_HELM = 0,
-  KNL_EXPR = 1
+  KERNEL_HELM = 0,
+  KERNEL_EXPR = 1
 };
 
 class Kernel3d
@@ -32,7 +32,7 @@ protected:
   static double _mindif;
   int _type;
 public:
-  Kernel3d(int t=KNL_HELM): _type(t) {;}
+  Kernel3d(int t=KERNEL_HELM): _type(t) {;}
   ~Kernel3d() {;}
   int& type() { return _type; }
   

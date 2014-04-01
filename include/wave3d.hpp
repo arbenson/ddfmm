@@ -65,10 +65,10 @@ public:
     int _fftnum;
     int _fftcnt;
     //
-    DblNumMat _extpos;  // positions of exact points (leaf level)
-    CpxNumVec _extden;  // Exact densities  
-    CpxNumVec _upeqnden;  // Upward equivalent density
-    CpxNumVec _extval;  // Exact potential value
+    DblNumMat _extpos;   // positions of exact points (leaf level)
+    CpxNumVec _extden;   // Exact densities  
+    CpxNumVec _upeqnden; // Upward equivalent density
+    CpxNumVec _extval;   // Exact potential value
     CpxNumVec _dnchkval; // Downward check potential
 
     int _tag;
@@ -161,38 +161,38 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef std::pair<BoxKey,Index3> BndKey;
+typedef std::pair<BoxKey,Index3> HFBoxAndDirectionKey;
 
 // Boundary data
-class BndDat {
+class HFBoxAndDirectionDat {
 public:
     CpxNumVec _dirupeqnden;
     CpxNumVec _dirdnchkval;
 public:
-    BndDat() {;}
-    ~BndDat() {;}
+    HFBoxAndDirectionDat() {;}
+    ~HFBoxAndDirectionDat() {;}
     // Directional upward equivalent density
     CpxNumVec& dirupeqnden() { return _dirupeqnden; }
     // Directional downward check value
     CpxNumVec& dirdnchkval() { return _dirdnchkval; }
 };
 
-#define BndDat_Number 2
+#define HFBoxAndDirectionDat_Number 2
 enum {
-    BndDat_dirupeqnden = 0,
-    BndDat_dirdnchkval = 1,
+    HFBoxAndDirectionDat_dirupeqnden = 0,
+    HFBoxAndDirectionDat_dirdnchkval = 1,
 };
 
-class BndPrtn{
+class HFBoxAndDirectionPrtn{
 public:
     IntNumTns _ownerinfo;
 public:
-    BndPrtn() {;}
-    ~BndPrtn() {;}
+    HFBoxAndDirectionPrtn() {;}
+    ~HFBoxAndDirectionPrtn() {;}
     IntNumTns& ownerinfo() { return _ownerinfo; }
-    int owner(BndKey key) {
+    int owner(HFBoxAndDirectionKey key) {
 #ifndef RELEASE
-	CallStackEntry entry("BndPrtn::owner");
+	CallStackEntry entry("HFBoxAndDirectionPrtn::owner");
 #endif
         int lvl = key.first.first;
         Index3 idx = key.first.second;
@@ -212,7 +212,7 @@ class Wave3d: public ComObject
 public:
     //-----------------------
     ParVec<int, Point3, PtPrtn>* _posptr;
-    Kernel3d _knl;
+    Kernel3d _kernel;
     int _ACCU;
     int _NPQ;
     Mlib3d* _mlibptr; // Read data in parallel and then send to other processors
@@ -224,7 +224,7 @@ public:
     int _maxlevel;
     //
     ParVec<BoxKey, BoxDat, BoxPrtn> _boxvec;
-    ParVec<BndKey, BndDat, BndPrtn> _bndvec;
+    ParVec<HFBoxAndDirectionKey, HFBoxAndDirectionDat, HFBoxAndDirectionPrtn> _bndvec;
     //
     CpxNumTns _denfft, _valfft;
     fftw_plan _fplan, _bplan;
@@ -235,7 +235,7 @@ public:
     ~Wave3d();
     //member access
     ParVec<int, Point3, PtPrtn>*& posptr() { return _posptr; }
-    Kernel3d& knl() { return _knl; }
+    Kernel3d& kernel() { return _kernel; }
     int& ACCU() { return _ACCU; }
     int& NPQ() { return _NPQ; }
     Mlib3d*& mlibptr() { return _mlibptr; }
@@ -257,7 +257,7 @@ public:
     int check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
               IntNumVec& chkkeyvec, double& relerr);
 
-    bool CompareBndKey(BndKey a, BndKey b) {
+    bool CompareHFBoxAndDirectionKey(HFBoxAndDirectionKey a, HFBoxAndDirectionKey b) {
 	return width(a.first) < width(b.first);
     }
 
@@ -338,18 +338,18 @@ private:
     int HighFreqPass(hdmap_t& hdmap);
 
     int EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
-                                std::set<BndKey>& reqbndset);
+                                std::set<HFBoxAndDirectionKey>& reqbndset);
     int EvalDownwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap);
 
 # ifdef LIMITED_MEMORY
     int GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
                             std::vector< pair<double, Index3> >& compute_info);
-    int LevelCommunication(map< double, std::vector<BndKey> >& request_bnds,
+    int LevelCommunication(map< double, std::vector<HFBoxAndDirectionKey> >& request_bnds,
                            double W);
 # endif
     
     int EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
-                       std::set<BndKey>& reqbndset);
+                       std::set<HFBoxAndDirectionKey>& reqbndset);
     int EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs);
 
     int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap);
@@ -374,7 +374,7 @@ private:
     // directional boundaries in the high-frequency interaction lists
     // of the target boxes.  dir specifies the direction of the boundaries.
     int GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
-                               std::set<BndKey>& reqbndset);
+                               std::set<HFBoxAndDirectionKey>& reqbndset);
 };
 
 //-------------------
@@ -386,10 +386,10 @@ int deserialize(BoxDat&, std::istream&, const std::vector<int>&);
 //-------------------
 //BoxPrtn, not necessary
 //-------------------
-int serialize(const BndDat&, std::ostream&, const std::vector<int>&);
-int deserialize(BndDat&, std::istream&, const std::vector<int>&);
+int serialize(const HFBoxAndDirectionDat&, std::ostream&, const std::vector<int>&);
+int deserialize(HFBoxAndDirectionDat&, std::istream&, const std::vector<int>&);
 //-------------------
-//BndPrtn, not necessary
+//HFBoxAndDirectionPrtn, not necessary
 
 
 #endif  // _WAVE3D_HPP_

@@ -99,17 +99,17 @@ int main(int argc, char** argv)
             std::cerr << "Done setting val " << val.lclmap().size() << " "
 		 << val.prtn().ownerinfo().size() << std::endl;
         }
-        Kernel3d knl(KNL_HELM);
-        mi = opts.find("-knl");
+        Kernel3d kernel(KERNEL_HELM);
+        mi = opts.find("-kernel");
         // TODO (Austin): change this to the other format for getting an option
         if (mi != opts.end()) {
 	    std::istringstream ss(mi->second);
             int type;
             ss >> type;
-            knl.type() = type;
+            kernel.type() = type;
         }
         Mlib3d mlib("mlib3d_");
-        mlib.knl() = knl;
+        mlib.kernel() = kernel;
         mlib.NPQ() = 4;
         iC( mlib.setup(opts) );
         if (mpirank == 0) {
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
         }
         Wave3d wave("wave3d_");
         wave.posptr() = &pos;
-        wave.knl() = knl;
+        wave.kernel() = kernel;
         wave.mlibptr() = &mlib;
         wave.geomprtn() = geomprtn;
 

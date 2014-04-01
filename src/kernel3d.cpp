@@ -34,7 +34,7 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
     cpx I(0, 1);
     double mindif2 = _mindif * _mindif;
 
-    if (_type == KNL_HELM) {
+    if (_type == KERNEL_HELM) {
         //-------------------------------
         DblNumMat r2(M, N);
         for (int i = 0; i < M; i++) {
@@ -68,7 +68,7 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
                 inter(i,j) = cpx( ckr(i, j) * ir(i, j), skr(i, j) * ir(i, j) );
             }
         }
-    } else if (_type == KNL_EXPR) {
+    } else if (_type == KERNEL_EXPR) {
         //-------------------------------
         DblNumMat r2(M,N);
         for (int i = 0; i < M; i++) {

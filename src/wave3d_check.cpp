@@ -65,7 +65,7 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     CpxNumVec trgval(tmptrgpos.size());
 
     CpxNumMat inter;
-    iC( _knl.kernel(trgpos, srcpos, srcpos, inter) );
+    iC( _kernel.kernel(trgpos, srcpos, srcpos, inter) );
     // If no points were assigned to this processor, then the trgval
     // should be zero.
     if (inter.n() != 0) {

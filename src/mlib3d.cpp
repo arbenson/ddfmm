@@ -124,7 +124,7 @@ int Mlib3d::UpwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
         ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
-        iC( _knl.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
+        iC( _kernel.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
     return 0;
@@ -155,7 +155,7 @@ int Mlib3d::DownwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
         ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
-        iC( _knl.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
+        iC( _kernel.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
   
@@ -216,7 +216,7 @@ int Mlib3d::UpwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
         ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
-        iC( _knl.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
+        iC( _kernel.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
   
@@ -272,7 +272,7 @@ int Mlib3d::DownwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
     for (int ind = 0; ind < NUM_CHILDREN; ind++) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
         ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
-        iC( _knl.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
+        iC( _kernel.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
   
