@@ -34,7 +34,7 @@ int Transpose(CpxNumMat& trg, CpxNumMat& src) {
     CallStackEntry entry("Transpose");
 #endif
     trg.resize(src.n(),src.m());
-    for(int i = 0; i < trg.m(); i++) {
+    for(int i = 0; i < trg.m(); ++i) {
         for(int j = 0; j < trg.n(); j++) {
             trg(i, j) = src(j, i);
         }
@@ -46,8 +46,8 @@ int ApplyShift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
 #ifndef RELEASE
     CallStackEntry entry("ApplyShift");
 #endif
-    for(int k = 0; k < src.n(); k++) {
-        for(int d = 0; d < 3; d++) {
+    for(int k = 0; k < src.n(); ++k) {
+        for(int d = 0; d < 3; ++d) {
             trg(d, k) = src(d, k) + shift(d);
         }
     }
@@ -58,8 +58,8 @@ int negate(DblNumMat& src) {
 #ifndef RELEASE
     CallStackEntry entry("negate");
 #endif
-    for (int i = 0; i < src.n(); i++) {
-        for (int d = 0; d < 3; d++) {
+    for (int i = 0; i < src.n(); ++i) {
+        for (int d = 0; d < 3; ++d) {
             src(d, i) = -src(d, i);
         }
     }
@@ -93,11 +93,11 @@ int Mlib3d::setup(std::map<std::string, std::string>& opts)
     //LEXING: read data in a shared way
     std::vector<int> all(1,1);
     std::istringstream liss;
-    iC( SharedRead(_ldname, liss) );
-    iC( deserialize(_w2ldmap, liss, all) );
+    SAFE_FUNC_EVAL( SharedRead(_ldname, liss) );
+    SAFE_FUNC_EVAL( deserialize(_w2ldmap, liss, all) );
     std::istringstream hiss;
-    iC( SharedRead(_hdname, hiss) );
-    iC( deserialize(_w2hdmap, hiss, all) );
+    SAFE_FUNC_EVAL( SharedRead(_hdname, hiss) );
+    SAFE_FUNC_EVAL( deserialize(_w2hdmap, hiss, all) );
   
     return 0;
 }
@@ -108,7 +108,7 @@ int Mlib3d::UpwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::UpwardLowFetch");
 #endif
-    iA(_w2ldmap.find(W) != _w2ldmap.end());
+    CHECK_TRUE(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
   
     uep = le.uep();
@@ -121,10 +121,10 @@ int Mlib3d::UpwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
     DblNumMat uepchd = _w2ldmap[W / 2].uep();
 
     ue2uc.resize(2, 2, 2);
-    for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+    for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
         ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
-        iC( _kernel.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
+        SAFE_FUNC_EVAL( _kernel.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
     return 0;
@@ -137,7 +137,7 @@ int Mlib3d::DownwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::DownwardLowFetch");
 #endif
-    iA(_w2ldmap.find(W) != _w2ldmap.end());
+    CHECK_TRUE(_w2ldmap.find(W) != _w2ldmap.end());
     LowFreqEntry& le = _w2ldmap[W];
   
     dep = le.ucp();
@@ -152,10 +152,10 @@ int Mlib3d::DownwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
     DblNumMat dcpchd = _w2ldmap[W / 2].uep();
   
     de2dc.resize(2,2,2);
-    for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+    for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
         ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
-        iC( _kernel.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
+        SAFE_FUNC_EVAL( _kernel.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
   
@@ -178,45 +178,45 @@ int Mlib3d::UpwardHighFetch(double W, Index3 dir, DblNumMat& uep, DblNumMat& ucp
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::UpwardHighFetch");
 #endif
-    iA(_w2hdmap.find(W) != _w2hdmap.end());
+    CHECK_TRUE(_w2hdmap.find(W) != _w2hdmap.end());
     std::map<Index3, HghFreqDirEntry>& curmap = _w2hdmap[W];
   
     Index3 srt, sgn, prm;
-    iC( HighFetchIndex3Sort(dir, srt, sgn, prm) );
-    iA(curmap.count(srt) != 0);
+    SAFE_FUNC_EVAL( HighFetchIndex3Sort(dir, srt, sgn, prm) );
+    CHECK_TRUE(curmap.count(srt) != 0);
 
     HghFreqDirEntry& he = curmap[srt];
     DblNumMat ueptmp( he.uep() );
     DblNumMat ucptmp( he.ucp() );
-    iC( HighFetchShuffle(prm, sgn, ueptmp, uep) );
-    iC( HighFetchShuffle(prm, sgn, ucptmp, ucp) );
+    SAFE_FUNC_EVAL( HighFetchShuffle(prm, sgn, ueptmp, uep) );
+    SAFE_FUNC_EVAL( HighFetchShuffle(prm, sgn, ucptmp, ucp) );
     uc2ue.resize(3);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         uc2ue(i) = he.uc2ue()(i);
     }
   
     DblNumMat uepchd;
     if (W == 1.0) { //unit box
-        iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
+        CHECK_TRUE(_w2ldmap.find(W / 2) != _w2ldmap.end());
         LowFreqEntry& le = _w2ldmap[W / 2];
         uepchd = le.uep();
     } else { //large box
-        iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
+        CHECK_TRUE(_w2hdmap.find(W / 2) != _w2hdmap.end());
         std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W / 2];
         
         Index3 pdr = predir(dir);
         Index3 srt, sgn, prm;
-        iC( HighFetchIndex3Sort(pdr, srt, sgn, prm) );
-        iA(curmap.find(srt) != curmap.end());
+        SAFE_FUNC_EVAL( HighFetchIndex3Sort(pdr, srt, sgn, prm) );
+        CHECK_TRUE(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
-        iC( HighFetchShuffle(prm, sgn, ueptmp, uepchd) );
+        SAFE_FUNC_EVAL( HighFetchShuffle(prm, sgn, ueptmp, uepchd) );
     }
     ue2uc.resize(2,2,2);
-    for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+    for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
         DblNumMat tmp(uepchd.m(), uepchd.n());
         ApplyShift(tmp, uepchd, ShiftedPoint(ind, W));
-        iC( _kernel.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
+        SAFE_FUNC_EVAL( _kernel.kernel(ucp, tmp, tmp, ue2uc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
   
@@ -230,49 +230,49 @@ int Mlib3d::DownwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::DownwardHighFetch");
 #endif
-    iA(_w2hdmap.find(W) != _w2hdmap.end());
+    CHECK_TRUE(_w2hdmap.find(W) != _w2hdmap.end());
     std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W];
   
     Index3 srt, sgn, prm;
-    iC( HighFetchIndex3Sort(dir, srt, sgn, prm) );
-    iA(curmap.find(srt) != curmap.end());
+    SAFE_FUNC_EVAL( HighFetchIndex3Sort(dir, srt, sgn, prm) );
+    CHECK_TRUE(curmap.find(srt) != curmap.end());
     HghFreqDirEntry& he = curmap[srt];
   
     DblNumMat ueptmp( he.uep() );
     DblNumMat ucptmp( he.ucp() );
-    iC( HighFetchShuffle(prm, sgn, ucptmp, dep) ); //ucp->dep
+    SAFE_FUNC_EVAL( HighFetchShuffle(prm, sgn, ucptmp, dep) ); //ucp->dep
     negate(dep);
-    iC( HighFetchShuffle(prm, sgn, ueptmp, dcp) ); //uep->dcp
+    SAFE_FUNC_EVAL( HighFetchShuffle(prm, sgn, ueptmp, dcp) ); //uep->dcp
     negate(dcp);
-    iC( HighFetchShuffle(prm, sgn, ueptmp, uep) ); //uep->uep
+    SAFE_FUNC_EVAL( HighFetchShuffle(prm, sgn, ueptmp, uep) ); //uep->uep
     dc2de.resize(3);
-    for (int k = 0; k < 3; k++) {
+    for (int k = 0; k < 3; ++k) {
         CpxNumMat tmp( he.uc2ue()(2 - k) );
         Transpose(dc2de(k), tmp);
     }
     DblNumMat dcpchd;
     if (W == 1.0) { //unit box
-        iA(_w2ldmap.find(W / 2) != _w2ldmap.end());
+        CHECK_TRUE(_w2ldmap.find(W / 2) != _w2ldmap.end());
         LowFreqEntry& le = _w2ldmap[W / 2];
         dcpchd = le.uep();
     } else { //large box
-        iA(_w2hdmap.find(W / 2) != _w2hdmap.end());
+        CHECK_TRUE(_w2hdmap.find(W / 2) != _w2hdmap.end());
         std::map<Index3,HghFreqDirEntry>& curmap = _w2hdmap[W / 2];
         
         Index3 pdr = predir(dir);
-        Index3 srt, sgn, prm;  iC( HighFetchIndex3Sort(pdr, srt, sgn, prm) );
-        iA(curmap.find(srt) != curmap.end());
+        Index3 srt, sgn, prm;  SAFE_FUNC_EVAL( HighFetchIndex3Sort(pdr, srt, sgn, prm) );
+        CHECK_TRUE(curmap.find(srt) != curmap.end());
         HghFreqDirEntry& he = curmap[srt];
         DblNumMat ueptmp( he.uep() );
-        iC( HighFetchShuffle(prm, sgn, ueptmp, dcpchd) );
+        SAFE_FUNC_EVAL( HighFetchShuffle(prm, sgn, ueptmp, dcpchd) );
         negate(dcpchd);
     }
   
     de2dc.resize(2,2,2);
-    for (int ind = 0; ind < NUM_CHILDREN; ind++) {
+    for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
         ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
-        iC( _kernel.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
+        SAFE_FUNC_EVAL( _kernel.kernel(tmp, dep, dep, de2dc(CHILD_IND1(ind), CHILD_IND2(ind),
                                              CHILD_IND3(ind))) );
     }
   
@@ -287,14 +287,14 @@ Index3 Mlib3d::predir(Index3 dir) {
     int C = dir.linfty();
     int B = C / 2;
     int midx = -1;
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
         if (abs(dir(d)) == C) {
             midx = d;
         }
     }
     //midx gives the direction
     Index3 res;
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
         res(d) = (dir(d) + C - 1) / 2;
         res(d) = 2 * (res(d) / 2) + 1 - B;
     }
@@ -311,13 +311,13 @@ int Mlib3d::HighFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp,
     CallStackEntry entry("Mlib3d::HighFetchShuffle");
 #endif
     res.resize(3, tmp.n());
-    for (int k = 0; k < res.n(); k++) {
-        for (int d = 0; d < 3; d++) {
+    for (int k = 0; k < res.n(); ++k) {
+        for (int d = 0; d < 3; ++d) {
             res(prm(d), k) = tmp(d, k);
         }
     }
-    for (int k = 0; k < res.n(); k++) {
-        for (int d = 0; d < 3; d++) {
+    for (int k = 0; k < res.n(); ++k) {
+        for (int d = 0; d < 3; ++d) {
             res(d, k) = sgn(d) * res(d, k);
         }
     }
@@ -331,7 +331,7 @@ int Mlib3d::HighFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn,
     CallStackEntry entry("Mlib3d::HighFetchIndex3Sort");
 #endif
     //make it positive
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
         sgn(d) = 1;
         if (val(d) < 0) {
             sgn(d) = -1;
@@ -340,10 +340,10 @@ int Mlib3d::HighFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn,
     }
     //sort
     int upp = val.linfty() + 1;
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
         int minidx = d;
         int minval = val[d];
-        for (int e = 0; e < 3; e++) {
+        for (int e = 0; e < 3; ++e) {
             if (val[e] < minval) {
                 minval = val[e];
                 minidx = e;
@@ -363,10 +363,10 @@ int serialize(const LowFreqEntry& le, std::ostream& os,
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif
-    iC( serialize(le._uep, os, mask) );
-    iC( serialize(le._ucp, os, mask) );
-    iC( serialize(le._uc2ue, os, mask) );
-    iC( serialize(le._ue2dc, os, mask) );
+    SAFE_FUNC_EVAL( serialize(le._uep, os, mask) );
+    SAFE_FUNC_EVAL( serialize(le._ucp, os, mask) );
+    SAFE_FUNC_EVAL( serialize(le._uc2ue, os, mask) );
+    SAFE_FUNC_EVAL( serialize(le._ue2dc, os, mask) );
     return 0;
 }
 int deserialize(LowFreqEntry& le, std::istream& is,
@@ -374,10 +374,10 @@ int deserialize(LowFreqEntry& le, std::istream& is,
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
 #endif
-    iC( deserialize(le._uep, is, mask) );
-    iC( deserialize(le._ucp, is, mask) );
-    iC( deserialize(le._uc2ue, is, mask) );
-    iC( deserialize(le._ue2dc, is, mask) );
+    SAFE_FUNC_EVAL( deserialize(le._uep, is, mask) );
+    SAFE_FUNC_EVAL( deserialize(le._ucp, is, mask) );
+    SAFE_FUNC_EVAL( deserialize(le._uc2ue, is, mask) );
+    SAFE_FUNC_EVAL( deserialize(le._ue2dc, is, mask) );
     return 0;
 }
 
@@ -387,9 +387,9 @@ int serialize(const HghFreqDirEntry& he, std::ostream& os,
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif
-    iC( serialize(he._uep, os, mask) );
-    iC( serialize(he._ucp, os, mask) );
-    iC( serialize(he._uc2ue, os, mask) );
+    SAFE_FUNC_EVAL( serialize(he._uep, os, mask) );
+    SAFE_FUNC_EVAL( serialize(he._ucp, os, mask) );
+    SAFE_FUNC_EVAL( serialize(he._uc2ue, os, mask) );
     return 0;
 }
 
@@ -398,8 +398,8 @@ int deserialize(HghFreqDirEntry& he, std::istream& is, const std::vector<int>& m
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
 #endif
-    iC( deserialize(he._uep, is, mask) );
-    iC( deserialize(he._ucp, is, mask) );
-    iC( deserialize(he._uc2ue, is, mask) );
+    SAFE_FUNC_EVAL( deserialize(he._uep, is, mask) );
+    SAFE_FUNC_EVAL( deserialize(he._ucp, is, mask) );
+    SAFE_FUNC_EVAL( deserialize(he._uc2ue, is, mask) );
     return 0;
 }

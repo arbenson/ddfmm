@@ -20,12 +20,11 @@
 
 //---------------------------------------------------------------------
 int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
-                  IntNumVec& chkkeys, double& relerr)
-{
+                  IntNumVec& chkkeys, double& relerr) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::check");
 #endif
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
   
     _self = this;
     int mpirank = getMPIRank();
@@ -34,28 +33,28 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     //1. get pos
     std::vector<int> all(1,1);
     std::vector<int> chkkeyvec;
-    for (int i = 0; i < chkkeys.m(); i++) {
+    for (int i = 0; i < chkkeys.m(); ++i) {
         chkkeyvec.push_back( chkkeys(i) );
     }
     pos.getBegin(chkkeyvec, all);
     pos.getEnd(all);
     std::vector<Point3> tmpsrcpos;
     for (std::map<int,Point3>::iterator mi = pos.lclmap().begin();
-        mi != pos.lclmap().end(); mi++) {
+        mi != pos.lclmap().end(); ++mi) {
         if(pos.prtn().owner(mi->first) == mpirank) {
             tmpsrcpos.push_back(mi->second);
         }
     }
     std::vector<cpx> tmpsrcden;
     for (std::map<int,cpx>::iterator mi = den.lclmap().begin();
-        mi != den.lclmap().end(); mi++) {
+        mi != den.lclmap().end(); ++mi) {
         if(den.prtn().owner(mi->first) == mpirank) {
             tmpsrcden.push_back(mi->second);
         }
     }
   
     std::vector<Point3> tmptrgpos;
-    for (int i = 0; i < chkkeyvec.size(); i++) {
+    for (int i = 0; i < chkkeyvec.size(); ++i) {
         tmptrgpos.push_back( pos.access(chkkeyvec[i]) );
     }
 
@@ -65,37 +64,37 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     CpxNumVec trgval(tmptrgpos.size());
 
     CpxNumMat inter;
-    iC( _kernel.kernel(trgpos, srcpos, srcpos, inter) );
+    SAFE_FUNC_EVAL( _kernel.kernel(trgpos, srcpos, srcpos, inter) );
     // If no points were assigned to this processor, then the trgval
     // should be zero.
     if (inter.n() != 0) {
-	iC( zgemv(1.0, inter, srcden, 0.0, trgval) );
+	SAFE_FUNC_EVAL( zgemv(1.0, inter, srcden, 0.0, trgval) );
     } else {
-	for (int i = 0; i < trgval.m(); i++) {
+	for (int i = 0; i < trgval.m(); ++i) {
 	    trgval(i) = 0;
 	}
     }
 
     CpxNumVec allval(trgval.m());
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     // Note: 2 doubles per complex number
-    iC( MPI_Allreduce(trgval.data(), allval.data(), trgval.m() * 2, MPI_DOUBLE,
-                      MPI_SUM, MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Allreduce(trgval.data(), allval.data(), trgval.m() * 2, MPI_DOUBLE,
+                                  MPI_SUM, MPI_COMM_WORLD) );
   
     //2. get val
     val.getBegin(chkkeyvec, all);  val.getEnd(all);
     CpxNumVec truval(chkkeyvec.size());
-    for(int i=0; i<chkkeyvec.size(); i++)
+    for(int i = 0; i < chkkeyvec.size(); ++i)
         truval(i) = val.access(chkkeyvec[i]);
   
     CpxNumVec errval(chkkeyvec.size());
-    for(int i=0; i<chkkeyvec.size(); i++)
+    for(int i = 0; i < chkkeyvec.size(); ++i)
         errval(i) = allval(i) - truval(i);
   
     double tn = sqrt( energy(truval) );
     double en = sqrt( energy(errval) );
     relerr = en / tn;
   
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }

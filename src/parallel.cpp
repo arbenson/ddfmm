@@ -25,7 +25,7 @@ int SeparateRead(std::string name, std::istringstream& is) {
 #ifndef RELEASE
     CallStackEntry entry("Separate_Read");
 #endif
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
 
@@ -39,7 +39,7 @@ int SeparateRead(std::string name, std::istringstream& is) {
     }
     is.str( std::string(std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>()) );
     fin.close();
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
@@ -48,7 +48,7 @@ int SeparateWrite(std::string name, std::ostringstream& os) {
 #ifndef RELEASE
     CallStackEntry entry("Separate_Write");
 #endif
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
 
@@ -62,7 +62,7 @@ int SeparateWrite(std::string name, std::ostringstream& os) {
     }
     fout<<os.str();
     fout.close();
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
@@ -71,7 +71,7 @@ int SharedRead(std::string name, std::istringstream& is) {
 #ifndef RELEASE
     CallStackEntry entry("Shared_Read");
 #endif
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
 
@@ -90,16 +90,16 @@ int SharedRead(std::string name, std::istringstream& is) {
 		      std::istreambuf_iterator<char>());
 	fin.close();
 	int size = tmpstr.size();
-	iC( MPI_Bcast((void*)&size, 1, MPI_INT, 0, MPI_COMM_WORLD) );
-	iC( MPI_Bcast((void*)&(tmpstr[0]), size, MPI_BYTE, 0, MPI_COMM_WORLD) );
+	SAFE_FUNC_EVAL( MPI_Bcast((void*)&size, 1, MPI_INT, 0, MPI_COMM_WORLD) );
+	SAFE_FUNC_EVAL( MPI_Bcast((void*)&(tmpstr[0]), size, MPI_BYTE, 0, MPI_COMM_WORLD) );
     } else {
 	int size;
-	iC( MPI_Bcast((void*)&size, 1, MPI_INT, 0, MPI_COMM_WORLD) );
+	SAFE_FUNC_EVAL( MPI_Bcast((void*)&size, 1, MPI_INT, 0, MPI_COMM_WORLD) );
 	tmpstr.resize(size);
-	iC( MPI_Bcast((void*)&(tmpstr[0]), size, MPI_BYTE, 0, MPI_COMM_WORLD) );
+	SAFE_FUNC_EVAL( MPI_Bcast((void*)&(tmpstr[0]), size, MPI_BYTE, 0, MPI_COMM_WORLD) );
     }
     is.str( std::string(tmpstr.begin(), tmpstr.end()) );
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
@@ -108,7 +108,7 @@ int SharedWrite(std::string name, std::ostringstream& os) {
 #ifndef RELEASE
     CallStackEntry entry("Shared_Write");
 #endif
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
 
@@ -125,6 +125,6 @@ int SharedWrite(std::string name, std::ostringstream& os) {
 	fout << os.str();
 	fout.close();
     }
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }

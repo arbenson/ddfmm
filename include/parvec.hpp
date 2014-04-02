@@ -124,7 +124,7 @@ int ParVec<Key,Data,Partition>::getSizes(std::vector<int>& rszvec, std::vector<i
         sifvec[2 * k + 1] = sszvec[k];
     }
     std::vector<int> rifvec(2 * mpisize, 0);
-    iC( MPI_Alltoall( (void*)&(sifvec[0]), 2, MPI_INT, (void*)&(rifvec[0]), 2,
+    SAFE_FUNC_EVAL( MPI_Alltoall( (void*)&(sifvec[0]), 2, MPI_INT, (void*)&(rifvec[0]), 2,
                       MPI_INT, MPI_COMM_WORLD ) );
     rszvec.resize(mpisize,0);
     for(int k = 0; k < mpisize; k++) {
@@ -147,9 +147,9 @@ int ParVec<Key,Data,Partition>::makeBufReqs(std::vector<int>& rszvec,
     }
     for (int k = 0; k < mpisize; k++) {
         // TODO (Austin): Is there a problem if rszvec or sszvec is 0?
-        iC( MPI_Irecv((void *)&(_rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0,
+        SAFE_FUNC_EVAL( MPI_Irecv((void *)&(_rbufvec[k][0]), rszvec[k], MPI_BYTE, k, 0,
                       MPI_COMM_WORLD, &_reqs[2 * k] ) );
-        iC( MPI_Isend((void *)&(_sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
+        SAFE_FUNC_EVAL( MPI_Isend((void *)&(_sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
                       MPI_COMM_WORLD, &_reqs[2 * k + 1] ) );
 	_kbytes_received += rszvec[k] / 1024;
 	_kbytes_sent += sszvec[k] / 1024;
@@ -184,7 +184,7 @@ int ParVec<Key,Data,Partition>::insert(Key key, Data& dat) {
     CallStackEntry entry("ParVec::insert");
 #endif
     int mpirank = getMPIRank();
-    iA( _prtn.owner(key) == mpirank); //LEXING: VERY IMPORTANT
+    CHECK_TRUE( _prtn.owner(key) == mpirank); //LEXING: VERY IMPORTANT
     _lclmap[key] = dat;
     return 0;
 }
@@ -196,7 +196,7 @@ Data& ParVec<Key,Data,Partition>::access(Key key) {
     CallStackEntry entry("ParVec::access");
 #endif
     typename std::map<Key,Data>::iterator mi = _lclmap.find(key);
-    iA(mi != _lclmap.end());
+    CHECK_TRUE(mi != _lclmap.end());
     return mi->second;
 }
 
@@ -248,8 +248,8 @@ int ParVec<Key,Data,Partition>::getBegin(int (*e2ps)(Key, Data&, std::vector<int
             for (int i = 0; i < pids.size(); i++) {
                 int k = pids[i];
                 if (k != mpirank) { //DO NOT SEND TO MYSELF
-                    iC( serialize(key, *(ossvec[k]), mask) );
-                    iC( serialize(dat, *(ossvec[k]), mask) );
+                    SAFE_FUNC_EVAL( serialize(key, *(ossvec[k]), mask) );
+                    SAFE_FUNC_EVAL( serialize(dat, *(ossvec[k]), mask) );
                     _snbvec[k]++; //LEXING: VERY IMPORTANT
                 }
             }
@@ -266,7 +266,7 @@ int ParVec<Key,Data,Partition>::getBegin(int (*e2ps)(Key, Data&, std::vector<int
 
     //3. allocate space, send and receive
     makeBufReqs(rszvec, sszvec);
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
@@ -302,7 +302,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
     for(int k = 0; k < mpisize; k++) {
         sszvec[k] = skeyvec[k].size();
     }
-    iC( MPI_Alltoall( (void*)&(sszvec[0]), 1, MPI_INT, (void*)&(rszvec[0]), 1,
+    SAFE_FUNC_EVAL( MPI_Alltoall( (void*)&(sszvec[0]), 1, MPI_INT, (void*)&(rszvec[0]), 1,
                        MPI_INT, MPI_COMM_WORLD ) );
 
     //3. allocate space for the keys, send and receive
@@ -314,12 +314,12 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
     MPI_Request *reqs = new MPI_Request[2 * mpisize];
     MPI_Status  *stats = new MPI_Status[2 * mpisize];
     for(int k = 0; k < mpisize; k++) {
-        iC( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k] * sizeof(Key), MPI_BYTE,
+        SAFE_FUNC_EVAL( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k] * sizeof(Key), MPI_BYTE,
                         k, 0, MPI_COMM_WORLD, &reqs[2 * k] ) );
-        iC( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k] * sizeof(Key), MPI_BYTE,
+        SAFE_FUNC_EVAL( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k] * sizeof(Key), MPI_BYTE,
                        k, 0, MPI_COMM_WORLD, &reqs[2 * k + 1] ) );
     }
-    iC( MPI_Waitall(2 * mpisize, &(reqs[0]), &(stats[0])) );
+    SAFE_FUNC_EVAL( MPI_Waitall(2 * mpisize, &(reqs[0]), &(stats[0])) );
     delete[] reqs;
     delete[] stats;
 
@@ -334,12 +334,12 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
         for(int g = 0; g < rkeyvec[k].size(); g++) {
             Key curkey = rkeyvec[k][g];
             typename std::map<Key, Data>::iterator mi = _lclmap.find(curkey);
-            iA( mi!=_lclmap.end() );
-            iA( _prtn.owner(curkey) == mpirank );
+            CHECK_TRUE( mi!=_lclmap.end() );
+            CHECK_TRUE( _prtn.owner(curkey) == mpirank );
             Key key = mi->first;
             const Data& dat = mi->second;
-            iC( serialize(key, *(ossvec[k]), mask) );
-            iC( serialize(dat, *(ossvec[k]), mask) );
+            SAFE_FUNC_EVAL( serialize(key, *(ossvec[k]), mask) );
+            SAFE_FUNC_EVAL( serialize(dat, *(ossvec[k]), mask) );
             _snbvec[k]++; //LEXING: VERY IMPORTANT
         }
     }
@@ -351,7 +351,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
 
     //6. allocate space, send and receive
     makeBufReqs(rszvec, sszvec);
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
@@ -363,7 +363,7 @@ int ParVec<Key,Data,Partition>::getEnd( const std::vector<int>& mask ) {
 #endif
     int mpisize = getMPISize();
     //LEXING: SEPARATE HERE
-    iC( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
+    SAFE_FUNC_EVAL( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
     delete[] _reqs;
     delete[] _stats;
     _sbufvec.clear(); //save space
@@ -396,7 +396,7 @@ int ParVec<Key,Data,Partition>::getEnd( const std::vector<int>& mask ) {
         delete issvec[k];
         issvec[k] = NULL;
     }
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
@@ -427,11 +427,11 @@ int ParVec<Key,Data,Partition>::putBegin(std::vector<Key>& keyvec,
         int k = _prtn.owner(key); //the owner
         if (k != mpirank) {
             typename std::map<Key, Data>::iterator mi = _lclmap.find(key);
-            iA( mi!=_lclmap.end() );
-            iA( key == mi->first );
+            CHECK_TRUE( mi!=_lclmap.end() );
+            CHECK_TRUE( key == mi->first );
             Data& dat = mi->second;
-            iC( serialize(key, *(ossvec[k]), mask) );
-            iC( serialize(dat, *(ossvec[k]), mask) );
+            SAFE_FUNC_EVAL( serialize(key, *(ossvec[k]), mask) );
+            SAFE_FUNC_EVAL( serialize(dat, *(ossvec[k]), mask) );
             _snbvec[k]++;
         }
     }
@@ -447,7 +447,7 @@ int ParVec<Key,Data,Partition>::putBegin(std::vector<Key>& keyvec,
     //4. allocate space, send and receive
     makeBufReqs(rszvec, sszvec);
 
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 
@@ -461,7 +461,7 @@ int ParVec<Key,Data,Partition>::putEnd( const std::vector<int>& mask ) {
     getMPIInfo(&mpirank, &mpisize);
 
     //LEXING: SEPARATE HERE
-    iC( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
+    SAFE_FUNC_EVAL( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
     delete[] _reqs;
     delete[] _stats;
     _sbufvec.clear(); //save space
@@ -479,9 +479,9 @@ int ParVec<Key,Data,Partition>::putEnd( const std::vector<int>& mask ) {
         for (int i = 0; i < _rnbvec[k]; i++) {
             Key key;
             deserialize(key, *(issvec[k]), mask);
-            iA( _prtn.owner(key) == mpirank );
+            CHECK_TRUE( _prtn.owner(key) == mpirank );
             typename std::map<Key,Data>::iterator mi = _lclmap.find(key);
-            iA( mi!=_lclmap.end() );
+            CHECK_TRUE( mi!=_lclmap.end() );
             deserialize(mi->second, *(issvec[k]), mask);
         }
     }
@@ -489,7 +489,7 @@ int ParVec<Key,Data,Partition>::putEnd( const std::vector<int>& mask ) {
         delete issvec[k];
         issvec[k] = NULL;
     }
-    iC( MPI_Barrier(MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
 

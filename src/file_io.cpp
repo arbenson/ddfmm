@@ -193,7 +193,7 @@ int AssignPoints(std::vector<int>& assignment, int NCPU,
     std::sort(sorted_num_points.begin(), sorted_num_points.end(),
               CompPairDescend);
     
-    iC( LloydsAlgorithm(assignment, 4 * NCPU, NCPU, centers, num_points,
+    SAFE_FUNC_EVAL( LloydsAlgorithm(assignment, 4 * NCPU, NCPU, centers, num_points,
                         proc_centers, sorted_num_points, num_coords) );
 
     return 0;
@@ -311,7 +311,7 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
 }
 
 int NewData(std::string fname, double K, double NPW, int NCPU, int NC) {
-    iA (NCPU > 0 && NPW > 0 && NC > 0 && K >= 1);
+    CHECK_TRUE (NCPU > 0 && NPW > 0 && NC > 0 && K >= 1);
 
     std::vector<Point3> points;
     std::vector<Point3> coords;
@@ -338,14 +338,10 @@ int NewData(std::string fname, double K, double NPW, int NCPU, int NC) {
 
     std::vector<int> assignment;
 
-    iC( AssignPoints(assignment, NCPU, centers, num_points, num_coords) );
-#if 0
-    for (int i = 0; i < assignment.size(); ++i) {
-	std::cout << assignment[i] << std::endl;
-    }
-#endif
+    SAFE_FUNC_EVAL( AssignPoints(assignment, NCPU, centers, num_points, num_coords) );
 
     // TODO: get the partition
     IntNumTns geom(NC, NC, NC);
-    iC ( AssignGeom(geom, num_points, assignment, centers, NC, NCPU, K, num_coords) );
+    SAFE_FUNC_EVAL ( AssignGeom(geom, num_points, assignment, centers, NC, NCPU,
+                                K, num_coords) );
 }

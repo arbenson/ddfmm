@@ -48,7 +48,7 @@ public:
 #ifndef RELEASE
 	CallStackEntry entry("PtPrtn::owner");
 #endif
-        iA(key<_ownerinfo[_ownerinfo.size()-1]);
+        CHECK_TRUE(key < _ownerinfo[_ownerinfo.size() - 1]);
         // Get the process which owns the current point
 	std::vector<int>::iterator vi = lower_bound(_ownerinfo.begin(),
                                                     _ownerinfo.end(), key + 1);
@@ -343,8 +343,8 @@ private:
 
 # ifdef LIMITED_MEMORY
     int GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
-                            std::vector< pair<double, Index3> >& compute_info);
-    int LevelCommunication(map< double, std::vector<HFBoxAndDirectionKey> >& request_bnds,
+                            std::vector< std::pair<double, Index3> >& compute_info);
+    int LevelCommunication(std::map< double, std::vector<HFBoxAndDirectionKey> >& request_bnds,
                            double W);
 # endif
     

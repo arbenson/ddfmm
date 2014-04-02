@@ -135,7 +135,7 @@ Point3 Wave3d::center(BoxKey& curkey) {
     Index3 path = curkey.second;
     int tmp = pow2(curkey.first);
     Point3 t;
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
 	t(d) = _ctr(d) - _K / 2 + (path(d) + 0.5) / tmp * _K;
     }
     return t;
@@ -207,7 +207,7 @@ int serialize(const BoxDat& val, std::ostream& os, const std::vector<int>& mask)
     if (mask[i] == 1) serialize(val._fftnum, os, mask);  i++;
     if (mask[i] == 1) serialize(val._fftcnt, os, mask);  i++;
   
-    iA(i==BoxDat_Number);
+    CHECK_TRUE(i == BoxDat_Number);
   
     return 0;
 }
@@ -241,7 +241,7 @@ int deserialize(BoxDat& val, std::istream& is, const std::vector<int>& mask) {
     if (mask[i] == 1) deserialize(val._fftnum, is, mask);  i++;
     if (mask[i] == 1) deserialize(val._fftcnt, is, mask);  i++;
   
-    iA(i == BoxDat_Number);
+    CHECK_TRUE(i == BoxDat_Number);
   
     return 0;
 }
@@ -255,7 +255,7 @@ int serialize(const HFBoxAndDirectionDat& val, std::ostream& os,
     int i = 0;
     if (mask[i] == 1) serialize(val._dirupeqnden, os, mask);  i++;
     if (mask[i] == 1) serialize(val._dirdnchkval, os, mask);  i++;
-    iA(i == HFBoxAndDirectionDat_Number);
+    CHECK_TRUE(i == HFBoxAndDirectionDat_Number);
     return 0;
 }
 //-----------------------------------------------------------
@@ -267,6 +267,6 @@ int deserialize(HFBoxAndDirectionDat& val, std::istream& is,
     int i = 0;
     if (mask[i] == 1) deserialize(val._dirupeqnden, is, mask);  i++;
     if (mask[i] == 1) deserialize(val._dirdnchkval, is, mask);  i++;
-    iA(i == HFBoxAndDirectionDat_Number);
+    CHECK_TRUE(i == HFBoxAndDirectionDat_Number);
     return 0;
 }

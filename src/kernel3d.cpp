@@ -101,7 +101,7 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         }
     } else {
 	std::cerr << "Unknown kernel type " << _type << std::endl;
-        iA(0);
+        throw new std::exception();
     }
     return 0;
 }

@@ -47,11 +47,10 @@
 typedef std::complex<double> cpx;
 
 //aux functions
-inline int pow2(int l) { assert(l>=0); return (1<<l); }
+inline int pow2(int l) { assert(l >= 0); return (1 << l); }
 
-#define iC(fun)  { int ierr = fun; assert(ierr == 0); }
-// #define iA(expr) { if((expr) == 0) { std::cerr << "wrong" << std::endl; assert(expr); } }
-#define iA(expr) { if((expr) == 0) { std::cerr << "wrong" << std::endl; throw new std::exception(); } }
+#define SAFE_FUNC_EVAL(fun)  { int ierr = fun; if (ierr != 0) { throw new std::exception(); } }
+#define CHECK_TRUE(expr) { if((expr) == 0) { std::cerr << "wrong" << std::endl; throw new std::exception(); } }
 
 template <class T, class S>
 std::istream& operator>>(std::istream& is, std::pair<T,S>& a)

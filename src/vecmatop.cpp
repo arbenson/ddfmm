@@ -29,7 +29,7 @@ int dgemm(double alpha, const DblNumMat& A, const DblNumMat& B, double beta, Dbl
     CallStackEntry entry("dgemm");
 #endif
   assert( A.m() == C.m() );  assert( A.n() == B.m() );  assert( B.n() == C.n() );
-  iC( dgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
+  SAFE_FUNC_EVAL( dgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
   return 0;
 }
 // ---------------------------------------------------------------------- 
@@ -54,7 +54,7 @@ int dgemv(double alpha, const DblNumMat& A, const DblNumVec& X, double beta, Dbl
 #endif
   assert(Y.m() == A.m());
   assert(A.n() == X.m());
-  iC( dgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
+  SAFE_FUNC_EVAL( dgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
   return 0;
 }
 // ---------------------------------------------------------------------- 
@@ -81,7 +81,7 @@ int zgemm(cpx alpha, const CpxNumMat& A, const CpxNumMat& B, cpx beta, CpxNumMat
     CallStackEntry entry("zgemm");
 #endif
   assert( A.m() == C.m() );  assert( A.n() == B.m() );  assert( B.n() == C.n() );
-  iC( zgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
+  SAFE_FUNC_EVAL( zgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
   return 0;
 }
 // ---------------------------------------------------------------------- 
@@ -106,7 +106,7 @@ int zgemv(cpx alpha, const CpxNumMat& A, const CpxNumVec& X, cpx beta, CpxNumVec
 #endif
   assert(Y.m() == A.m());
   assert(A.n() == X.m());
-  iC( zgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
+  SAFE_FUNC_EVAL( zgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
   return 0;
 }
 // ---------------------------------------------------------------------- 
@@ -115,7 +115,7 @@ int zgemv(int m, int n, cpx alpha, cpx* A, cpx* X, cpx beta, cpx* Y)
 #ifndef RELEASE
     CallStackEntry entry("zgemv");
 #endif
-  iA(m>0 && A!=NULL && X!=NULL);
+  CHECK_TRUE(m > 0 && A != NULL && X != NULL);
   char trans = 'N';
   assert(m!=0 && n!=0);
   int incx = 1;

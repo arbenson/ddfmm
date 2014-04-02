@@ -709,6 +709,3 @@ int inline deserialize(NumTns<T>& val, std::istream& is, const std::vector<int>&
 
 
 #endif
-
-
-

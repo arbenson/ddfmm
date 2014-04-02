@@ -24,8 +24,8 @@
 int optionsCreate(int argc, char** argv, std::map<std::string,
                   std::string>& options) {
     options.clear();
-    for(int k=1; k<argc; k=k+2) {
-      options[ std::string(argv[k]) ] = std::string(argv[k+1]);
+    for(int k = 1; k < argc; k += 2) {
+      options[ std::string(argv[k]) ] = std::string(argv[k + 1]);
     }
     return 0;
 }
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
 
         //0. init and get options
         srand48(time(NULL));
-	iA(argc % 1 == 0);
+	CHECK_TRUE(argc % 1 == 0);
         clock_t ck0, ck1;
         time_t t0, t1;
 	std::vector<int> all(1,1);
@@ -70,8 +70,8 @@ int main(int argc, char** argv)
         }
 
 	std::istringstream piss;
-        iC( SeparateRead(opt, piss) );
-        iC( deserialize(pos, piss, all) );
+        SAFE_FUNC_EVAL( SeparateRead(opt, piss) );
+        SAFE_FUNC_EVAL( deserialize(pos, piss, all) );
 	std::vector<int>& tmpinfo = pos.prtn().ownerinfo();
 	// LEXING: numpts CONTAINS THE TOTAL NUMBER OF POINTS
         int numpts = tmpinfo[tmpinfo.size()-1];
@@ -87,9 +87,10 @@ int main(int argc, char** argv)
             return 0;
         }
 
-	std::istringstream diss; iC( SeparateRead(opt, diss) );
-        iC( deserialize(den, diss, all) );
-        if(mpirank==0) {
+	std::istringstream diss;
+        SAFE_FUNC_EVAL( SeparateRead(opt, diss) );
+        SAFE_FUNC_EVAL( deserialize(den, diss, all) );
+        if (mpirank == 0) {
             std::cerr << "Done reading den " << den.lclmap().size() << " "
 		 << den.prtn().ownerinfo().size() << std::endl;
         }
@@ -111,7 +112,7 @@ int main(int argc, char** argv)
         Mlib3d mlib("mlib3d_");
         mlib.kernel() = kernel;
         mlib.NPQ() = 4;
-        iC( mlib.setup(opts) );
+        SAFE_FUNC_EVAL( mlib.setup(opts) );
         if (mpirank == 0) {
             std::cerr << "Done reading mlib " << mlib.w2ldmap().size() << " "
 		 << mlib.w2hdmap().size() << std::endl;
@@ -122,9 +123,10 @@ int main(int argc, char** argv)
             return 0;
         }
   
-	std::istringstream giss;  iC( SharedRead(opt, giss) );
-        iC( deserialize(geomprtn, giss, all) );
-        if(mpirank==0) {
+	std::istringstream giss;
+        SAFE_FUNC_EVAL( SharedRead(opt, giss) );
+        SAFE_FUNC_EVAL( deserialize(geomprtn, giss, all) );
+        if (mpirank == 0) {
             std::cerr << "Done reading geomprtn " << geomprtn.m() << " "
 		 << geomprtn.n() << " " << geomprtn.p() << std::endl
 		 << geomprtn << std::endl;
@@ -137,7 +139,7 @@ int main(int argc, char** argv)
 
         //2. setup
         t0 = time(0);
-        iC( wave.setup(opts) );
+        SAFE_FUNC_EVAL( wave.setup(opts) );
         t1 = time(0);
         if (mpirank == 0) {
 	    std::cout << "wave setup used " << difftime(t1,t0) << "secs " << std::endl;
@@ -146,7 +148,7 @@ int main(int argc, char** argv)
         //3. eval
         double time_eval;
         t0 = time(0);
-	iC( wave.eval(den, val) );
+	SAFE_FUNC_EVAL( wave.eval(den, val) );
 
 	t1 = time(0);
 	if (mpirank == 0) {
@@ -155,13 +157,13 @@ int main(int argc, char** argv)
 	time_eval = difftime(t1,t0);
 
         std::ostringstream oss;
-	iC( serialize(val, oss, all) );
+	SAFE_FUNC_EVAL( serialize(val, oss, all) );
 
 	opt = findOption(opts, "-valfile");
 	if (opt.empty()) {
 	    return 0;
 	}
-	iC( SeparateWrite(opt, oss) );
+	SAFE_FUNC_EVAL( SeparateWrite(opt, oss) );
 
 	//4. check
 	IntNumVec chkkeyvec;
@@ -170,21 +172,21 @@ int main(int argc, char** argv)
 	    return 0;
 	}
         std::istringstream iss;
-	iC( SharedRead(opt, iss) );
-	iC( deserialize(chkkeyvec, iss, all) );
+	SAFE_FUNC_EVAL( SharedRead(opt, iss) );
+	SAFE_FUNC_EVAL( deserialize(chkkeyvec, iss, all) );
 	int numchk = chkkeyvec.m();
 	double relerr;
 	ck0 = clock();
-	iC( wave.check(den, val, chkkeyvec, relerr) );
+	SAFE_FUNC_EVAL( wave.check(den, val, chkkeyvec, relerr) );
 	ck1 = clock();
-	if(mpirank==0) {
+	if (mpirank == 0) {
 	    std::cout << "wave check used " << CLOCK_DIFF_SECS(ck1, ck0)
                       << "secs " << std::endl;
 	}
 
 	//5. output results
 	double time_drct = CLOCK_DIFF_SECS(ck1, ck0) * numpts / double(numchk);
-	if(mpirank==0) {
+	if (mpirank == 0) {
 	    printf("----------------------\n");
 	    printf("RESULT\n");
 	    printf("K  %.2e\n", wave.K());
@@ -195,7 +197,7 @@ int main(int argc, char** argv)
 	    printf("----------------------\n");
 	}
 	//
-	iC( MPI_Finalize() );
+	SAFE_FUNC_EVAL( MPI_Finalize() );
 #ifndef RELEASE
     } catch( ... ) {
 	int mpirank;
