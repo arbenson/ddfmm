@@ -265,14 +265,14 @@ public:
               IntNumVec& chkkeyvec, double& relerr);
 
     bool CompareHFBoxAndDirectionKey(HFBoxAndDirectionKey a, HFBoxAndDirectionKey b) {
-	return width(a.first) < width(b.first);
+	return BoxWidth(a.first) < BoxWidth(b.first);
     }
 
 private:
     double width() { return _K; }
     //access information from BoxKey
-    Point3 center(BoxKey& curkey);
-    double width(BoxKey& curkey) { return _K / pow2(curkey.first); }
+    Point3 BoxCenter(BoxKey& curkey);
+    double BoxWidth(BoxKey& curkey) { return _K / pow2(curkey.first); }
     bool IsCellLevelBox(const BoxKey& curkey) { return curkey.first == cell_level(); }
 
     // Return the key of the parent box of the box corresponding to curkey.

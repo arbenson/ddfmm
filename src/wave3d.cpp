@@ -45,22 +45,23 @@ Index3 Wave3d::nml2dir(Point3 n, double W) {
     CallStackEntry entry("Wave3d::nml2dir");
 #endif
     int C = _NPQ * int(round(W));
-    int B = C/2;
-    int midx = 0;  double mval = abs(n(0));
-    for (int d = 1; d < 3; d++) {
-	if (mval<abs(n(d))) {
+    int B = C / 2;
+    int midx = 0;
+    double mval = abs(n(0));
+    for (int d = 1; d < 3; ++d) {
+	if (mval < abs(n(d))) {
             midx = d;
             mval = abs(n(d));
 	}
     }
     //midx gives the direction (can be + or -)
     Point3 val = n / mval;
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
         val(d) = atan(val(d));
     }
     double Ang = (M_PI/2)/C;
     Index3 res;
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
         int tmp = int(floor(val(d) / Ang));
         tmp = std::min(std::max(tmp, -B), B - 1);
         res(d) = 2 * tmp + 1;
@@ -75,9 +76,9 @@ Index3 Wave3d::ParentDir(Index3 dir) {
     CallStackEntry entry("Wave3d::ParentDir");
 #endif
     int C = dir.linfty();
-    int B = C/2;
+    int B = C / 2;
     int midx = -1;
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
       if (abs(dir(d)) == C) {
 	midx = d;
       }
@@ -85,7 +86,7 @@ Index3 Wave3d::ParentDir(Index3 dir) {
     assert(midx!=-1);
     //midx gives the direction
     Index3 res;
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
         res(d) = (dir(d) + C - 1) / 2;
         res(d) = 2 * (res(d) / 2) + 1 - B;
     }
@@ -100,15 +101,15 @@ std::vector<Index3> Wave3d::ChildDir(Index3 dir) {
 #endif
     int C = dir.linfty();
     std::vector<int> oidx;
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < 3; ++d) {
 	if(abs(dir(d)) != C) {
 	    oidx.push_back(d);
 	}
     }
     std::vector<Index3> res;
-    for (int a = 0; a < 2; a++) {
-	for (int b = 0; b < 2; b++) {
-	    Index3 tmp = 2*dir;
+    for (int a = 0; a < 2; ++a) {
+	for (int b = 0; b < 2; ++b) {
+	    Index3 tmp = 2 * dir;
 	    tmp(oidx[0]) += 2 * a - 1;
 	    tmp(oidx[1]) += 2 * b - 1;
 	    res.push_back(tmp);
@@ -127,7 +128,7 @@ double Wave3d::Dir2Width(Index3 dir) {
 }
 
 //-----------------------------------------------------------
-Point3 Wave3d::center(BoxKey& curkey) {
+Point3 Wave3d::BoxCenter(BoxKey& curkey) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::center");
 #endif
@@ -145,7 +146,7 @@ int Wave3d::P() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::P");
 #endif
-    assert(_ACCU >= 1 && _ACCU <= 3);
+    CHECK_TRUE(_ACCU >= 1 && _ACCU <= 3);
     switch (_ACCU) {
     case 1:
 	return 4;

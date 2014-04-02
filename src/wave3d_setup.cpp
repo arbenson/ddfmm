@@ -158,7 +158,7 @@ int Wave3d::setup_tree() {
         if (action) {
             // 1. subdivide to get new children
             NumTns<BoxDat> chdboxtns(2,2,2);
-            Point3 curctr = center(curkey); //LEXING: VERY IMPORTANT
+            Point3 curctr = BoxCenter(curkey); //LEXING: VERY IMPORTANT
             for (int g = 0; g < curdat.ptidxvec().size(); g++) {
                 int tmpidx = curdat.ptidxvec()[g];
                 Point3 tmp = pos.access(tmpidx); //get position value
@@ -208,7 +208,7 @@ int Wave3d::setup_tree() {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (OwnBox(curkey, mpirank) && HasPoints(curdat)) { //LEXING: JUST COMPUTE MY OWN BOXES
-            if (width(curkey) < 1 - eps) { //LEXING: STRICTLY < 1
+            if (BoxWidth(curkey) < 1 - eps) { //LEXING: STRICTLY < 1
                 // Low frequency regime
                 SAFE_FUNC_EVAL( setup_tree_callowlist(curkey, curdat) );
             } else {
@@ -257,7 +257,7 @@ int Wave3d::setup_tree() {
         mi!=_boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        double W = width(curkey);
+        double W = BoxWidth(curkey);
         if (OwnBox(curkey, mpirank) && W > 1 - eps && HasPoints(curdat)) {
             if (!IsCellLevelBox(curkey)) {
                 BoxKey parkey = ParentKey(curkey);
@@ -274,13 +274,13 @@ int Wave3d::setup_tree() {
                 }
             }
             //go thrw
-            Point3 curctr = center(curkey);
+            Point3 curctr = BoxCenter(curkey);
             for (std::map< Index3, std::vector<BoxKey> >::iterator mi = curdat.fndeidxvec().begin();
                 mi!=curdat.fndeidxvec().end(); mi++) {
                 std::vector<BoxKey>& tmplist = mi->second;
                 for (int k = 0; k < tmplist.size(); k++) {
                     BoxKey othkey = tmplist[k];
-                    Point3 othctr = center(othkey);
+                    Point3 othctr = BoxCenter(othkey);
                     Point3 tmp = othctr - curctr;
                     tmp /= tmp.l2();
                     Index3 dir = nml2dir(tmp, W);
@@ -394,8 +394,8 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup_tree_calhghlist");
 #endif
-    Point3 curctr = center(curkey);
-    double W = width(curkey);
+    Point3 curctr = BoxCenter(curkey);
+    double W = BoxWidth(curkey);
     double eps = 1e-12;
     double D = W * W + W; // Far field distance
     double threshold = D - eps;
@@ -407,7 +407,7 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat) {
             BoxDat& othdat = BoxData(othkey);
             if (HasPoints(othdat)) {
                 //LEXING: ALWAYS target - source
-                Point3 diff = curctr - center(othkey);
+                Point3 diff = curctr - BoxCenter(othkey);
                 if (diff.l2() >= threshold) {
                     Index3 dir = nml2dir(diff / diff.l2(), W);
                     curdat.fndeidxvec()[dir].push_back(othkey);
@@ -428,7 +428,7 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat) {
                 BoxDat& othdat = BoxData(othkey);
                 if (HasPoints(othdat)) {
                     //LEXING: ALWAYS target - source
-                    Point3 diff = curctr - center(othkey);
+                    Point3 diff = curctr - BoxCenter(othkey);
                     if (diff.l2() >= threshold) {
                         Index3 dir = nml2dir(diff / diff.l2(), W);
                         curdat.fndeidxvec()[dir].push_back(othkey);
@@ -501,7 +501,7 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, std::vector<int>& pids) {
     //for each ent, get all the pids that might need it
     int numC = _geomprtn.m();
     double widC = _K/numC;
-    double W = width(boxkey);
+    double W = BoxWidth(boxkey);
     if (IsCellLevelBox(boxkey)) {
         //LEXING: CELL LEVEL BOXES ARE NEEDED FOR ALL CPUS
         pids.clear();
@@ -510,8 +510,8 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, std::vector<int>& pids) {
         }
     } else {
         std::set<int> idset;
-        Point3 ctr = center(boxkey);
-        double D = std::max(4*W*W+4*W, 1.0); //LEXING: THIS TAKE CARES THE LOW FREQUENCY PART
+        Point3 ctr = BoxCenter(boxkey);
+        double D = std::max(4 * W * W + 4 * W, 1.0); //LEXING: THIS TAKE CARES THE LOW FREQUENCY PART
         int il = std::max((int)floor((ctr(0)+_K/2-D)/widC),0);
         int iu = std::min((int)ceil( (ctr(0)+_K/2+D)/widC),numC);
         int jl = std::max((int)floor((ctr(1)+_K/2-D)/widC),0);

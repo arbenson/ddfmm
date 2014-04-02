@@ -265,7 +265,7 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
         mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        double W = width(curkey);
+        double W = BoxWidth(curkey);
         if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
             // Boxes of width less than one that are nonempty and are owned
             // by this processor get put in the low-frequency map.
@@ -432,7 +432,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
         BoxDat& srcdat = _boxvec.access(srckey);
         CHECK_TRUE(HasPoints(srcdat));  // should have points
 
-        Point3 srcctr = center(srckey);
+        Point3 srcctr = BoxCenter(srckey);
         //get array
         CpxNumVec upchkval(tdof*ucp.n());
         setvalue(upchkval,cpx(0,0));
@@ -508,7 +508,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
         BoxDat& trgdat = _boxvec.access(trgkey);
         CHECK_TRUE(HasPoints(trgdat));  // should have points
 
-        Point3 trgctr = center(trgkey);
+        Point3 trgctr = BoxCenter(trgkey);
         //array
         CpxNumVec& dnchkval = trgdat.dnchkval();
         if (dnchkval.m() == 0) {
@@ -604,8 +604,8 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::V_list_compute");
 #endif
-    double step = W/(_P-1);
-    setvalue(_valfft,cpx(0,0));
+    double step = W / (_P - 1);
+    setvalue(_valfft,cpx(0, 0));
     //LEXING: SPECIAL
     for (std::vector<BoxKey>::iterator vi = trgdat.vndeidxvec().begin();
          vi != trgdat.vndeidxvec().end(); ++vi) {
@@ -613,7 +613,7 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
         BoxDat& neidat = _boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
         //mul
-        Point3 neictr = center(neikey);
+        Point3 neictr = BoxCenter(neikey);
         Index3 idx;
         for (int d = 0; d < dim(); ++d) {
             idx(d) = int(round( (trgctr[d]-neictr[d]) / W )); //LEXING:CHECK
@@ -670,7 +670,7 @@ int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
-        Point3 neictr = center(neikey);
+        Point3 neictr = BoxCenter(neikey);
         if(IsTerminal(trgdat) && trgdat.extpos().n() < dcp.n()) {
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
@@ -694,14 +694,14 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
-        Point3 neictr = center(neikey);
+        Point3 neictr = BoxCenter(neikey);
         //upchkpos
         if (IsTerminal(neidat) && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
-            double coef = width(neikey) / W; //LEXING: SUPER IMPORTANT
+            double coef = BoxWidth(neikey) / W; //LEXING: SUPER IMPORTANT
             DblNumMat upeqnpos(uep.m(), uep.n()); //local version
             for (int k = 0; k < uep.n(); ++k) {
                 for (int d = 0; d < dim(); ++d) {
@@ -788,7 +788,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
         BoxDat& srcdat = _boxvec.access(srckey);
         CHECK_TRUE(HasPoints(srcdat));  // Should have points
 
-        Point3 srcctr = center(srckey);
+        Point3 srcctr = BoxCenter(srckey);
         HFBoxAndDirectionKey bndkey(srckey, dir);
         HFBoxAndDirectionDat& bnddat = _bndvec.access( bndkey );
         CpxNumVec& upeqnden = bnddat.dirupeqnden();
@@ -879,7 +879,7 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
     CallStackEntry entry("Wave3d::HighFrequencyM2L");
 #endif
     CHECK_TRUE(HasPoints(trgdat));  // should have points
-    Point3 trgctr = center(trgkey);
+    Point3 trgctr = BoxCenter(trgkey);
     //1. mix
     //get target
     DblNumMat tmpdcp(dcp.m(), dcp.n());
@@ -894,7 +894,7 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
     std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
     for (int i = 0; i < tmpvec.size(); ++i) {
         BoxKey srckey = tmpvec[i];
-	Point3 srcctr = center(srckey);
+	Point3 srcctr = BoxCenter(srckey);
 	//difference vector
 	Point3 diff = trgctr - srcctr;
 	diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
