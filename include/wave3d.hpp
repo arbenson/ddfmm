@@ -88,9 +88,18 @@ public:
     std::set<Index3> _incdirset;
     std::set<Index3> _outdirset;
 
-
     BoxDat(): _tag(0), _fftnum(0), _fftcnt(0) {;} //by default, no children
     ~BoxDat() {;}
+
+    // Size of directional interaction list
+    int DirInteractionListSize() {
+        int num = 0;
+        for (std::map< Index3, std::vector<BoxKey> >::iterator mi = _fndeidxvec.begin();
+             mi != _fndeidxvec.end(); ++mi) {
+  	    num += mi->second.size();
+        }
+        return num;
+    }
     //
     int& tag() { return _tag; }
     std::vector<int>& ptidxvec() { return _ptidxvec; }

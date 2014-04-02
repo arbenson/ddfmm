@@ -25,7 +25,8 @@
 #define DVMAX 400
 
 #ifdef LIMITED_MEMORY
-bool CompareDownwardHighInfo(std::pair<double, Index3> a, std::pair<double, Index3> b) {
+bool CompareDownwardHighInfo(std::pair<double, Index3> a,
+                             std::pair<double, Index3> b) {
     return a.first < b.first;
 }
 
@@ -348,6 +349,26 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
          mi != to_delete.end(); ++mi) {
         BoxKey curkey = *mi;
         _boxvec._lclmap.erase(curkey);
+    }
+
+    // Gather some statistics on the number of boxes and directions
+    std::map<int, int> dircounts;
+    std::map<int, int> boxcounts;
+    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
+        mi != _boxvec.lclmap().end(); ++mi) {
+        int level = (mi->first).first;
+        dircounts[level] += mi->second.DirInteractionListSize();
+        boxcounts[level] += 1;
+    }
+    for (std::map<int, int>::iterator mi = dircounts.begin(); mi != dircounts.end(); ++mi) {
+        int level = mi->first;
+        int count = mi->second;
+        std::cerr << "dirs: (" << level << ", " << count << ")" << std::endl;
+    }
+    for (std::map<int, int>::iterator mi = boxcounts.begin(); mi != boxcounts.end(); ++mi) {
+        int level = mi->first;
+        int count = mi->second;
+        std::cerr << "boxes: (" << level << ", " << count << ")" << std::endl;
     }
 
     // Setup of low and high frequency maps
