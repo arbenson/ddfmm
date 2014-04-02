@@ -94,7 +94,7 @@ int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
 #endif
     time_t t0 = time(0);
     for (ldmap_t::reverse_iterator mi = ldmap.rbegin();
-        mi != ldmap.rend(); mi++) {
+        mi != ldmap.rend(); ++mi) {
         SAFE_FUNC_EVAL( EvalDownwardLow(mi->first, mi->second) );
     }
     time_t t1 = time(0);
@@ -206,7 +206,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     }
 
     std::set<HFBoxAndDirectionKey> reqbndset;
-    for (int i = 0; i < basedirs.size(); i++) {
+    for (int i = 0; i < basedirs.size(); ++i) {
         SAFE_FUNC_EVAL( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
     }
     t1 = time(0);
@@ -223,7 +223,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     PrintParData(GatherParData(t0, t1), "High frequency communication");
 
     t0 = time(0);
-    for (int i = 0; i < basedirs.size(); i++) {
+    for (int i = 0; i < basedirs.size(); ++i) {
         Index3 dir = basedirs[i]; // LEXING: PRE HERE
         SAFE_FUNC_EVAL( EvalDownwardHighRecursive(1, dir, hdmap) );
     }
@@ -261,7 +261,7 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
     //     2. BoxKeys that have the direction in its incoming direction list
     //
     for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); mi++) {
+        mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = width(curkey);
@@ -275,14 +275,14 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
                 HFBoxAndDirectionDat dummy;
                 // For each outgoing direction of this box, add to the first list
                 for (std::set<Index3>::iterator si = curdat.outdirset().begin();
-                    si != curdat.outdirset().end(); si++) {
+                    si != curdat.outdirset().end(); ++si) {
                     hdmap[*si].first.push_back(curkey);
                     // into bndvec
                     _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
                 }
                 // For each incoming direction of this box, add to the second list
                 for (std::set<Index3>::iterator si = curdat.incdirset().begin();
-                    si != curdat.incdirset().end(); si++) {
+                    si != curdat.incdirset().end(); ++si) {
                     hdmap[*si].second.push_back(curkey);
                     // into bndvec
                     _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
@@ -308,7 +308,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     // Go through posptr to get nonlocal points
     std::vector<int> reqpts;
     for(std::map<int,Point3>::iterator mi = pos.lclmap().begin();
-        mi != pos.lclmap().end(); mi++) {
+        mi != pos.lclmap().end(); ++mi) {
         reqpts.push_back( mi->first );
     }
 
@@ -316,7 +316,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
 
     // Compute extden using ptidxvec
     for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); mi++) {
+        mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (has_pts(curdat) && own_box(curkey, mpirank) && isterminal(curdat)) {
@@ -334,7 +334,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     // Delete of empty boxes
     std::list<BoxKey> to_delete;
     for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); mi++) {
+        mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (!has_pts(curdat)) {
@@ -367,14 +367,14 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     //set val from extval
     std::vector<int> wrtpts;
     for(std::map<int,Point3>::iterator mi = pos.lclmap().begin();
-        mi != pos.lclmap().end(); mi++) {
+        mi != pos.lclmap().end(); ++mi) {
         if (pos.prtn().owner(mi->first) != mpirank) {
             wrtpts.push_back(mi->first);
         }
     }
     val.expand(wrtpts);
     for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); mi++) {
+        mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (has_pts(curdat) && own_box(curkey, mpirank) && isterminal(curdat)) {
@@ -566,7 +566,7 @@ int Wave3d::U_list_compute(BoxDat& trgdat) {
     CallStackEntry entry("Wave3d::U_list_compute");
 #endif
     for (std::vector<BoxKey>::iterator vi = trgdat.undeidxvec().begin();
-        vi != trgdat.undeidxvec().end(); vi++) {
+        vi != trgdat.undeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
         CHECK_TRUE(has_pts(neidat));
@@ -587,7 +587,7 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
     setvalue(_valfft,cpx(0,0));
     //LEXING: SPECIAL
     for (std::vector<BoxKey>::iterator vi = trgdat.vndeidxvec().begin();
-         vi != trgdat.vndeidxvec().end(); vi++) {
+         vi != trgdat.vndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
         CHECK_TRUE(has_pts(neidat));
@@ -645,7 +645,7 @@ int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
     CallStackEntry entry("Wave3d::X_list_compute");
 #endif
     for (std::vector<BoxKey>::iterator vi = trgdat.xndeidxvec().begin();
-        vi != trgdat.xndeidxvec().end(); vi++) {
+        vi != trgdat.xndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
         CHECK_TRUE(has_pts(neidat));
@@ -669,7 +669,7 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep) {
     CallStackEntry entry("Wave3d::W_list_compute");
 #endif
     for (std::vector<BoxKey>::iterator vi = trgdat.wndeidxvec().begin();
-        vi != trgdat.wndeidxvec().end(); vi++) {
+        vi != trgdat.wndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
         CHECK_TRUE(has_pts(neidat));
