@@ -249,8 +249,6 @@ public:
     int setup(std::map<std::string, std::string>& opts);
 
     // Compute the potentials at the target points.
-    // den contains the density information
-    // TODO (Austin): what is val here?
     int eval( ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val);
 
     // Compute the true solution and store the relative err in relerr.
@@ -266,29 +264,29 @@ private:
     //access information from BoxKey
     Point3 center(BoxKey& curkey);
     double width(BoxKey& curkey) { return _K / pow2(curkey.first); }
-    bool iscell(const BoxKey& curkey) { return curkey.first == cell_level(); }
+    bool IsCellLevelBox(const BoxKey& curkey) { return curkey.first == cell_level(); }
 
     // Return the key of the parent box of the box corresponding to curkey.
-    BoxKey parkey(BoxKey& curkey) {
+    BoxKey ParentKey(BoxKey& curkey) {
 	return BoxKey(curkey.first - 1, curkey.second / 2);
     }
 
     // Return the key of a child box of the box corresponding to curkey.
     // The index into the 8 children is given by idx
-    BoxKey chdkey(BoxKey& curkey, Index3 idx) {
+    BoxKey ChildKey(BoxKey& curkey, Index3 idx) {
         return BoxKey(curkey.first + 1, 2 * curkey.second + idx);
     }
 
-    BoxDat& boxdata(BoxKey& curkey) { return _boxvec.access(curkey); }
+    BoxDat& BoxData(BoxKey& curkey) { return _boxvec.access(curkey); }
 
-    bool isterminal(BoxDat& curdat) { return curdat.tag() & WAVE3D_TERMINAL; }
+    bool IsTerminal(BoxDat& curdat) { return curdat.tag() & WAVE3D_TERMINAL; }
 
     // Returns true iff curdat contains points.
-    bool has_pts(BoxDat& curdat) { return curdat.tag() & WAVE3D_PTS; }
+    bool HasPoints(BoxDat& curdat) { return curdat.tag() & WAVE3D_PTS; }
 
     // Determine whether the box corresponding to curkey is owned
     // by this processor.
-    bool own_box(BoxKey& curkey, int mpirank) { return _boxvec.prtn().owner(curkey) == mpirank; }
+    bool OwnBox(BoxKey& curkey, int mpirank) { return _boxvec.prtn().owner(curkey) == mpirank; }
 
     // Return dimension of this problem.    
     int dim() { return 3; }
@@ -303,9 +301,9 @@ private:
     // associated with all children boxes C of B.
     //
     // dir is the child direction
-    Index3 predir(Index3 dir);
-    std::vector<Index3> chddir(Index3 dir);
-    double dir2width(Index3 dir);
+    Index3 ParentDir(Index3 dir);
+    std::vector<Index3> ChildDir(Index3 dir);
+    double Dir2Width(Index3 dir);
 
     int setup_tree();
     static int setup_Q1_wrapper(int key, Point3& dat, std::vector<int>& pids);

@@ -200,7 +200,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     std::vector<Index3> basedirs;
     for (hdmap_t::iterator mi = hdmap.begin(); mi != hdmap.end(); ++mi) {
         Index3 dir = mi->first;
-        if (dir2width(dir) == 1) {
+        if (Dir2Width(dir) == 1) {
             basedirs.push_back(dir);
         }
     }
@@ -265,7 +265,7 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = width(curkey);
-        if (has_pts(curdat) && own_box(curkey, mpirank)) {
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
             // Boxes of width less than one that are nonempty and are owned
             // by this processor get put in the low-frequency map.
             if (W < 1 - eps) {
@@ -319,7 +319,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (has_pts(curdat) && own_box(curkey, mpirank) && isterminal(curdat)) {
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsTerminal(curdat)) {
             std::vector<int>& curpis = curdat.ptidxvec();
             CpxNumVec& extden = curdat.extden();
             extden.resize(curpis.size());
@@ -337,7 +337,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (!has_pts(curdat)) {
+        if (!HasPoints(curdat)) {
             to_delete.push_back(curkey);
         }
     }
@@ -377,7 +377,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (has_pts(curdat) && own_box(curkey, mpirank) && isterminal(curdat)) {
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsTerminal(curdat)) {
             CpxNumVec& extval = curdat.extval();
             std::vector<int>& curpis = curdat.ptidxvec();
             for (int k = 0; k < curpis.size(); ++k) {
@@ -409,7 +409,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
-        CHECK_TRUE(has_pts(srcdat));  // should have points
+        CHECK_TRUE(HasPoints(srcdat));  // should have points
 
         Point3 srcctr = center(srckey);
         //get array
@@ -417,7 +417,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
         setvalue(upchkval,cpx(0,0));
         CpxNumVec& upeqnden = srcdat.upeqnden();
         //ue2dc
-        if (isterminal(srcdat)) {
+        if (IsTerminal(srcdat)) {
             DblNumMat upchkpos(ucp.m(), ucp.n());
             for (int k = 0; k < ucp.n(); ++k) {
                 for (int d = 0; d < dim(); ++d) {
@@ -433,8 +433,8 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
                 int a = CHILD_IND1(ind);
                 int b = CHILD_IND2(ind);
                 int c = CHILD_IND3(ind);
-                BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
-                std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
+                BoxKey key = ChildKey(srckey, Index3(a, b, c));
+                std::pair<bool, BoxDat&> data = _boxvec.contains(key);
                 if (data.first) {
                     BoxDat& chddat = data.second;
                     SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
@@ -485,7 +485,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
     for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
-        CHECK_TRUE(has_pts(trgdat));  // should have points
+        CHECK_TRUE(HasPoints(trgdat));  // should have points
 
         Point3 trgctr = center(trgkey);
         //array
@@ -526,7 +526,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
         SAFE_FUNC_EVAL( zgemv(1.0, v, mid, 0.0, dneqnden) );
         //-------------
         //to children or to exact points
-        if (isterminal(trgdat)) {
+        if (IsTerminal(trgdat)) {
             DblNumMat dneqnpos(dep.m(), dep.n());
             for (int k = 0; k < dep.n(); ++k) {
                 for (int d = 0; d < dim(); ++d) {
@@ -543,8 +543,8 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
                 int a = CHILD_IND1(ind);
                 int b = CHILD_IND2(ind);
                 int c = CHILD_IND3(ind);
-                BoxKey chdkey = this->chdkey(trgkey, Index3(a, b, c));
-                std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
+                BoxKey key = ChildKey(trgkey, Index3(a, b, c));
+                std::pair<bool, BoxDat&> data = _boxvec.contains(key);
                 if (!data.first) {
                   continue;
                 }
@@ -569,7 +569,7 @@ int Wave3d::U_list_compute(BoxDat& trgdat) {
         vi != trgdat.undeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
-        CHECK_TRUE(has_pts(neidat));
+        CHECK_TRUE(HasPoints(neidat));
         //mul
         CpxNumMat mat;
         SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
@@ -590,7 +590,7 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
          vi != trgdat.vndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
-        CHECK_TRUE(has_pts(neidat));
+        CHECK_TRUE(HasPoints(neidat));
         //mul
         Point3 neictr = center(neikey);
         Index3 idx;
@@ -648,9 +648,9 @@ int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
         vi != trgdat.xndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
-        CHECK_TRUE(has_pts(neidat));
+        CHECK_TRUE(HasPoints(neidat));
         Point3 neictr = center(neikey);
-        if(isterminal(trgdat) && trgdat.extpos().n() < dcp.n()) {
+        if(IsTerminal(trgdat) && trgdat.extpos().n() < dcp.n()) {
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
@@ -672,10 +672,10 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep) {
         vi != trgdat.wndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _boxvec.access(neikey);
-        CHECK_TRUE(has_pts(neidat));
+        CHECK_TRUE(HasPoints(neidat));
         Point3 neictr = center(neikey);
         //upchkpos
-        if (isterminal(neidat) && neidat.extpos().n() < uep.n()) {
+        if (IsTerminal(neidat) && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
@@ -705,7 +705,7 @@ int Wave3d::EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
     hdmap_t::iterator mi = hdmap.find(nowdir);
     if (mi != hdmap.end()) {
         SAFE_FUNC_EVAL( EvalUpwardHigh(W, nowdir, mi->second, reqbndset) );
-        std::vector<Index3> dirvec = chddir(nowdir);
+        std::vector<Index3> dirvec = ChildDir(nowdir);
         for (int k = 0; k < dirvec.size(); ++k) {
             SAFE_FUNC_EVAL( EvalUpwardHighRecursive(2 * W, dirvec[k], hdmap, reqbndset) );
         }
@@ -720,7 +720,7 @@ int Wave3d::EvalDownwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap) {
 #endif
     hdmap_t::iterator mi = hdmap.find(nowdir);
     if (mi != hdmap.end()) {
-        std::vector<Index3> dirvec = chddir(nowdir);
+        std::vector<Index3> dirvec = ChildDir(nowdir);
         for (int k = 0; k < dirvec.size(); ++k) {
             SAFE_FUNC_EVAL( EvalDownwardHighRecursive(2 * W, dirvec[k], hdmap) );
         }
@@ -765,7 +765,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
-        CHECK_TRUE(has_pts(srcdat));  // Should have points
+        CHECK_TRUE(HasPoints(srcdat));  // Should have points
 
         Point3 srcctr = center(srckey);
         HFBoxAndDirectionKey bndkey(srckey, dir);
@@ -781,12 +781,12 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
                 int a = CHILD_IND1(ind);
                 int b = CHILD_IND2(ind);
                 int c = CHILD_IND3(ind);
-                BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
+                BoxKey key = ChildKey(srckey, Index3(a, b, c));
                 // Do not compute unless _boxvec has the child key
-                std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
+                std::pair<bool, BoxDat&> data = _boxvec.contains(key);
                 if (data.first) {
                     BoxDat& chddat = data.second;
-                    CHECK_TRUE(has_pts(chddat));
+                    CHECK_TRUE(HasPoints(chddat));
                     CpxNumVec& chdued = chddat.upeqnden();
                     SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
                 }
@@ -794,16 +794,16 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
         } else {
             // Pick the direction such that the child wedges in that direction
             // contain the parent wedge in direction dir
-            Index3 pdir = predir(dir);
+            Index3 pdir = ParentDir(dir);
             for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
                 int a = CHILD_IND1(ind);
                 int b = CHILD_IND2(ind);
                 int c = CHILD_IND3(ind);
-                BoxKey chdkey = this->chdkey(srckey, Index3(a, b, c));
+                BoxKey chdkey = ChildKey(srckey, Index3(a, b, c));
                 std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
                 if (data.first) {
                     BoxDat& chddat = data.second;
-                    CHECK_TRUE(has_pts(chddat));
+                    CHECK_TRUE(HasPoints(chddat));
                     HFBoxAndDirectionKey bndkey(chdkey, pdir);
                     HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
                     CpxNumVec& chdued = bnddat.dirupeqnden();
@@ -841,7 +841,7 @@ int Wave3d::GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes
   for (int k = 0; k < target_boxes.size(); ++k) {
       BoxKey trgkey = target_boxes[k];
       BoxDat& trgdat = _boxvec.access(trgkey);
-      CHECK_TRUE(has_pts(trgdat));
+      CHECK_TRUE(HasPoints(trgdat));
       std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
       for (int i = 0; i < tmpvec.size(); ++i) {
           BoxKey srckey = tmpvec[i];
@@ -857,7 +857,7 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFrequencyM2L");
 #endif
-    CHECK_TRUE(has_pts(trgdat));  // should have points
+    CHECK_TRUE(HasPoints(trgdat));  // should have points
     Point3 trgctr = center(trgkey);
     //1. mix
     //get target
@@ -931,8 +931,8 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
 	    int a = CHILD_IND1(ind);
 	    int b = CHILD_IND2(ind);
 	    int c = CHILD_IND3(ind);             
-	    BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
-	    std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
+	    BoxKey key = ChildKey(trgkey, Index3(a,b,c));
+	    std::pair<bool, BoxDat&> data = _boxvec.contains(key);
 	    // If the box was empty, it will not be stored
 	    if (!data.first) {
 	        continue;
@@ -946,12 +946,12 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
 	    SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
 	}
     } else {
-        Index3 pdir = predir(dir); //LEXING: CHECK
+        Index3 pdir = ParentDir(dir); //LEXING: CHECK
 	for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
 	    int a = CHILD_IND1(ind);
 	    int b = CHILD_IND2(ind);
 	    int c = CHILD_IND3(ind);             
-	    BoxKey chdkey = this->chdkey(trgkey, Index3(a,b,c));
+	    BoxKey chdkey = ChildKey(trgkey, Index3(a,b,c));
 	    std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
 	    // If the box was empty, it will not be stored
 	    if (!data.first) {
@@ -998,7 +998,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
-        CHECK_TRUE(has_pts(srcdat));  // should have points
+        CHECK_TRUE(HasPoints(srcdat));  // should have points
         HFBoxAndDirectionKey bndkey(srckey, dir);
         HFBoxAndDirectionDat& bnddat = _bndvec.access( bndkey );
         bnddat.dirupeqnden().resize(0);
@@ -1006,7 +1006,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
     for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
-        CHECK_TRUE(has_pts(trgdat));  // should have points
+        CHECK_TRUE(HasPoints(trgdat));  // should have points
         std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
         for (int i = 0; i < tmpvec.size(); ++i) {
             BoxKey srckey = tmpvec[i];

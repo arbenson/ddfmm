@@ -70,9 +70,9 @@ Index3 Wave3d::nml2dir(Point3 n, double W) {
 }
 
 //-----------------------------------
-Index3 Wave3d::predir(Index3 dir) {
+Index3 Wave3d::ParentDir(Index3 dir) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::predir");
+    CallStackEntry entry("Wave3d::ParentDir");
 #endif
     int C = dir.linfty();
     int B = C/2;
@@ -94,9 +94,9 @@ Index3 Wave3d::predir(Index3 dir) {
 }
 
 //-----------------------------------
-std::vector<Index3> Wave3d::chddir(Index3 dir) {
+std::vector<Index3> Wave3d::ChildDir(Index3 dir) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::chddir");
+    CallStackEntry entry("Wave3d::ChildDir");
 #endif
     int C = dir.linfty();
     std::vector<int> oidx;
@@ -118,8 +118,7 @@ std::vector<Index3> Wave3d::chddir(Index3 dir) {
 }
 
 //-----------------------------------
-double Wave3d::dir2width(Index3 dir)
-{
+double Wave3d::Dir2Width(Index3 dir) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::dir2width");
 #endif

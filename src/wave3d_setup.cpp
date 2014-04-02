@@ -175,8 +175,8 @@ int Wave3d::setup_tree() {
                 int b = CHILD_IND2(ind);
                 int c = CHILD_IND3(ind);
                 // TODO(Austin): We should be smarter about the empty children
-                BoxKey chdkey = this->chdkey(curkey, Index3(a,b,c));
-                tmpq.push( std::pair<BoxKey,BoxDat>(chdkey, chdboxtns(a,b,c)) );
+                BoxKey key = ChildKey(curkey, Index3(a,b,c));
+                tmpq.push( std::pair<BoxKey,BoxDat>(key, chdboxtns(a,b,c)) );
             }
             // 4. clear my own ptidxvec vector
             curdat.ptidxvec().clear();
@@ -207,7 +207,7 @@ int Wave3d::setup_tree() {
         mi != _boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (own_box(curkey, mpirank) && has_pts(curdat)) { //LEXING: JUST COMPUTE MY OWN BOXES
+        if (OwnBox(curkey, mpirank) && HasPoints(curdat)) { //LEXING: JUST COMPUTE MY OWN BOXES
             if (width(curkey) < 1 - eps) { //LEXING: STRICTLY < 1
                 // Low frequency regime
                 SAFE_FUNC_EVAL( setup_tree_callowlist(curkey, curdat) );
@@ -224,7 +224,7 @@ int Wave3d::setup_tree() {
         mi!=_boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (has_pts(curdat) && own_box(curkey, mpirank)) {
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
             reqboxset.insert(curdat.undeidxvec().begin(), curdat.undeidxvec().end());
             reqboxset.insert(curdat.vndeidxvec().begin(), curdat.vndeidxvec().end());
             reqboxset.insert(curdat.wndeidxvec().begin(), curdat.wndeidxvec().end());
@@ -241,7 +241,7 @@ int Wave3d::setup_tree() {
         mi!=_boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (has_pts(curdat) && own_box(curkey, mpirank)) {
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
            for (std::vector<BoxKey>::iterator vi = curdat.vndeidxvec().begin();
                 vi != curdat.vndeidxvec().end(); vi++) {
                 BoxKey neikey = (*vi);
@@ -258,18 +258,18 @@ int Wave3d::setup_tree() {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = width(curkey);
-        if (own_box(curkey, mpirank) && W > 1 - eps && has_pts(curdat)) {
-            if (!iscell(curkey)) {
-                BoxKey parkey = this->parkey(curkey);
-                BoxDat& pardat = boxdata(parkey);
+        if (OwnBox(curkey, mpirank) && W > 1 - eps && HasPoints(curdat)) {
+            if (!IsCellLevelBox(curkey)) {
+                BoxKey parkey = ParentKey(curkey);
+                BoxDat& pardat = BoxData(parkey);
                 for (std::set<Index3>::iterator si = pardat.outdirset().begin();
                     si != pardat.outdirset().end(); si++) {
-                    Index3 nowdir = predir(*si);
+                    Index3 nowdir = ParentDir(*si);
                     curdat.outdirset().insert(nowdir);
                 }
                 for (std::set<Index3>::iterator si = pardat.incdirset().begin();
                     si != pardat.incdirset().end(); si++) {
-                    Index3 nowdir = predir(*si);
+                    Index3 nowdir = ParentDir(*si);
                     curdat.incdirset().insert(nowdir);
                 }
             }
@@ -304,9 +304,9 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat) {
     CallStackEntry entry("Wave3d::setup_tree_callowlist");
 #endif
     std::set<BoxKey> Uset, Vset, Wset, Xset;
-    CHECK_TRUE(!iscell(curkey)); //LEXING: DO NOT ALLOW WIDTH=1 BOXES TO BE CELLS
+    CHECK_TRUE(!IsCellLevelBox(curkey)); //LEXING: DO NOT ALLOW WIDTH=1 BOXES TO BE CELLS
     Index3 curpth = curkey.second;
-    BoxKey parkey = this->parkey(curkey); //the link to parent
+    BoxKey parkey = ParentKey(curkey); //the link to parent
     Index3 parpth = parkey.second;
     //
     int L = pow2(curkey.first);  //Index3 minpth(0,0,0);  //Index3 maxpth(L,L,L);
@@ -333,10 +333,10 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat) {
                 }
                 bool adj = setup_tree_adjacent(reskey, curkey);
 
-                if (reskey.first < curkey.first && has_pts(resdat)) {
+                if (reskey.first < curkey.first && HasPoints(resdat)) {
                     if (!adj) {
                         Xset.insert(reskey);
-                    } else if (isterminal(curdat)) {
+                    } else if (IsTerminal(curdat)) {
                         Uset.insert(reskey);
                     }
                 }
@@ -345,28 +345,28 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat) {
                     if (!adj) {
                         Index3 bb = reskey.second - curkey.second;
                         CHECK_TRUE( bb.linfty()<=3 );
-                        if (has_pts(resdat)) {
+                        if (HasPoints(resdat)) {
                             Vset.insert(reskey);
                         }
-                    } else if (isterminal(curdat)) {
+                    } else if (IsTerminal(curdat)) {
                         std::queue<BoxKey> rest;
                         rest.push(reskey);
                         while(!rest.empty()) {
                             BoxKey fntkey = rest.front(); rest.pop();
-                            BoxDat& fntdat = boxdata(fntkey);
+                            BoxDat& fntdat = BoxData(fntkey);
 
                             bool adj = setup_tree_adjacent(fntkey, curkey);
-                            if (!adj && has_pts(fntdat)) {
+                            if (!adj && HasPoints(fntdat)) {
                                 Wset.insert(fntkey);
                             } 
-                            if (adj && isterminal(fntdat) && has_pts(fntdat)) {
+                            if (adj && IsTerminal(fntdat) && HasPoints(fntdat)) {
                                 Uset.insert(fntkey);
                             }
-                            if (adj && !isterminal(fntdat)) {
+                            if (adj && !IsTerminal(fntdat)) {
                                 for (int ind = 0; ind < NUM_CHILDREN; ind++) {
-                                    rest.push( chdkey(fntkey, Index3(CHILD_IND1(ind),
-                                                                     CHILD_IND2(ind),
-                                                                     CHILD_IND3(ind))) );
+                                    rest.push( ChildKey(fntkey, Index3(CHILD_IND1(ind),
+                                                                       CHILD_IND2(ind),
+                                                                       CHILD_IND3(ind))) );
                                 }
                             }
                         }
@@ -375,7 +375,7 @@ int Wave3d::setup_tree_callowlist(BoxKey curkey, BoxDat& curdat) {
             }
         }
     }
-    if (isterminal(curdat) && has_pts(curdat)) {
+    if (IsTerminal(curdat) && HasPoints(curdat)) {
         Uset.insert(curkey);
     }
     for (std::set<BoxKey>::iterator si=Uset.begin(); si!=Uset.end(); si++)
@@ -399,13 +399,13 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat) {
     double eps = 1e-12;
     double D = W * W + W; // Far field distance
     double threshold = D - eps;
-    if (iscell(curkey)) {
+    if (IsCellLevelBox(curkey)) {
         //LEXING: CHECK THE FOLLOWING
         for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-             iscell(mi->first); mi++) {
+             IsCellLevelBox(mi->first); mi++) {
             BoxKey othkey = mi->first;
-            BoxDat& othdat = boxdata(othkey);
-            if (has_pts(othdat)) {
+            BoxDat& othdat = BoxData(othkey);
+            if (HasPoints(othdat)) {
                 //LEXING: ALWAYS target - source
                 Point3 diff = curctr - center(othkey);
                 if (diff.l2() >= threshold) {
@@ -417,15 +417,16 @@ int Wave3d::setup_tree_calhghlist(BoxKey curkey, BoxDat& curdat) {
             }
         }
     } else {
-        BoxKey parkey = this->parkey(curkey);
-        BoxDat& pardata = boxdata(parkey);
+        BoxKey parkey = ParentKey(curkey);
+        BoxDat& pardata = BoxData(parkey);
         for (int k = 0; k < pardata.endeidxvec().size(); k++) {
             BoxKey trykey = pardata.endeidxvec()[k];
             for (int ind = 0; ind < NUM_CHILDREN; ind++) {
-                BoxKey othkey = chdkey(trykey, Index3(CHILD_IND1(ind),
-                                       CHILD_IND2(ind), CHILD_IND3(ind)));
-                BoxDat& othdat = boxdata(othkey);
-                if (has_pts(othdat)) {
+                BoxKey othkey = ChildKey(trykey, Index3(CHILD_IND1(ind),
+                                                        CHILD_IND2(ind),
+                                                        CHILD_IND3(ind)));
+                BoxDat& othdat = BoxData(othkey);
+                if (HasPoints(othdat)) {
                     //LEXING: ALWAYS target - source
                     Point3 diff = curctr - center(othkey);
                     if (diff.l2() >= threshold) {
@@ -447,12 +448,12 @@ bool Wave3d::setup_tree_find(BoxKey wntkey, BoxKey& trykey) {
     CallStackEntry entry("Wave3d::setup_tree_find");
 #endif
     trykey = wntkey;
-    while(!iscell(trykey)) {
+    while(!IsCellLevelBox(trykey)) {
         std::map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().find(trykey);
         if (mi!=_boxvec.lclmap().end()) {
             return true; //found
         }
-        trykey = parkey(trykey);
+        trykey = ParentKey(trykey);
     }
     std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().find(trykey);
     return (mi != _boxvec.lclmap().end());
@@ -501,7 +502,7 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, std::vector<int>& pids) {
     int numC = _geomprtn.m();
     double widC = _K/numC;
     double W = width(boxkey);
-    if (iscell(boxkey)) {
+    if (IsCellLevelBox(boxkey)) {
         //LEXING: CELL LEVEL BOXES ARE NEEDED FOR ALL CPUS
         pids.clear();
         for (int i = 0; i < getMPISize(); i++) {
