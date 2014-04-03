@@ -370,6 +370,9 @@ private:
                        DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
                        NumTns<CpxNumTns>& ue2dc);
 
+    int LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
+                        NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden);
+
     int HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
                          NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
     int HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,

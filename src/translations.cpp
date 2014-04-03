@@ -65,7 +65,7 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
         //allocate space if necessary
         if (dcv.m() == 0) {
             dcv.resize(Mts.m());
-            setvalue(dcv, cpx(0,0)); //LEXING: CHECK
+            setvalue(dcv, cpx(0, 0)); //LEXING: CHECK
         }
         //SAFE_FUNC_EVAL( ued.m() != 0 );
         if (ued.m() == 0) {
@@ -142,7 +142,6 @@ int Wave3d::HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
     return 0;
 }
 
-
 int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
                              NumVec<CpxNumMat>& dc2de,
                              NumTns<CpxNumMat>& de2dc) {
@@ -207,6 +206,43 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
     return 0;
 }
 
+int Wave3d::LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
+                            NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden) {
+    Point3 trgctr = BoxCenter(trgkey);
+
+    // Add potentials to children or to exact points
+    if (IsTerminal(trgdat)) {
+        DblNumMat dneqnpos(dep.m(), dep.n());
+	for (int k = 0; k < dep.n(); ++k) {
+            for (int d = 0; d < dim(); ++d) {
+	        dneqnpos(d, k) = dep(d, k) + trgctr(d);
+	    }
+	}
+	CpxNumMat mat;
+	SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
+	SAFE_FUNC_EVAL( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
+    } else {
+        // put stuff to children
+        for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
+            int a = CHILD_IND1(ind);
+	    int b = CHILD_IND2(ind);
+	    int c = CHILD_IND3(ind);
+	    BoxKey key = ChildKey(trgkey, Index3(a, b, c));
+	    std::pair<bool, BoxDat&> data = _boxvec.contains(key);
+	    if (!data.first) {
+	        continue;
+	    }
+	    BoxDat& chddat = data.second;
+	    if (chddat.dnchkval().m() == 0) {
+                chddat.dnchkval().resize(de2dc(a, b, c).m());
+                setvalue(chddat.dnchkval(), cpx(0, 0));
+	    }
+	    SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddat.dnchkval()) );
+	}
+    }
+
+    return 0;
+}
 
 int Wave3d::U_list_compute(BoxDat& trgdat) {
 #ifndef RELEASE

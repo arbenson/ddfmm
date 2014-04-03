@@ -553,6 +553,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
         BoxDat& trgdat = _boxvec.access(trgkey);
         CHECK_TRUE(HasPoints(trgdat));  // should have points
 
+        // Low frequency M2L
         Point3 trgctr = BoxCenter(trgkey);
         //array
         CpxNumVec& dnchkval = trgdat.dnchkval();
@@ -567,7 +568,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
         DblNumMat dnchkpos(dcp.m(), dcp.n());
         for (int k = 0; k < dcp.n(); ++k) {
             for (int d = 0; d < dim(); ++d) {
-                dnchkpos(d,k) = dcp(d,k) + trgctr(d);
+                dnchkpos(d, k) = dcp(d, k) + trgctr(d);
             }
         }
         // List computations
@@ -577,52 +578,22 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
         SAFE_FUNC_EVAL( X_list_compute(trgdat, dcp, dnchkpos, dnchkval) );
 
         //-------------
-        //dnchkval to dneqnden
+        // dnchkval to dneqnden
         CpxNumMat& v  = dc2de(0);
         CpxNumMat& is = dc2de(1);
         CpxNumMat& up = dc2de(2);
-        CpxNumVec mid(up.m());        setvalue(mid,cpx(0,0));
+        CpxNumVec mid(up.m());
+        setvalue(mid,cpx(0, 0));
         SAFE_FUNC_EVAL( zgemv(1.0, up, dnchkval, 0.0, mid) );
-        dnchkval.resize(0); //LEXING: SAVE SPACE
+        dnchkval.resize(0); // LEXING: SAVE SPACE
         for (int k = 0; k < mid.m(); ++k) {
-            mid(k) = mid(k) * is(k,0);
+            mid(k) = mid(k) * is(k, 0);
         }
         CpxNumVec dneqnden(v.m());
         setvalue(dneqnden,cpx(0,0));
         SAFE_FUNC_EVAL( zgemv(1.0, v, mid, 0.0, dneqnden) );
-        //-------------
-        //to children or to exact points
-        if (IsTerminal(trgdat)) {
-            DblNumMat dneqnpos(dep.m(), dep.n());
-            for (int k = 0; k < dep.n(); ++k) {
-                for (int d = 0; d < dim(); ++d) {
-                    dneqnpos(d,k) = dep(d,k) + trgctr(d);
-                }
-            }
-            //mul
-            CpxNumMat mat;
-            SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
-            SAFE_FUNC_EVAL( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
-        } else {
-            //put stuff to children
-            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);
-                BoxKey key = ChildKey(trgkey, Index3(a, b, c));
-                std::pair<bool, BoxDat&> data = _boxvec.contains(key);
-                if (!data.first) {
-                  continue;
-                }
-                BoxDat& chddat = data.second;
-                //mul
-                if (chddat.dnchkval().m() == 0) {
-                    chddat.dnchkval().resize(de2dc(a,b,c).m());
-                    setvalue(chddat.dnchkval(), cpx(0,0));
-                }
-                SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddat.dnchkval()) );
-            }
-        }
+
+        LowFrequencyL2L(trgkey, trgdat, dep, de2dc, dneqnden);
     }
     return 0;
 }
