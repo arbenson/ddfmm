@@ -89,7 +89,7 @@ public:
         CallStackEntry entry("NumVec::resize");
 #endif
         assert(_owndata);
-        if (m !=_m) {
+        if (m != _m) {
             deallocate();
             _m = m;
             allocate();
