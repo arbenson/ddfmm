@@ -470,60 +470,11 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
     SAFE_FUNC_EVAL( _mlibptr->UpwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
-    //---------------
-    int tdof = 1;
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
-        CHECK_TRUE(HasPoints(srcdat));  // should have points
+        LowFrequencyM2M(srckey, srcdat, uep, ucp, uc2ue, ue2uc);
 
-        Point3 srcctr = BoxCenter(srckey);
-        //get array
-        CpxNumVec upchkval(tdof*ucp.n());
-        setvalue(upchkval,cpx(0,0));
-        CpxNumVec& upeqnden = srcdat.upeqnden();
-        //ue2dc
-        if (IsTerminal(srcdat)) {
-            DblNumMat upchkpos(ucp.m(), ucp.n());
-            for (int k = 0; k < ucp.n(); ++k) {
-                for (int d = 0; d < dim(); ++d) {
-                    upchkpos(d,k) = ucp(d,k) + srcctr(d);
-                }
-            }
-            //mul
-            CpxNumMat mat;
-            SAFE_FUNC_EVAL( _kernel.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
-            SAFE_FUNC_EVAL( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
-        } else {
-            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);
-                BoxKey key = ChildKey(srckey, Index3(a, b, c));
-                std::pair<bool, BoxDat&> data = _boxvec.contains(key);
-                if (data.first) {
-                    BoxDat& chddat = data.second;
-                    SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
-                }
-            }
-        }
-
-        //uc2ue
-        CpxNumMat& v  = uc2ue(0);
-        CpxNumMat& is = uc2ue(1); //LEXING: it is stored as a matrix
-        CpxNumMat& up = uc2ue(2);
-        CpxNumVec mid(up.m());
-        setvalue(mid,cpx(0,0));
-        SAFE_FUNC_EVAL( zgemv(1.0, up, upchkval, 0.0, mid) );
-        for (int k = 0; k < mid.m(); ++k) {
-            mid(k) = mid(k) * is(k,0);
-        }
-        upeqnden.resize(v.m());
-        setvalue(upeqnden,cpx(0,0));
-        SAFE_FUNC_EVAL( zgemv(1.0, v, mid, 0.0, upeqnden) );
-
-        //-------------------------
-        //EXTRA WORK, change role now
         // Add boxes in U, V, W, and X lists of trgdat to reqboxset.           
         BoxDat& trgdat = srcdat;
         reqboxset.insert(trgdat.undeidxvec().begin(), trgdat.undeidxvec().end());

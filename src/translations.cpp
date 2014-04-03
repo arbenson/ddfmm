@@ -206,6 +206,60 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
     return 0;
 }
 
+int Wave3d::LowFrequencyM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
+                            DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
+                            NumTns<CpxNumMat>& ue2uc) {
+    // TODO(arbenson): What was this being used for before?
+    int tdof = 1;
+
+    CHECK_TRUE(HasPoints(srcdat));  // should have points
+    Point3 srcctr = BoxCenter(srckey);
+    // get array
+    CpxNumVec upchkval(tdof * ucp.n());
+    setvalue(upchkval,cpx(0,0));
+    CpxNumVec& upeqnden = srcdat.upeqnden();
+    // ue2dc
+    if (IsTerminal(srcdat)) {
+        DblNumMat upchkpos(ucp.m(), ucp.n());
+	for (int k = 0; k < ucp.n(); ++k) {
+            for (int d = 0; d < dim(); ++d) {
+                upchkpos(d, k) = ucp(d, k) + srcctr(d);
+	    }
+	}
+	CpxNumMat mat;
+	SAFE_FUNC_EVAL( _kernel.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
+	SAFE_FUNC_EVAL( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
+    } else {
+        for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
+	  int a = CHILD_IND1(ind);
+	  int b = CHILD_IND2(ind);
+	  int c = CHILD_IND3(ind);
+	  BoxKey key = ChildKey(srckey, Index3(a, b, c));
+	  std::pair<bool, BoxDat&> data = _boxvec.contains(key);
+	  if (data.first) {
+	      BoxDat& chddat = data.second;
+	      SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
+	  }
+	}
+    }
+    
+    // uc2ue
+    CpxNumMat& v  = uc2ue(0);
+    CpxNumMat& is = uc2ue(1); //LEXING: it is stored as a matrix
+    CpxNumMat& up = uc2ue(2);
+    CpxNumVec mid(up.m());
+    setvalue(mid,cpx(0,0));
+    SAFE_FUNC_EVAL( zgemv(1.0, up, upchkval, 0.0, mid) );
+    for (int k = 0; k < mid.m(); ++k) {
+        mid(k) = mid(k) * is(k, 0);
+    }
+    upeqnden.resize(v.m());
+    setvalue(upeqnden,cpx(0,0));
+    SAFE_FUNC_EVAL( zgemv(1.0, v, mid, 0.0, upeqnden) );
+
+    return 0;
+}
+
 int Wave3d::LowFrequencyM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
                             NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
                             NumVec<CpxNumMat>& dc2de) {
