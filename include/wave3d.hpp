@@ -170,7 +170,7 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef std::pair<BoxKey,Index3> HFBoxAndDirectionKey;
+typedef std::pair<BoxKey, Index3> HFBoxAndDirectionKey;
 
 // Boundary data
 class HFBoxAndDirectionDat {
@@ -370,9 +370,10 @@ private:
                        DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
                        NumTns<CpxNumTns>& ue2dc);
 
+    int HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
+                         NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
     int HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
                          DblNumMat& dcp, DblNumMat& uep);
-
     int HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
                          NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc);
 

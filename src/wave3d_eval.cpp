@@ -685,13 +685,11 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardHigh");
 #endif
-    double eps = 1e-12;
     DblNumMat uep;
     DblNumMat ucp;
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
     SAFE_FUNC_EVAL( _mlibptr->UpwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
-    //---------------
     std::vector<BoxKey>& srcvec = hdvecs.first;
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
@@ -700,63 +698,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
 
         Point3 srcctr = BoxCenter(srckey);
         HFBoxAndDirectionKey bndkey(srckey, dir);
-        HFBoxAndDirectionDat& bnddat = _bndvec.access( bndkey );
-        CpxNumVec& upeqnden = bnddat.dirupeqnden();
-        //eval
-        CpxNumVec upchkval(ue2uc(0,0,0).m());
-        setvalue(upchkval,cpx(0,0));
-        // High-frequency M2M
-        if (abs(W-1) < eps) {
-            // The children boxes only have non-directional equivalent densities
-            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);
-                BoxKey key = ChildKey(srckey, Index3(a, b, c));
-                // Do not compute unless _boxvec has the child key
-                std::pair<bool, BoxDat&> data = _boxvec.contains(key);
-                if (data.first) {
-                    BoxDat& chddat = data.second;
-                    CHECK_TRUE(HasPoints(chddat));
-                    CpxNumVec& chdued = chddat.upeqnden();
-                    SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
-                }
-            }
-        } else {
-            // Pick the direction such that the child wedges in that direction
-            // contain the parent wedge in direction dir
-            Index3 pdir = ParentDir(dir);
-            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);
-                BoxKey chdkey = ChildKey(srckey, Index3(a, b, c));
-                std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
-                if (data.first) {
-                    BoxDat& chddat = data.second;
-                    CHECK_TRUE(HasPoints(chddat));
-                    HFBoxAndDirectionKey bndkey(chdkey, pdir);
-                    HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
-                    CpxNumVec& chdued = bnddat.dirupeqnden();
-                    SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
-                }
-            }
-        }
-
-        // Upward check to upward equivalency (uc2ue)
-        CpxNumMat& E1 = uc2ue(0);
-        CpxNumMat& E2 = uc2ue(1);
-        CpxNumMat& E3 = uc2ue(2);
-        cpx dat0[DVMAX], dat1[DVMAX];
-        CpxNumVec tmp0(E3.m(), false, dat0);
-        CHECK_TRUE(DVMAX >= E3.m());
-        CpxNumVec tmp1(E2.m(), false, dat1);
-        CHECK_TRUE(DVMAX >= E2.m());
-        upeqnden.resize(E1.m());
-        setvalue(upeqnden,cpx(0,0));
-        SAFE_FUNC_EVAL( zgemv(1.0, E3, upchkval, 0.0, tmp0) );
-        SAFE_FUNC_EVAL( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
-        SAFE_FUNC_EVAL( zgemv(1.0, E1, tmp1, 0.0, upeqnden) );
+	HighFrequencyM2M(W, bndkey, uc2ue, ue2uc);
     }
 
     SAFE_FUNC_EVAL( GetInteractionListKeys(dir, hdvecs.second, reqbndset) );
