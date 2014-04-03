@@ -121,7 +121,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     double local_max_W = 1;
     for (hdmap_t::iterator mi = hdmap.begin(); mi != hdmap.end(); ++mi) {
         Index3 dir = mi->first;
-        double W = dir2width(dir);
+        double W = Dir2Width(dir);
         if (W == 1) {
             basedirs.push_back(dir);
         }
@@ -148,7 +148,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     std::map< double, std::vector<HFBoxAndDirectionKey> > request_bnds;
     while (!reqbnd.empty()) {
         HFBoxAndDirectionKey key = reqbnd.back();
-        request_bnds[width(key.first)].push_back(key);
+        request_bnds[BoxWidth(key.first)].push_back(key);
         reqbnd.pop_back();
     }
 
@@ -759,7 +759,7 @@ int Wave3d::GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
 #endif
     hdmap_t::iterator mi = hdmap.find(nowdir);
     if (mi != hdmap.end()) {
-        std::vector<Index3> dirvec = chddir(nowdir);
+        std::vector<Index3> dirvec = ChildDir(nowdir);
         for (int k = 0; k < dirvec.size(); ++k) {
             SAFE_FUNC_EVAL( GetDownwardHighInfo(2 * W, dirvec[k], hdmap, compute_info) );
         }
