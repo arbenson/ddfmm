@@ -30,8 +30,7 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
 #endif
     CHECK_TRUE(HasPoints(trgdat));  // should have points
     Point3 trgctr = BoxCenter(trgkey);
-    //1. mix
-    //get target
+    // get target
     DblNumMat tmpdcp(dcp.m(), dcp.n());
     for (int k = 0; k < tmpdcp.n(); ++k) {
         for (int d = 0; d < 3; ++d) {
@@ -45,11 +44,11 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
     for (int i = 0; i < tmpvec.size(); ++i) {
         BoxKey srckey = tmpvec[i];
         Point3 srcctr = BoxCenter(srckey);
-        //difference vector
+        // difference vector
         Point3 diff = trgctr - srcctr;
         diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
         CHECK_TRUE( nml2dir(diff, W) == dir );
-        //get source
+        // get source
         DblNumMat tmpuep(uep.m(),uep.n());
         for (int k = 0; k < tmpuep.n(); ++k) {
             for (int d = 0; d < 3; ++d) {
@@ -79,6 +78,9 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
 
 int Wave3d::HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
                              NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::HighFrequencyM2M");
+#endif
     double eps = 1e-12;
     BoxKey srckey = bndkey.first;
     Index3 dir = bndkey.second;
@@ -145,6 +147,9 @@ int Wave3d::HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
 int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
                              NumVec<CpxNumMat>& dc2de,
                              NumTns<CpxNumMat>& de2dc) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::HighFrequencyL2L");
+#endif
     double eps = 1e-12;
     HFBoxAndDirectionKey bndkey(trgkey, dir);
     HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
@@ -209,6 +214,9 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
 int Wave3d::LowFrequencyM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
                             DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
                             NumTns<CpxNumMat>& ue2uc) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::LowFrequencyM2M");
+#endif
     // TODO(arbenson): What was this being used for before?
     int tdof = 1;
 
@@ -263,6 +271,9 @@ int Wave3d::LowFrequencyM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
 int Wave3d::LowFrequencyM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
                             NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
                             NumVec<CpxNumMat>& dc2de) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::LowFrequencyM2L");
+#endif
     int _P = P();
     Point3 trgctr = BoxCenter(trgkey);
     CpxNumVec& dnchkval = trgdat.dnchkval();
@@ -281,10 +292,10 @@ int Wave3d::LowFrequencyM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat&
 	}
     }
     // List computations
-    SAFE_FUNC_EVAL( U_list_compute(trgdat) );
-    SAFE_FUNC_EVAL( V_list_compute(trgdat, W, _P, trgctr, uep, dcp, dnchkval, ue2dc) );
-    SAFE_FUNC_EVAL( W_list_compute(trgdat, W, uep) );
-    SAFE_FUNC_EVAL( X_list_compute(trgdat, dcp, dnchkpos, dnchkval) );
+    SAFE_FUNC_EVAL( UListCompute(trgdat) );
+    SAFE_FUNC_EVAL( VListCompute(trgdat, W, _P, trgctr, uep, dcp, dnchkval, ue2dc) );
+    SAFE_FUNC_EVAL( WListCompute(trgdat, W, uep) );
+    SAFE_FUNC_EVAL( XListCompute(trgdat, dcp, dnchkpos, dnchkval) );
     
     // dnchkval to dneqnden
     CpxNumMat& v  = dc2de(0);
@@ -305,6 +316,9 @@ int Wave3d::LowFrequencyM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat&
 
 int Wave3d::LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
                             NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::LowFrequencyL2L");
+#endif
     Point3 trgctr = BoxCenter(trgkey);
 
     // Add potentials to children or to exact points
@@ -341,9 +355,9 @@ int Wave3d::LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
     return 0;
 }
 
-int Wave3d::U_list_compute(BoxDat& trgdat) {
+int Wave3d::UListCompute(BoxDat& trgdat) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::U_list_compute");
+    CallStackEntry entry("Wave3d::UListCompute");
 #endif
     for (std::vector<BoxKey>::iterator vi = trgdat.undeidxvec().begin();
         vi != trgdat.undeidxvec().end(); ++vi) {
@@ -358,10 +372,10 @@ int Wave3d::U_list_compute(BoxDat& trgdat) {
     return 0;
 }
 
-int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNumMat& uep,
-                           DblNumMat& dcp, CpxNumVec& dnchkval, NumTns<CpxNumTns>& ue2dc) {
+int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNumMat& uep,
+                         DblNumMat& dcp, CpxNumVec& dnchkval, NumTns<CpxNumTns>& ue2dc) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::V_list_compute");
+    CallStackEntry entry("Wave3d::VListCompute");
 #endif
     double step = W / (_P - 1);
     setvalue(_valfft,cpx(0, 0));
@@ -375,7 +389,7 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
         Point3 neictr = BoxCenter(neikey);
         Index3 idx;
         for (int d = 0; d < dim(); ++d) {
-            idx(d) = int(round( (trgctr[d]-neictr[d]) / W )); //LEXING:CHECK
+            idx(d) = int(round( (trgctr[d] - neictr[d]) / W )); //LEXING:CHECK
         }
         //create if it is missing
         if (neidat.fftcnt() == 0) {
@@ -419,10 +433,10 @@ int Wave3d::V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr, Dbl
     return 0;
 }
 
-int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
-                           CpxNumVec& dnchkval) {
+int Wave3d::XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
+                         CpxNumVec& dnchkval) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::X_list_compute");
+    CallStackEntry entry("Wave3d::XListCompute");
 #endif
     for (std::vector<BoxKey>::iterator vi = trgdat.xndeidxvec().begin();
         vi != trgdat.xndeidxvec().end(); ++vi) {
@@ -435,7 +449,6 @@ int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
-            //mul
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, dnchkval) );
@@ -444,9 +457,9 @@ int Wave3d::X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
     return 0;
 }
 
-int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep) {
+int Wave3d::WListCompute(BoxDat& trgdat, double W, DblNumMat& uep) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::W_list_compute");
+    CallStackEntry entry("Wave3d::WListCompute");
 #endif
     for (std::vector<BoxKey>::iterator vi = trgdat.wndeidxvec().begin();
         vi != trgdat.wndeidxvec().end(); ++vi) {
@@ -454,20 +467,19 @@ int Wave3d::W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep) {
         BoxDat& neidat = _boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
         Point3 neictr = BoxCenter(neikey);
-        //upchkpos
+        // upchkpos
         if (IsTerminal(neidat) && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
-            double coef = BoxWidth(neikey) / W; //LEXING: SUPER IMPORTANT
-            DblNumMat upeqnpos(uep.m(), uep.n()); //local version
+            double coef = BoxWidth(neikey) / W; // LEXING: SUPER IMPORTANT
+            DblNumMat upeqnpos(uep.m(), uep.n()); // local version
             for (int k = 0; k < uep.n(); ++k) {
                 for (int d = 0; d < dim(); ++d) {
                     upeqnpos(d, k) = coef * uep(d, k) + neictr(d);
                 }
             }
-            //mul
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), upeqnpos, upeqnpos, mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.upeqnden(), 1.0, trgdat.extval()) );

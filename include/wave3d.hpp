@@ -362,13 +362,13 @@ private:
     int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap);
     int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
     
-    int U_list_compute(BoxDat& trgdat);
-    int X_list_compute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
-                       CpxNumVec& dnchkval);
-    int W_list_compute(BoxDat& trgdat, double W, DblNumMat& uep);
-    int V_list_compute(BoxDat& trgdat, double W, int _P, Point3& trgctr,
-                       DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
-                       NumTns<CpxNumTns>& ue2dc);
+    int UListCompute(BoxDat& trgdat);
+    int XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
+                     CpxNumVec& dnchkval);
+    int WListCompute(BoxDat& trgdat, double W, DblNumMat& uep);
+    int VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr,
+                     DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
+                     NumTns<CpxNumTns>& ue2dc);
 
     int LowFrequencyM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
                         DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
