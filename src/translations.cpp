@@ -206,6 +206,49 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
     return 0;
 }
 
+int Wave3d::LowFrequencyM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
+                            NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
+                            NumVec<CpxNumMat>& dc2de) {
+    int _P = P();
+    Point3 trgctr = BoxCenter(trgkey);
+    CpxNumVec& dnchkval = trgdat.dnchkval();
+    if (dnchkval.m() == 0) {
+        dnchkval.resize(dcp.n());
+	setvalue(dnchkval,cpx(0,0));
+    }
+    if (trgdat.extval().m() == 0) {
+        trgdat.extval().resize( trgdat.extpos().n() );
+	setvalue(trgdat.extval(), cpx(0,0));
+    }
+    DblNumMat dnchkpos(dcp.m(), dcp.n());
+    for (int k = 0; k < dcp.n(); ++k) {
+        for (int d = 0; d < dim(); ++d) {
+	  dnchkpos(d, k) = dcp(d, k) + trgctr(d);
+	}
+    }
+    // List computations
+    SAFE_FUNC_EVAL( U_list_compute(trgdat) );
+    SAFE_FUNC_EVAL( V_list_compute(trgdat, W, _P, trgctr, uep, dcp, dnchkval, ue2dc) );
+    SAFE_FUNC_EVAL( W_list_compute(trgdat, W, uep) );
+    SAFE_FUNC_EVAL( X_list_compute(trgdat, dcp, dnchkpos, dnchkval) );
+    
+    // dnchkval to dneqnden
+    CpxNumMat& v  = dc2de(0);
+    CpxNumMat& is = dc2de(1);
+    CpxNumMat& up = dc2de(2);
+    CpxNumVec mid(up.m());
+    setvalue(mid,cpx(0, 0));
+    SAFE_FUNC_EVAL( zgemv(1.0, up, dnchkval, 0.0, mid) );
+    dnchkval.resize(0); // LEXING: SAVE SPACE
+    for (int k = 0; k < mid.m(); ++k) {
+        mid(k) = mid(k) * is(k, 0);
+    }
+    dneqnden.resize(v.m());
+    setvalue(dneqnden, cpx(0,0));
+    SAFE_FUNC_EVAL( zgemv(1.0, v, mid, 0.0, dneqnden) );
+    return 0;
+}
+
 int Wave3d::LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
                             NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden) {
     Point3 trgctr = BoxCenter(trgkey);
