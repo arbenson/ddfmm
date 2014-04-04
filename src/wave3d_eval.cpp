@@ -25,44 +25,8 @@
 #include <sstream>
 #include <vector>
 
-#include "parUtils.h"
-
 // TODO(arbenson): this is a bit of hack.
 #define DVMAX 400
-
-namespace par {
-template <>
-class Mpi_datatype<Index3> {
-public:
-    static MPI_Datatype value() {
-        static bool         first = true;
-        static MPI_Datatype datatype;
-        if (first) {
-            first = false;
-            MPI_Type_contiguous(sizeof(Index3), MPI_BYTE, &datatype);
-            MPI_Type_commit(&datatype);
-        }
-        return datatype;
-    }
-};
-}
-
-namespace par {
-template <>
-class Mpi_datatype<HFBoxAndDirectionKey> {
-public:
-    static MPI_Datatype value() {
-        static bool         first = true;
-        static MPI_Datatype datatype;
-        if (first) {
-            first = false;
-            MPI_Type_contiguous(sizeof(HFBoxAndDirectionKey), MPI_BYTE, &datatype);
-            MPI_Type_commit(&datatype);
-        }
-        return datatype;
-    }
-};
-}
 
 #ifdef LIMITED_MEMORY
 bool CompareDownwardHighInfo(std::pair<double, Index3> a,
@@ -404,12 +368,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     level_hdkeys_t level_hdkeys_inc(max_level);
     ConstructMaps(ldmap, hdmap, level_hdkeys_out, level_hdkeys_inc);
 
-    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    std::cerr << "Starting bitonicSort" << std::endl;
-    std::cout << "size: " << level_hdkeys_out[5].size() << std::endl;
-    par::bitonicSort(level_hdkeys_out[5], MPI_COMM_WORLD);
-    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    std::cerr << "Done with bitonicSort" << std::endl;
+    PartitionDirections(level_hdkeys_out, level_hdkeys_inc);
 
     // Main work of the algorithm
     std::set<BoxKey> reqboxset;

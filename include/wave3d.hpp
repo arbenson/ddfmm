@@ -301,7 +301,7 @@ private:
     // Return dimension of this problem.    
     int dim() { return 3; }
 
-    //the level such that the box has width 1
+    // The level such that the box has width 1
     int unitlevel() { return int(round(log(_K) / log(2))); } 
     int cell_level() { return int(round(log(_geomprtn.m()) / log(2))); }
     Index3 nml2dir(Point3 nml, double W);
@@ -394,6 +394,10 @@ private:
     // of the target boxes.  dir specifies the direction of the boundaries.
     int GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
                                std::set<HFBoxAndDirectionKey>& reqbndset);
+
+    // Tools for data distribution.
+    void PartitionDirections(level_hdkeys_t& level_hdkeys_out,
+			     level_hdkeys_t& level_hdkeys_inc);
 };
 
 //-------------------

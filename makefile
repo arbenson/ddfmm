@@ -39,6 +39,7 @@ LIB_SRC = src/wave3d.cpp \
           src/global.cpp \
           src/utility.cpp \
           src/translations.cpp \
+          src/data_distrib.cpp \
           src/file_io.cpp
 
 
