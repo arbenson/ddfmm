@@ -517,7 +517,9 @@ int Wave3d::EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
 #endif
     hdmap_t::iterator mi = hdmap.find(nowdir);
     if (mi != hdmap.end()) {
-        SAFE_FUNC_EVAL( EvalUpwardHigh(W, nowdir, mi->second, reqbndset) );
+        box_lists_t& hdvecs = mi->second;
+        SAFE_FUNC_EVAL( EvalUpwardHigh(W, nowdir, hdvecs.first) );
+	SAFE_FUNC_EVAL( GetInteractionListKeys(nowdir, hdvecs.second, reqbndset) );
         std::vector<Index3> dirvec = ChildDir(nowdir);
         for (int k = 0; k < dirvec.size(); ++k) {
             SAFE_FUNC_EVAL( EvalUpwardHighRecursive(2 * W, dirvec[k], hdmap, reqbndset) );
@@ -562,8 +564,7 @@ int Wave3d::GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
 # endif
 
 //---------------------------------------------------------------------
-int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
-                           std::set<HFBoxAndDirectionKey>& reqbndset) {
+int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardHigh");
 #endif
@@ -572,7 +573,6 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
     SAFE_FUNC_EVAL( _mlibptr->UpwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
-    std::vector<BoxKey>& srcvec = hdvecs.first;
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
@@ -583,7 +583,6 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
 	HighFrequencyM2M(W, bndkey, uc2ue, ue2uc);
     }
 
-    SAFE_FUNC_EVAL( GetInteractionListKeys(dir, hdvecs.second, reqbndset) );
     return 0;
 }
 

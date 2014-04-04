@@ -355,8 +355,7 @@ private:
                            double W);
 # endif
     
-    int EvalUpwardHigh(double W, Index3 dir, box_lists_t& hdvecs,
-                       std::set<HFBoxAndDirectionKey>& reqbndset);
+    int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs);
 
     int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap);
