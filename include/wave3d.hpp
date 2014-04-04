@@ -215,6 +215,7 @@ public:
 typedef std::pair< std::vector<BoxKey>, std::vector<BoxKey> > box_lists_t;
 typedef std::map< Index3, box_lists_t > hdmap_t;
 typedef std::map< double, std::vector<BoxKey> > ldmap_t;
+typedef std::vector< std::vector<HFBoxAndDirectionKey> > level_hdkeys_t;
 
 class Wave3d: public ComObject
 {
@@ -358,7 +359,9 @@ private:
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs);
 
-    int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap);
+    int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap,
+		      level_hdkeys_t& level_hdkeys_out,
+		      level_hdkeys_t& level_hdkeys_inc);
     int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
     
     int UListCompute(BoxDat& trgdat);

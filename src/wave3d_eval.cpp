@@ -47,6 +47,23 @@ public:
 };
 }
 
+namespace par {
+template <>
+class Mpi_datatype<HFBoxAndDirectionKey> {
+public:
+    static MPI_Datatype value() {
+        static bool         first = true;
+        static MPI_Datatype datatype;
+        if (first) {
+            first = false;
+            MPI_Type_contiguous(sizeof(HFBoxAndDirectionKey), MPI_BYTE, &datatype);
+            MPI_Type_commit(&datatype);
+        }
+        return datatype;
+    }
+};
+}
+
 
 #ifdef LIMITED_MEMORY
 bool CompareDownwardHighInfo(std::pair<double, Index3> a,
@@ -273,7 +290,9 @@ int Wave3d::GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& de
     return 0;
 }
 
-int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
+int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap,
+                          level_hdkeys_t& level_hdkeys_out,
+                          level_hdkeys_t& level_hdkeys_inc) {
     int mpirank = getMPIRank();
     double eps = 1e-12;
     // construct maps, low frequency level by level, high frequency dir by dir
@@ -304,13 +323,16 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap) {
                     hdmap[*si].first.push_back(curkey);
                     // into bndvec
                     _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
+                    level_hdkeys_out[curkey.first].push_back(HFBoxAndDirectionKey(curkey, *si));
                 }
+                
                 // For each incoming direction of this box, add to the second list
                 for (std::set<Index3>::iterator si = curdat.incdirset().begin();
                     si != curdat.incdirset().end(); ++si) {
                     hdmap[*si].second.push_back(curkey);
                     // into bndvec
                     _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
+                    level_hdkeys_inc[curkey.first].push_back(HFBoxAndDirectionKey(curkey, *si));
                 }
             }
         }
@@ -378,48 +400,17 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     // Setup of low and high frequency maps
     ldmap_t ldmap;
     hdmap_t hdmap;
-    ConstructMaps(ldmap, hdmap);
+    int max_level = 10;
+    level_hdkeys_t level_hdkeys_out(max_level);
+    level_hdkeys_t level_hdkeys_inc(max_level);
+    ConstructMaps(ldmap, hdmap, level_hdkeys_out, level_hdkeys_inc);
 
-#if 0
-    // Gather some statistics on the number of boxes and directions
-    std::map<int, int> dircounts;
-    for (std::map< Index3, box_lists_t >::iterator mi = hdmap.begin();
-         mi != hdmap.end(); ++mi) {
-        std::vector<BoxKey>& boxes = mi->second.first;
-        for (int i = 0; i < boxes.size(); ++i) {
-            dircounts[boxes[i].first] += BoxData(boxes[i]).DirInteractionListSize();
-        } 
-    }
-    for (std::map<int, int>::iterator mi = dircounts.begin();
-         mi != dircounts.end(); ++mi) {
-        std::cerr << mpirank
-                  << " directions: ("
-                  << mi->first
-                  << ", "
-                  << mi->second
-                  << ")"
-                  << std::endl;
-    }
-#endif
-
-    std::vector<Index3> box_locs;
-    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
-        int level = (mi->first).first;
-        if (level == 5) {
-            box_locs.push_back(mi->first.second);
-        }
-    }
-
-    std::cerr << mpirank << ": first before sort: " << box_locs[0] << std::endl;
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     std::cerr << "Starting bitonicSort" << std::endl;
-    par::bitonicSort(box_locs, MPI_COMM_WORLD);
+    std::cout << "size: " << level_hdkeys_out[5].size() << std::endl;
+    par::bitonicSort(level_hdkeys_out[5], MPI_COMM_WORLD);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     std::cerr << "Done with bitonicSort" << std::endl;
-    std::cerr << mpirank << ": first after sort: " << box_locs[0] << std::endl;
-
-
 
     // Main work of the algorithm
     std::set<BoxKey> reqboxset;

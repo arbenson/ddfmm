@@ -197,12 +197,12 @@ int Wave3d::setup_tree() {
         _boxvec.insert(curkey, curdat); //LEXING: CHECK
     }
 
-    //call get setup_Q2
+    // call get setup_Q2
     std::vector<int> mask1(BoxDat_Number,0);
     mask1[BoxDat_tag] = 1;
     SAFE_FUNC_EVAL( _boxvec.getBegin( &(Wave3d::setup_Q2_wrapper), mask1 ) );
     SAFE_FUNC_EVAL( _boxvec.getEnd( mask1 ) );
-    //compute lists, low list and high list
+    // Compute lists, low list and high list
     for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
@@ -218,7 +218,7 @@ int Wave3d::setup_tree() {
         }
     }
 
-    //3. get extpos
+    // 3. get extpos
     std::set<BoxKey> reqboxset;
     for (std::map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin();
         mi!=_boxvec.lclmap().end(); mi++) {
@@ -251,10 +251,9 @@ int Wave3d::setup_tree() {
         }
     }
 
-    //4. dirupeqndenvec, dirdnchkvalvec
-    //create
-    for (std::map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().begin();
-        mi!=_boxvec.lclmap().end(); mi++) {
+    // 4. dirupeqndenvec, dirdnchkvalvec
+    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
+        mi != _boxvec.lclmap().end(); mi++) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = BoxWidth(curkey);
@@ -273,10 +272,9 @@ int Wave3d::setup_tree() {
                     curdat.incdirset().insert(nowdir);
                 }
             }
-            //go thrw
             Point3 curctr = BoxCenter(curkey);
             for (std::map< Index3, std::vector<BoxKey> >::iterator mi = curdat.fndeidxvec().begin();
-                mi!=curdat.fndeidxvec().end(); mi++) {
+                mi != curdat.fndeidxvec().end(); mi++) {
                 std::vector<BoxKey>& tmplist = mi->second;
                 for (int k = 0; k < tmplist.size(); k++) {
                     BoxKey othkey = tmplist[k];
