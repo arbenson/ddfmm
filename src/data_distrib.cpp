@@ -40,20 +40,27 @@ public:
 };
 }
 
-std::vector<int> BoxAndDirection(HFBoxAndDirectionKey& key) {
-    std::vector<int> data(6);
+void BoxAndDirection(HFBoxAndDirectionKey& key, std::vector<int>& out_key) {
+#ifndef RELEASE
+    CallStackEntry entry("BoxAndDirection");
+#endif
+    out_key.resize(6);
+
     // Direction information.
-    data[0] = key.second[0];
-    data[1] = key.second[1];
-    data[2] = key.second[2];
+    out_key[0] = key.second[0];
+    out_key[1] = key.second[1];
+    out_key[2] = key.second[2];
     // Box index.
-    data[3] = key.first.second[0];
-    data[4] = key.first.second[1];
-    data[5] = key.first.second[2];
+    out_key[3] = key.first.second[0];
+    out_key[4] = key.first.second[1];
+    out_key[5] = key.first.second[2];
 }
 
 void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
                                  level_hdkeys_t& level_hdkeys_inc) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::PartitionDirections");
+#endif
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
 
@@ -81,20 +88,23 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
         CHECK_TRUE(curr_level_keys.size() > 0);
         par::bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+
         // Communicate starting keys for each processor.
-        std::vector<int> first_data = BoxAndDirection(curr_level_keys[0]);
+        std::vector<int> first_data;
+	BoxAndDirection(curr_level_keys[0], first_data);
         std::vector<int> first_recv_buf(first_data.size() * mpisize);
-        SAFE_FUNC_EVAL(MPI_Alltoall(&first_data[0], first_data.size(), MPI_INT,
-                                    &first_recv_buf[0], first_recv_buf.size(),
+        SAFE_FUNC_EVAL(MPI_Alltoall((void *)&first_data[0], first_data.size(), MPI_INT,
+                                    (void *)&first_recv_buf[0], first_data.size(),
                                     MPI_INT, MPI_COMM_WORLD));
-#if 0
+        SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+
         // Communicate ending keys for each processor.
-        std::vector<int> end_data = BoxAndDirection(curr_level_keys.back());
+        std::vector<int> end_data;
+	BoxAndDirection(curr_level_keys.back(), end_data);
         std::vector<int> end_recv_buf(end_data.size() * mpisize);
         SAFE_FUNC_EVAL(MPI_Alltoall(&end_data[0], end_data.size(), MPI_INT,
-                                    &end_recv_buf[0], end_recv_buf.size(),
+                                    &end_recv_buf[0], end_data.size(),
                                     MPI_INT, MPI_COMM_WORLD));
-#endif
+        SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     }
-
 }
