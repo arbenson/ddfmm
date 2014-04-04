@@ -49,7 +49,7 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
         diff /= diff.l2(); //LEXING: see wave3d_setup.cpp
         CHECK_TRUE( nml2dir(diff, W) == dir );
         // get source
-        DblNumMat tmpuep(uep.m(),uep.n());
+        DblNumMat tmpuep(uep.m(), uep.n());
         for (int k = 0; k < tmpuep.n(); ++k) {
             for (int d = 0; d < 3; ++d) {
                 tmpuep(d, k) = uep(d, k) + srcctr(d);
@@ -66,7 +66,6 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
             dcv.resize(Mts.m());
             setvalue(dcv, cpx(0, 0)); //LEXING: CHECK
         }
-        //SAFE_FUNC_EVAL( ued.m() != 0 );
         if (ued.m() == 0) {
             ued.resize(Mts.n());
             setvalue(ued, cpx(0, 0));
