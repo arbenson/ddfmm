@@ -64,7 +64,6 @@ public:
 };
 }
 
-
 #ifdef LIMITED_MEMORY
 bool CompareDownwardHighInfo(std::pair<double, Index3> a,
                              std::pair<double, Index3> b) {

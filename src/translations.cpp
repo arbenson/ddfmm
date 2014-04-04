@@ -66,6 +66,7 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
             dcv.resize(Mts.m());
             setvalue(dcv, cpx(0, 0)); //LEXING: CHECK
         }
+        //SAFE_FUNC_EVAL( ued.m() != 0 );
         if (ued.m() == 0) {
             ued.resize(Mts.n());
             setvalue(ued, cpx(0, 0));
