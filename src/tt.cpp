@@ -141,16 +141,7 @@ int main(int argc, char** argv)
 	std::istringstream ss2(opt);
 	ss2 >> NPW;
 
-	// TODO: Make this an argument
-	int NC = 8;
-
-	std::string geomfile;
-	opt = findOption(opts, "-geomfile");
-
-	std::istringstream ss2(opt);
-	ss2 >> NPW;
-
-	// TODO: Make this an argument
+	// TODO(arbenson): Make this an argument
 	int NC = 8;
 
 	std::string geomfile;
