@@ -33,22 +33,6 @@ bool CompareDownwardHighInfo(std::pair<double, Index3> a,
                              std::pair<double, Index3> b) {
     return a.first < b.first;
 }
-
-int Wave3d::LevelCommunication(std::map< double, std::vector<HFBoxAndDirectionKey> >& request_bnds,
-                               double W) {
-    std::vector<int> mask(HFBoxAndDirectionDat_Number, 0);
-    mask[HFBoxAndDirectionDat_dirupeqnden] = 1;
-    _bndvec.initialize_data();
-    SAFE_FUNC_EVAL( _bndvec.getBegin(request_bnds[W], mask) );
-    SAFE_FUNC_EVAL( _bndvec.getEnd(mask) );
-    request_bnds[W].clear();
-    std::ostringstream recv_msg;
-    recv_msg << "kbytes received (W = " << W << ")";
-    PrintCommData(GatherCommData(_bndvec.kbytes_received()), recv_msg.str());
-    std::ostringstream sent_msg;
-    sent_msg << "kbytes sent (W = " << W << ")";
-    PrintCommData(GatherCommData(_bndvec.kbytes_sent()), sent_msg.str());
-}
 #endif
 
 int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset) {
@@ -68,28 +52,6 @@ int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset) {
     }
     time_t t1 = time(0);
     PrintParData(GatherParData(t0, t1), "Low frequency upward pass");
-    return 0;
-}
-
-int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::LowFreqDownwardComm");
-#endif
-    time_t t0 = time(0);
-    std::vector<BoxKey> reqbox;
-    reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
-    std::vector<int> mask(BoxDat_Number,0);
-    mask[BoxDat_extden] = 1;
-    mask[BoxDat_upeqnden] = 1;
-    _boxvec.initialize_data();
-    SAFE_FUNC_EVAL( _boxvec.getBegin(reqbox, mask) );
-    SAFE_FUNC_EVAL( _boxvec.getEnd(mask) );
-    time_t t1 = time(0);
-    PrintParData(GatherParData(t0, t1), "Low frequency downward communication");
-    PrintCommData(GatherCommData(_boxvec.kbytes_received()),
-                  "kbytes received");
-    PrintCommData(GatherCommData(_boxvec.kbytes_sent()),
-                  "kbytes sent");
     return 0;
 }
 
@@ -238,20 +200,6 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap) {
     return 0;
 }
 #endif
-
-int Wave3d::GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den) {
-    int mpirank = getMPIRank();
-    std::vector<int> all(1, 1);
-    time_t t0 = time(0);
-    SAFE_FUNC_EVAL( den.getBegin(reqpts, all) );
-    SAFE_FUNC_EVAL( den.getEnd(all) );
-    time_t t1 = time(0);
-    if (mpirank == 0) {
-        std::cout << "Density communication: " << difftime(t1, t0)
-                  << " secs" << std::endl;
-    }
-    return 0;
-}
 
 int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap,
                           level_hdkeys_t& level_hdkeys_out,
@@ -468,7 +416,7 @@ int Wave3d::EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
     if (mi != hdmap.end()) {
         box_lists_t& hdvecs = mi->second;
         SAFE_FUNC_EVAL( EvalUpwardHigh(W, nowdir, hdvecs.first) );
-	SAFE_FUNC_EVAL( GetInteractionListKeys(nowdir, hdvecs.second, reqbndset) );
+	SAFE_FUNC_EVAL( HighFreqInteractionListKeys(nowdir, hdvecs.second, reqbndset) );
         std::vector<Index3> dirvec = ChildDir(nowdir);
         for (int k = 0; k < dirvec.size(); ++k) {
             SAFE_FUNC_EVAL( EvalUpwardHighRecursive(2 * W, dirvec[k], hdmap, reqbndset) );
@@ -534,28 +482,6 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 
     return 0;
 }
-
-//---------------------------------------------------------------------
-int Wave3d::GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
-                                   std::set<HFBoxAndDirectionKey>& reqbndset) {
-#ifndef RELEASE
-  CallStackEntry entry("Wave3d::GetInteractionListKeys");
-#endif
-  for (int k = 0; k < target_boxes.size(); ++k) {
-      BoxKey trgkey = target_boxes[k];
-      BoxDat& trgdat = _boxvec.access(trgkey);
-      CHECK_TRUE(HasPoints(trgdat));
-      std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-      for (int i = 0; i < tmpvec.size(); ++i) {
-          BoxKey srckey = tmpvec[i];
-          reqbndset.insert(HFBoxAndDirectionKey(srckey, dir));
-      }
-  }
-  return 0;
-}
-
-
-//---------------------------------------------------------------------
 
 //---------------------------------------------------------------------
 int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {

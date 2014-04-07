@@ -392,8 +392,13 @@ private:
     // For every target box, add all the keys corresponding to
     // directional boundaries in the high-frequency interaction lists
     // of the target boxes.  dir specifies the direction of the boundaries.
-    int GetInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
-                               std::set<HFBoxAndDirectionKey>& reqbndset);
+    int HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
+                                    std::set<HFBoxAndDirectionKey>& reqbndset);
+
+     // For all keys in hf_level_keys, add the children keys to children_keys.
+     int HighFreqChildrenKeys(double W,
+			      std::vector<HFBoxAndDirectionKey>& hf_level_keys,
+			      std::vector<HFBoxAndDirectionKey>& children_keys);
 
     // Tools for data distribution.
     void PartitionDirections(level_hdkeys_t& level_hdkeys_out,
@@ -407,12 +412,8 @@ int deserialize(PtPrtn&, std::istream&, const std::vector<int>&);
 int serialize(const BoxDat&, std::ostream&, const std::vector<int>&);
 int deserialize(BoxDat&, std::istream&, const std::vector<int>&);
 //-------------------
-//BoxPrtn, not necessary
-//-------------------
 int serialize(const HFBoxAndDirectionDat&, std::ostream&, const std::vector<int>&);
 int deserialize(HFBoxAndDirectionDat&, std::istream&, const std::vector<int>&);
 //-------------------
-//HFBoxAndDirectionPrtn, not necessary
-
 
 #endif  // _WAVE3D_HPP_

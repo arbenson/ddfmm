@@ -40,6 +40,8 @@ LIB_SRC = src/wave3d.cpp \
           src/utility.cpp \
           src/translations.cpp \
           src/data_distrib.cpp \
+          src/communication.cpp \
+          src/DataCollection.cpp \
           src/file_io.cpp
 
 

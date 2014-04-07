@@ -89,7 +89,7 @@ int Wave3d::HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
     CpxNumVec upchkval(ue2uc(0, 0, 0).m());
     setvalue(upchkval, cpx(0, 0));
 
-    if (abs(W-1) < eps) {
+    if (abs(W - 1) < eps) {
         // The children boxes only have non-directional equivalent densities
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
             int a = CHILD_IND1(ind);
@@ -170,7 +170,7 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
             int a = CHILD_IND1(ind);
             int b = CHILD_IND2(ind);
-            int c = CHILD_IND3(ind);             
+            int c = CHILD_IND3(ind);
             BoxKey key = ChildKey(trgkey, Index3(a,b,c));
             std::pair<bool, BoxDat&> data = _boxvec.contains(key);
             // If the box was empty, it will not be stored
