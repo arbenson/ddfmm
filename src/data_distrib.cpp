@@ -56,6 +56,32 @@ void BoxAndDirection(HFBoxAndDirectionKey& key, std::vector<int>& out_key) {
     out_key[5] = key.first.second[2];
 }
 
+void FormPartitionMap(HFBoxAndDirMap& map, std::vector<int>& start_data,
+                      std::vector<int>& end_data, int level) {
+    CHECK_TRUE(start_data.size() == end_data.size());
+    CHECK_TRUE(start_data.size() % 6 == 0);
+    std::vector<HFBoxAndDirectionKey>& part = map.partition_;
+    // Keys are represented as 6 integers:
+    //    (x, y, z) direction
+    //    (x, y, z) box index
+    for (int i = 0; i < start_data.size(); i += 6) {
+        Index3 dir(start_data[i], start_data[i + 1], start_data[i + 2]);
+        Index3 ind(start_data[i + 3], start_data[i + 4], start_data[i + 5]);
+        BoxKey boxkey(level, ind);
+	part.push_back(HFBoxAndDirectionKey(boxkey, dir));
+    }
+    
+    // We only need the starting keys to determine the partition.  However,
+    // we also store the ending keys for debugging.
+    std::vector<HFBoxAndDirectionKey>& end_part = map.end_partition_;
+    for (int i = 0; i < end_data.size(); i += 6) {
+        Index3 dir(end_data[i], end_data[i + 1], end_data[i + 2]);
+        Index3 ind(end_data[i + 3], end_data[i + 4], end_data[i + 5]);
+        BoxKey boxkey(level, ind);
+	end_part.push_back(HFBoxAndDirectionKey(boxkey, dir));
+    }
+}
+
 void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
                                  level_hdkeys_t& level_hdkeys_inc) {
 #ifndef RELEASE
@@ -90,21 +116,24 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate starting keys for each processor.
-        std::vector<int> first_data;
-	BoxAndDirection(curr_level_keys[0], first_data);
-        std::vector<int> first_recv_buf(first_data.size() * mpisize);
-        SAFE_FUNC_EVAL(MPI_Alltoall((void *)&first_data[0], first_data.size(), MPI_INT,
-                                    (void *)&first_recv_buf[0], first_data.size(),
+        std::vector<int> start_data;
+        BoxAndDirection(curr_level_keys[0], start_data);
+        std::vector<int> first_recv_buf(start_data.size() * mpisize);
+        SAFE_FUNC_EVAL(MPI_Alltoall((void *)&start_data[0], start_data.size(), MPI_INT,
+                                    (void *)&first_recv_buf[0], start_data.size(),
                                     MPI_INT, MPI_COMM_WORLD));
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate ending keys for each processor.
         std::vector<int> end_data;
-	BoxAndDirection(curr_level_keys.back(), end_data);
+        BoxAndDirection(curr_level_keys.back(), end_data);
         std::vector<int> end_recv_buf(end_data.size() * mpisize);
         SAFE_FUNC_EVAL(MPI_Alltoall(&end_data[0], end_data.size(), MPI_INT,
                                     &end_recv_buf[0], end_data.size(),
                                     MPI_INT, MPI_COMM_WORLD));
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+
+	HFBoxAndDirMap map;
+	FormPartitionMap(map, start_data, end_data, i);
     }
 }

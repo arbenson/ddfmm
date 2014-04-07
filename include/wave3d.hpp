@@ -19,11 +19,14 @@
 #define _WAVE3D_HPP_
 
 #include "comobject.hpp"
-#include "vec3t.hpp"
-#include "numtns.hpp"
 #include "kernel3d.hpp"
 #include "mlib3d.hpp"
+#include "numtns.hpp"
 #include "parvec.hpp"
+#include "vec3t.hpp"
+
+#include <algorithm>
+#include <vector>
 
 #define NUM_CHILDREN (8)
 #define CHILD_IND1(x) ((x & 4) >> 2)
@@ -36,7 +39,6 @@ enum {
 };
 
 //---------------------------------------------------------------------------
-
 class PtPrtn {
 public:
     std::vector<int> _ownerinfo;
@@ -172,6 +174,26 @@ public:
 //---------------------------------------------------------------------------
 typedef std::pair<BoxKey, Index3> HFBoxAndDirectionKey;
 
+
+//---------------------------------------------------------------------------
+class HFBoxAndDirMap {
+public:
+    HFBoxAndDirMap() {}
+    ~HFBoxAndDirMap() {}
+    
+    std::vector<HFBoxAndDirectionKey> partition_;
+    std::vector<HFBoxAndDirectionKey> end_partition_;  // for debugging
+
+    // Return process that owns the key.
+    int Owner(HFBoxAndDirectionKey& key) {
+        int ind = std::lower_bound(partition_.begin(),
+                                   partition_.end(), key) - partition_.begin();
+        CHECK_TRUE(key <= end_partition_[ind]);
+        return ind;
+    }
+};
+
+//---------------------------------------------------------------------------
 // Boundary data
 class HFBoxAndDirectionDat {
 public:
