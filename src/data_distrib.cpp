@@ -111,6 +111,7 @@ void ScatterKeys(level_hdkeys_t& level_hdkeys) {
        }
     }
 
+    // Distribute data more or less evenly.
     if (my_size == 0) {
         // Compute who is going to send me a key
         int my_sender = nonempty_procs[my_index % nonempty_procs.size()];

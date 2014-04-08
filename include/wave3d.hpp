@@ -392,7 +392,7 @@ private:
     int SetupTreeHighFreqLists(BoxKey curkey, BoxDat& curdat);
     bool SetupTreeFind(BoxKey wntkey, BoxKey& reskey);
     bool SetupTreeAdjacent(BoxKey me, BoxKey yo);
-
+    int RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq);
     int P();
 
     // Functions for evaluation

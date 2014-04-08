@@ -98,6 +98,68 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     return 0;
 }
 
+int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::RecursiveBoxInsert");
+#endif
+    ParVec<int, Point3, PtPrtn>& pos = *_posptr;
+    while (!tmpq.empty()) {
+        std::pair<BoxKey, BoxDat> curent = tmpq.front();
+        tmpq.pop();
+        BoxKey& curkey = curent.first;
+        BoxDat& curdat = curent.second;
+        //LEXING: VERY IMPORTANT
+        if (curdat.ptidxvec().size() > 0) {
+            curdat.tag() |=  WAVE3D_PTS;
+        }
+        // We take an action if we are in the high frequency regime with points OR
+        // we are in the low frequency regime with sufficient number of points and
+	// not at the max depth.
+	// If no action is taken, we are at a leaf node.
+        bool action = (curkey.first <= UnitLevel() && curdat.ptidxvec().size() > 0) ||
+            (curdat.ptidxvec().size() > ptsmax() && curkey.first < maxlevel() - 1);
+        if (action) {
+            // Subdivide to get new children
+            NumTns<BoxDat> chdboxtns(2, 2, 2);
+            Point3 curctr = BoxCenter(curkey); //LEXING: VERY IMPORTANT
+            for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
+                int tmpidx = curdat.ptidxvec()[g];
+                Point3 tmp = pos.access(tmpidx); //get position value
+                Index3 idx;
+                for (int d = 0; d < 3; ++d) {
+                    idx(d) = (tmp(d) >= curctr(d));
+                }
+                // put points to children
+                chdboxtns(idx(0), idx(1), idx(2)).ptidxvec().push_back(tmpidx);
+            }
+            // Put non-empty ones into queue
+            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
+                int a = CHILD_IND1(ind);
+                int b = CHILD_IND2(ind);
+                int c = CHILD_IND3(ind);
+                BoxKey key = ChildKey(curkey, Index3(a,b,c));
+		tmpq.push( std::pair<BoxKey, BoxDat>(key, chdboxtns(a, b, c)) );
+            }
+            // Destory ptidxvec to save memory.
+	    std::vector<int>().swap(curdat.ptidxvec());
+        } else {
+            // Copy data into _extpos
+            curdat.extpos().resize(3, curdat.ptidxvec().size());
+            for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
+                int tmpidx = curdat.ptidxvec()[g];
+                Point3 tmp = pos.access(tmpidx);
+                for (int d = 0; d < 3; ++d) {
+                    curdat.extpos()(d, g) = tmp(d);
+                }
+            }
+            //LEXING: VERY IMPORTANT
+            curdat.tag() |= WAVE3D_LEAF;
+        }
+        // Add my self into _tree
+        _boxvec.insert(curkey, curdat); //LEXING: CHECK
+    }
+}
+
 //---------------------------------------------------------------------
 int Wave3d::SetupTree() {
 #ifndef RELEASE
@@ -107,7 +169,7 @@ int Wave3d::SetupTree() {
     double eps = 1e-12;
     double K = this->K();
     // pos contains all data read by this processor
-    ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
+    ParVec<int, Point3, PtPrtn>& pos = *_posptr;
 
     // Get all of the geometry information needed for this processor
     std::vector<int> all(1,1);
@@ -148,63 +210,8 @@ int Wave3d::SetupTree() {
     cellboxtns.resize(0, 0, 0);
 
     // Construct the tree.
-    while (!tmpq.empty()) {
-        std::pair<BoxKey,BoxDat> curent = tmpq.front();
-        tmpq.pop();
-        BoxKey& curkey = curent.first;
-        BoxDat& curdat = curent.second;
-        //LEXING: VERY IMPORTANT
-        if (curdat.ptidxvec().size() > 0) {
-            curdat.tag() |=  WAVE3D_PTS;
-        }
-        // We take an action if we are in the high frequency regime with points OR
-        // we are in the low frequency regime with sufficient number of points and
-	// not at the max depth.
-	// If no action is taken, we are at a leaf node.
-        bool action = (curkey.first <= UnitLevel() && curdat.ptidxvec().size() > 0) ||
-            (curdat.ptidxvec().size() > ptsmax() && curkey.first < maxlevel() - 1);
-        if (action) {
-            // Subdivide to get new children
-            NumTns<BoxDat> chdboxtns(2, 2, 2);
-            Point3 curctr = BoxCenter(curkey); //LEXING: VERY IMPORTANT
-            for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
-                int tmpidx = curdat.ptidxvec()[g];
-                Point3 tmp = pos.access(tmpidx); //get position value
-                Index3 idx;
-                for (int d = 0; d < 3; ++d) {
-                    idx(d) = (tmp(d) >= curctr(d));
-                }
-                // put points to children
-                chdboxtns(idx(0), idx(1), idx(2)).ptidxvec().push_back(tmpidx);
-            }
-            // Put non-empty ones into queue
-            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);
-                // TODO(Austin): We should be smarter about the empty children
-                BoxKey key = ChildKey(curkey, Index3(a,b,c));
-                tmpq.push( std::pair<BoxKey, BoxDat>(key, chdboxtns(a, b, c)) );
-            }
-            // Destory ptidxvec to save memory.
-	    std::vector<int>().swap(curdat.ptidxvec());
-        } else {
-            // Copy data into _extpos
-            curdat.extpos().resize(3, curdat.ptidxvec().size());
-            for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
-                int tmpidx = curdat.ptidxvec()[g];
-                Point3 tmp = pos.access(tmpidx);
-                for (int d = 0; d < 3; ++d) {
-                    curdat.extpos()(d, g) = tmp(d);
-                }
-            }
-            //LEXING: VERY IMPORTANT
-            curdat.tag() |= WAVE3D_LEAF;
-        }
-        // Add my self into _tree
-        _boxvec.insert(curkey, curdat); //LEXING: CHECK
-    }
-
+    RecursiveBoxInsert(tmpq);
+ 
     // call get setup_Q2
     std::vector<int> mask1(BoxDat_Number,0);
     mask1[BoxDat_tag] = 1;
