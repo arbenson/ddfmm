@@ -23,7 +23,7 @@
 #include <vector>
 
 int Wave3d::HighFreqChildrenKeys(double W,
-				 std::vector<HFBoxAndDirectionKey>& hf_level_keys,
+                                 std::map<Index3, std::vector<BoxKey> >& level_out,
 				 std::vector<HFBoxAndDirectionKey>& children_keys) {
 #ifndef RELEASE
   CallStackEntry entry("Wave3d::HighFreqChildrenKeys");
@@ -36,20 +36,24 @@ int Wave3d::HighFreqChildrenKeys(double W,
         return 0;
     }
 
-    for (int i = 0; i < hf_level_keys.size(); ++i) {
-        // Pick the direction such that the child wedges in that direction
-        // contain the parent wedge in direction dir
-        HFBoxAndDirectionKey curr_key = hf_level_keys[i];
-        Index3 pdir = ParentDir(curr_key.second);
-        for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-            int a = CHILD_IND1(ind);
-            int b = CHILD_IND2(ind);
-            int c = CHILD_IND3(ind);
-            BoxKey chdkey = ChildKey(curr_key.first, Index3(a, b, c));
-            children_keys.push_back(HFBoxAndDirectionKey(chdkey, pdir));
-        }
+    for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_out.begin();
+	 mi != level_out.end(); ++mi) {
+        Index3 dir = mi->first;
+	std::vector<BoxKey>& keys = mi->second;
+        for (int i = 0; i < keys.size(); ++i) {
+            // Pick the direction such that the child wedges in that direction
+            // contain the parent wedge in direction dir
+            BoxKey curr_key = keys[i];
+	    Index3 pdir = ParentDir(dir);
+	    for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
+                int a = CHILD_IND1(ind);
+		int b = CHILD_IND2(ind);
+		int c = CHILD_IND3(ind);
+		BoxKey chdkey = ChildKey(curr_key, Index3(a, b, c));
+		children_keys.push_back(HFBoxAndDirectionKey(chdkey, pdir));
+	    }
+	}
     }
-
     return 0;
 }
 
@@ -96,6 +100,9 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
 
 int Wave3d::GatherDensities(std::vector<int>& reqpts,
                             ParVec<int, cpx, PtPrtn>& den) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::GatherDensities");
+#endif
     int mpirank = getMPIRank();
     std::vector<int> all(1, 1);
     time_t t0 = time(0);

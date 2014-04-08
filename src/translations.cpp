@@ -108,22 +108,22 @@ int Wave3d::HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
     } else {
         // Pick the direction such that the child wedges in that direction
         // contain the parent wedge in direction dir
-      Index3 pdir = ParentDir(dir);
-      for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-          int a = CHILD_IND1(ind);
-          int b = CHILD_IND2(ind);
-          int c = CHILD_IND3(ind);
-          BoxKey chdkey = ChildKey(srckey, Index3(a, b, c));
-          std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
-          if (data.first) {
-              BoxDat& chddat = data.second;
-              CHECK_TRUE(HasPoints(chddat));
-              HFBoxAndDirectionKey bndkey(chdkey, pdir);
-              HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
-              CpxNumVec& chdued = bnddat.dirupeqnden();
-              SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
-          }
-      }
+        Index3 pdir = ParentDir(dir);
+        for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
+            int a = CHILD_IND1(ind);
+            int b = CHILD_IND2(ind);
+            int c = CHILD_IND3(ind);
+            BoxKey chdkey = ChildKey(srckey, Index3(a, b, c));
+            std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
+            if (data.first) {
+                BoxDat& chddat = data.second;
+                CHECK_TRUE(HasPoints(chddat));
+                HFBoxAndDirectionKey bndkey(chdkey, pdir);
+                HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
+                CpxNumVec& chdued = bnddat.dirupeqnden();
+                SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
+            }
+        }
     }
 
     // Upward check to upward equivalency (uc2ue)
@@ -229,26 +229,26 @@ int Wave3d::LowFrequencyM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     // ue2dc
     if (IsTerminal(srcdat)) {
         DblNumMat upchkpos(ucp.m(), ucp.n());
-	for (int k = 0; k < ucp.n(); ++k) {
+        for (int k = 0; k < ucp.n(); ++k) {
             for (int d = 0; d < dim(); ++d) {
                 upchkpos(d, k) = ucp(d, k) + srcctr(d);
-	    }
-	}
-	CpxNumMat mat;
-	SAFE_FUNC_EVAL( _kernel.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
-	SAFE_FUNC_EVAL( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
+            }
+        }
+        CpxNumMat mat;
+        SAFE_FUNC_EVAL( _kernel.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
+        SAFE_FUNC_EVAL( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
     } else {
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-	  int a = CHILD_IND1(ind);
-	  int b = CHILD_IND2(ind);
-	  int c = CHILD_IND3(ind);
-	  BoxKey key = ChildKey(srckey, Index3(a, b, c));
-	  std::pair<bool, BoxDat&> data = _boxvec.contains(key);
-	  if (data.first) {
-	      BoxDat& chddat = data.second;
-	      SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
-	  }
-	}
+          int a = CHILD_IND1(ind);
+          int b = CHILD_IND2(ind);
+          int c = CHILD_IND3(ind);
+          BoxKey key = ChildKey(srckey, Index3(a, b, c));
+          std::pair<bool, BoxDat&> data = _boxvec.contains(key);
+          if (data.first) {
+              BoxDat& chddat = data.second;
+              SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
+          }
+        }
     }
     
     // uc2ue
@@ -279,17 +279,17 @@ int Wave3d::LowFrequencyM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat&
     CpxNumVec& dnchkval = trgdat.dnchkval();
     if (dnchkval.m() == 0) {
         dnchkval.resize(dcp.n());
-	setvalue(dnchkval,cpx(0,0));
+        setvalue(dnchkval,cpx(0,0));
     }
     if (trgdat.extval().m() == 0) {
         trgdat.extval().resize( trgdat.extpos().n() );
-	setvalue(trgdat.extval(), cpx(0,0));
+        setvalue(trgdat.extval(), cpx(0,0));
     }
     DblNumMat dnchkpos(dcp.m(), dcp.n());
     for (int k = 0; k < dcp.n(); ++k) {
         for (int d = 0; d < dim(); ++d) {
-	  dnchkpos(d, k) = dcp(d, k) + trgctr(d);
-	}
+          dnchkpos(d, k) = dcp(d, k) + trgctr(d);
+        }
     }
     // List computations
     SAFE_FUNC_EVAL( UListCompute(trgdat) );
@@ -324,32 +324,32 @@ int Wave3d::LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
     // Add potentials to children or to exact points
     if (IsTerminal(trgdat)) {
         DblNumMat dneqnpos(dep.m(), dep.n());
-	for (int k = 0; k < dep.n(); ++k) {
+        for (int k = 0; k < dep.n(); ++k) {
             for (int d = 0; d < dim(); ++d) {
-	        dneqnpos(d, k) = dep(d, k) + trgctr(d);
-	    }
-	}
-	CpxNumMat mat;
-	SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
-	SAFE_FUNC_EVAL( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
+                dneqnpos(d, k) = dep(d, k) + trgctr(d);
+            }
+        }
+        CpxNumMat mat;
+        SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
+        SAFE_FUNC_EVAL( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
     } else {
         // put stuff to children
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
             int a = CHILD_IND1(ind);
-	    int b = CHILD_IND2(ind);
-	    int c = CHILD_IND3(ind);
-	    BoxKey key = ChildKey(trgkey, Index3(a, b, c));
-	    std::pair<bool, BoxDat&> data = _boxvec.contains(key);
-	    if (!data.first) {
-	        continue;
-	    }
-	    BoxDat& chddat = data.second;
-	    if (chddat.dnchkval().m() == 0) {
+            int b = CHILD_IND2(ind);
+            int c = CHILD_IND3(ind);
+            BoxKey key = ChildKey(trgkey, Index3(a, b, c));
+            std::pair<bool, BoxDat&> data = _boxvec.contains(key);
+            if (!data.first) {
+                continue;
+            }
+            BoxDat& chddat = data.second;
+            if (chddat.dnchkval().m() == 0) {
                 chddat.dnchkval().resize(de2dc(a, b, c).m());
                 setvalue(chddat.dnchkval(), cpx(0, 0));
-	    }
-	    SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddat.dnchkval()) );
-	}
+            }
+            SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddat.dnchkval()) );
+        }
     }
 
     return 0;

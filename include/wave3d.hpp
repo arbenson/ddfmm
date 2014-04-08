@@ -410,9 +410,9 @@ private:
     int HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
                                     std::set<HFBoxAndDirectionKey>& reqbndset);
 
-     // For all keys in hf_level_keys, add the children keys to children_keys.
+     // For all keys in level_keys, add the children keys to children_keys.
      int HighFreqChildrenKeys(double W,
-			      std::vector<HFBoxAndDirectionKey>& hf_level_keys,
+			      std::map<Index3, std::vector<BoxKey> >& level_keys,
 			      std::vector<HFBoxAndDirectionKey>& children_keys);
 
     // Tools for data distribution.

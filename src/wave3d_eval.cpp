@@ -63,7 +63,7 @@ int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
 }
 
 int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
-			 level_hdkeys_map_t& level_hdmap_inc) {
+                         level_hdkeys_map_t& level_hdmap_inc) {
 # ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
 # endif
@@ -79,23 +79,37 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
 
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
-        std::map<Index3, std::vector<BoxKey> > level_out = level_hdmap_out[level];
-	for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_out.begin();
+        std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
+        std::vector<HFBoxAndDirectionKey> children_keys;
+	HighFreqChildrenKeys(W, level_out, children_keys);
+
+        // TODO(arbenson): Gather data for the keys
+
+        for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_out.begin();
             mi != level_out.end(); ++mi) {
             Index3 dir = mi->first;
             std::vector<BoxKey>& keys_out = mi->second;
-	    SAFE_FUNC_EVAL( EvalUpwardHigh(W, dir, keys_out) );
-	}
+            SAFE_FUNC_EVAL( EvalUpwardHigh(W, dir, keys_out) );
+        }
+        // TODO(arbenson): remove data from parvec
     }
 
     // Collect all keys needed for M2L
     std::set<HFBoxAndDirectionKey> reqbndset;
     for (int level = level_hdmap_inc.size() - 1; level >= 0; --level) {
-	std::map<Index3, std::vector<BoxKey> > level_inc = level_hdmap_inc[level];
-	for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
+        double W = _K / pow2(level);
+        std::map<Index3, std::vector<BoxKey> >& level_inc = level_hdmap_inc[level];
+        std::vector<HFBoxAndDirectionKey> children_keys;
+	HighFreqChildrenKeys(W, level_inc, children_keys);
+
+        // TODO(arbenson): Scatter data for the keys
+
+        for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
             mi != level_inc.end(); ++mi) {
-	    SAFE_FUNC_EVAL( HighFreqInteractionListKeys(mi->first, mi->second, reqbndset) );
-	}
+            SAFE_FUNC_EVAL( HighFreqInteractionListKeys(mi->first, mi->second, reqbndset) );
+        }
+
+        // TODO(arbenson): remove data from parvec
     }
 
     t1 = time(0);
@@ -118,13 +132,13 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
         double W = _K / pow2(level);
         std::map<Index3, std::vector<BoxKey> > level_inc = level_hdmap_inc[level];
         std::map<Index3, std::vector<BoxKey> > level_out = level_hdmap_out[level];
-	for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
+        for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
             mi != level_inc.end(); ++mi) {
             Index3 dir = mi->first;
             std::vector<BoxKey>& keys_inc = mi->second;
             std::vector<BoxKey>& keys_out = level_out[dir];
-	    SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_out) );
-	}
+            SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_out) );
+        }
     }
     t1 = time(0);
 
@@ -166,9 +180,9 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
                     si != curdat.outdirset().end(); ++si) {
                     // into bndvec
                     _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
-		    int level = curkey.first;
+                    int level = curkey.first;
                     level_hdkeys_out[level].push_back(HFBoxAndDirectionKey(curkey, *si));
-		    level_hdmap_out[level][*si].push_back(curkey);
+                    level_hdmap_out[level][*si].push_back(curkey);
                 }
                 
                 // For each incoming direction of this box, add to the second list
@@ -176,9 +190,9 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
                     si != curdat.incdirset().end(); ++si) {
                     // into bndvec
                     _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
-		    int level = curkey.first;
+                    int level = curkey.first;
                     level_hdkeys_inc[level].push_back(HFBoxAndDirectionKey(curkey, *si));
-		    level_hdmap_inc[level][*si].push_back(curkey);
+                    level_hdmap_inc[level][*si].push_back(curkey);
                 }
             }
         }
@@ -360,7 +374,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 
         Point3 srcctr = BoxCenter(srckey);
         HFBoxAndDirectionKey bndkey(srckey, dir);
-	HighFrequencyM2M(W, bndkey, uc2ue, ue2uc);
+        HighFrequencyM2M(W, bndkey, uc2ue, ue2uc);
     }
 
     return 0;
