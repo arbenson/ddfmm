@@ -121,7 +121,8 @@ int Wave3d::setup_tree() {
     Point3 bctr = ctr();  // overall center of domain
     NumTns<BoxDat> cellboxtns(numC, numC, numC);
     // Fill boxes with points.
-    for (std::map<int,Point3>::iterator mi = pos.lclmap().begin(); mi!=pos.lclmap().end(); ++mi) {
+    for (std::map<int,Point3>::iterator mi = pos.lclmap().begin();
+         mi != pos.lclmap().end(); ++mi) {
         int key = mi->first;
         Point3 pos = mi->second;
         Index3 idx;
@@ -137,8 +138,8 @@ int Wave3d::setup_tree() {
         for (int b = 0; b < numC; b++) {
             for (int c = 0; c < numC; c++) {
                 if (_geomprtn(a,b,c) == mpirank) {
-                    BoxKey key(lvlC, Index3(a,b,c));
-                    tmpq.push( std::pair<BoxKey,BoxDat>(key, cellboxtns(a,b,c)) );
+                    BoxKey key(lvlC, Index3(a, b, c));
+                    tmpq.push( std::pair<BoxKey,BoxDat>(key, cellboxtns(a, b, c)) );
                 }
             }
         }

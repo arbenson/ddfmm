@@ -68,7 +68,7 @@ void FormPartitionMap(HFBoxAndDirMap& map, std::vector<int>& start_data,
         Index3 dir(start_data[i], start_data[i + 1], start_data[i + 2]);
         Index3 ind(start_data[i + 3], start_data[i + 4], start_data[i + 5]);
         BoxKey boxkey(level, ind);
-	part.push_back(BoxAndDirKey(boxkey, dir));
+        part.push_back(BoxAndDirKey(boxkey, dir));
     }
     
     // We only need the starting keys to determine the partition.  However,
@@ -78,7 +78,59 @@ void FormPartitionMap(HFBoxAndDirMap& map, std::vector<int>& start_data,
         Index3 dir(end_data[i], end_data[i + 1], end_data[i + 2]);
         Index3 ind(end_data[i + 3], end_data[i + 4], end_data[i + 5]);
         BoxKey boxkey(level, ind);
-	end_part.push_back(BoxAndDirKey(boxkey, dir));
+        end_part.push_back(BoxAndDirKey(boxkey, dir));
+    }
+}
+
+void ScatterKeys(level_hdkeys_t& level_hdkeys) {
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
+
+    // Get the size of the keys on each 
+    int my_size = level_hdkeys.size();
+    std::vector<int> sizes(mpisize);
+    SAFE_FUNC_EVAL( MPI_Alltoall(&my_size, 1, MPI_INT, &sizes[0], 1, MPI_INT,
+                                 MPI_COMM_WORLD) );
+
+    int my_index = -1;
+    std::vector<int> empty_procs;
+    std::vector<int> nonempty_procs;
+    for (int p = 0; p < sizes.size(); ++p) {
+       if (sizes[p] > 0) {
+           nonempty_procs.push_back(p);
+           if (p == mpirank) {
+               my_index = nonempty_procs.size() - 1;
+           }
+       } else {
+           empty_procs.push_back(p);
+           if (p == mpirank) {
+               my_index = empty_procs.size() - 1;
+           }
+       }
+    }
+
+    if (my_size == 0) {
+        // Compute who is going to send me a key
+        int my_sender = nonempty_procs[my_index % nonempty_procs.size()];
+        int count = 0;
+        for (int i = 0; i < empty_procs.size(); ++i) {
+            if (nonempty_procs[i % nonempty_procs.size()] == my_sender) {
+                ++count;
+            }
+        }
+        int num_to_recv = sizes[my_sender] / (count + 1);
+        // MPI_Irecv
+    } else {
+        // Compute to whom I am going to send data
+        std::vector<int> dest_procs;
+        for (int i = 0; i < empty_procs.size(); ++i) {
+            if (nonempty_procs[i % nonempty_procs.size()] == mpirank) {
+                dest_procs.push_back(nonempty_procs[i]);
+            }
+        }
+        for (int i = 0; i < dest_procs.size(); ++i) {
+            // MPI_Isend
+        }
     }
 }
 
@@ -89,6 +141,8 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
 #endif
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
+    ScatterKeys(level_hdkeys_out);
+    ScatterKeys(level_hdkeys_inc);
 
     // Figure out which level is the starting level.
     int local_start_level = 0;
@@ -133,7 +187,7 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
                                     MPI_INT, MPI_COMM_WORLD));
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
-	HFBoxAndDirMap map;
-	FormPartitionMap(map, start_data, end_data, i);
+        HFBoxAndDirMap map;
+        FormPartitionMap(map, start_data, end_data, i);
     }
 }
