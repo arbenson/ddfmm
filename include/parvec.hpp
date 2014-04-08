@@ -381,7 +381,8 @@ int ParVec<Key,Data,Partition>::getEnd( const std::vector<int>& mask ) {
   
     for (int k = 0; k < mpisize; k++) {
         for (int i = 0; i < _rnbvec[k]; i++) {
-            Key key;  deserialize(key, *(issvec[k]), mask);
+            Key key;
+            deserialize(key, *(issvec[k]), mask);
             typename std::map<Key, Data>::iterator mi = _lclmap.find(key);
             if (mi == _lclmap.end()) { //do not exist
                 Data dat;

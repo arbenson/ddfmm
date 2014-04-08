@@ -247,7 +247,7 @@ int deserialize(BoxDat& val, std::istream& is, const std::vector<int>& mask) {
 }
 
 //-----------------------------------------------------------
-int serialize(const HFBoxAndDirectionDat& val, std::ostream& os,
+int serialize(const BoxAndDirDat& val, std::ostream& os,
               const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -255,11 +255,11 @@ int serialize(const HFBoxAndDirectionDat& val, std::ostream& os,
     int i = 0;
     if (mask[i] == 1) serialize(val._dirupeqnden, os, mask);  i++;
     if (mask[i] == 1) serialize(val._dirdnchkval, os, mask);  i++;
-    CHECK_TRUE(i == HFBoxAndDirectionDat_Number);
+    CHECK_TRUE(i == BoxAndDirDat_Number);
     return 0;
 }
 //-----------------------------------------------------------
-int deserialize(HFBoxAndDirectionDat& val, std::istream& is,
+int deserialize(BoxAndDirDat& val, std::istream& is,
                 const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -267,6 +267,30 @@ int deserialize(HFBoxAndDirectionDat& val, std::istream& is,
     int i = 0;
     if (mask[i] == 1) deserialize(val._dirupeqnden, is, mask);  i++;
     if (mask[i] == 1) deserialize(val._dirdnchkval, is, mask);  i++;
-    CHECK_TRUE(i == HFBoxAndDirectionDat_Number);
+    CHECK_TRUE(i == BoxAndDirDat_Number);
+    return 0;
+}
+
+//-----------------------------------------------------------
+int serialize(const BoxAndDirKey& key, std::ostream& os, const std::vector<int>& mask) {
+#ifndef RELEASE
+    CallStackEntry entry("serialize");
+#endif
+    int i = 0;
+    serialize(key._boxkey, os, mask); i++;
+    serialize(key._dir, os, mask); i++;
+    CHECK_TRUE(i == BoxAndDirKey_Number);
+    return 0;
+}
+//-----------------------------------------------------------
+int deserialize(BoxAndDirKey& key, std::istream& is,
+                const std::vector<int>& mask) {
+#ifndef RELEASE
+    CallStackEntry entry("deserialize");
+#endif
+    int i = 0;
+    deserialize(key._boxkey, is, mask);  i++;
+    deserialize(key._dir, is, mask);  i++;
+    CHECK_TRUE(i == BoxAndDirKey_Number);
     return 0;
 }

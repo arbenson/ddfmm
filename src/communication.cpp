@@ -24,7 +24,7 @@
 
 int Wave3d::HighFreqChildrenKeys(double W,
                                  std::map<Index3, std::vector<BoxKey> >& level_out,
-				 std::vector<HFBoxAndDirectionKey>& children_keys) {
+				 std::vector<BoxAndDirKey>& children_keys) {
 #ifndef RELEASE
   CallStackEntry entry("Wave3d::HighFreqChildrenKeys");
 #endif
@@ -50,7 +50,7 @@ int Wave3d::HighFreqChildrenKeys(double W,
 		int b = CHILD_IND2(ind);
 		int c = CHILD_IND3(ind);
 		BoxKey chdkey = ChildKey(curr_key, Index3(a, b, c));
-		children_keys.push_back(HFBoxAndDirectionKey(chdkey, pdir));
+		children_keys.push_back(BoxAndDirKey(chdkey, pdir));
 	    }
 	}
     }
@@ -59,7 +59,7 @@ int Wave3d::HighFreqChildrenKeys(double W,
 
 
 int Wave3d::HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
-					std::set<HFBoxAndDirectionKey>& reqbndset) {
+					std::set<BoxAndDirKey>& reqbndset) {
 #ifndef RELEASE
   CallStackEntry entry("Wave3d::HighFreqInteractionListKeys");
 #endif
@@ -70,7 +70,7 @@ int Wave3d::HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_
       std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
       for (int i = 0; i < tmpvec.size(); ++i) {
           BoxKey srckey = tmpvec[i];
-          reqbndset.insert(HFBoxAndDirectionKey(srckey, dir));
+          reqbndset.insert(BoxAndDirKey(srckey, dir));
       }
   }
   return 0;

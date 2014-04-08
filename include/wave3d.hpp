@@ -172,7 +172,49 @@ public:
 };
 
 //---------------------------------------------------------------------------
-typedef std::pair<BoxKey, Index3> HFBoxAndDirectionKey;
+class BoxAndDirKey {
+public:
+    BoxAndDirKey(BoxKey boxkey, Index3 dir) : _boxkey(boxkey), _dir(dir) {}
+    BoxAndDirKey() {}
+    ~BoxAndDirKey() {}
+
+    BoxKey _boxkey;
+    Index3 _dir;
+
+    inline bool operator==(const BoxAndDirKey& rhs) const {
+        return _boxkey == rhs._boxkey && _dir == rhs._dir;
+    }
+
+    inline bool operator!=(const BoxAndDirKey& rhs) const {
+        return !operator==(rhs);
+    }
+
+    inline bool operator>(const BoxAndDirKey& rhs) const {
+        return _boxkey > rhs._boxkey ||
+               (_boxkey == rhs._boxkey && _dir > rhs._dir);
+    }
+
+    inline bool operator<(const BoxAndDirKey& rhs) const {
+        return _boxkey < rhs._boxkey ||
+               (_boxkey == rhs._boxkey && _dir < rhs._dir);
+    }
+
+    inline bool operator>=(const BoxAndDirKey& rhs) const {
+        return _boxkey >= rhs._boxkey ||
+               (_boxkey == rhs._boxkey && _dir >= rhs._dir);
+    }
+
+    inline bool operator<=(const BoxAndDirKey& rhs) const {
+        return _boxkey <= rhs._boxkey ||
+               (_boxkey == rhs._boxkey && _dir <= rhs._dir);
+    }
+};
+
+#define BoxAndDirKey_Number 2
+enum {
+    BoxAndDirKey_boxkey = 0,
+    BoxAndDirKey_dir = 1,
+};
 
 
 //---------------------------------------------------------------------------
@@ -181,11 +223,11 @@ public:
     HFBoxAndDirMap() {}
     ~HFBoxAndDirMap() {}
     
-    std::vector<HFBoxAndDirectionKey> partition_;
-    std::vector<HFBoxAndDirectionKey> end_partition_;  // for debugging
+    std::vector<BoxAndDirKey> partition_;
+    std::vector<BoxAndDirKey> end_partition_;  // for debugging
 
     // Return process that owns the key.
-    int Owner(HFBoxAndDirectionKey& key) {
+    int Owner(BoxAndDirKey& key) {
         int ind = std::lower_bound(partition_.begin(),
                                    partition_.end(), key) - partition_.begin();
         CHECK_TRUE(key <= end_partition_[ind]);
@@ -195,38 +237,38 @@ public:
 
 //---------------------------------------------------------------------------
 // Boundary data
-class HFBoxAndDirectionDat {
+class BoxAndDirDat {
 public:
     CpxNumVec _dirupeqnden;
     CpxNumVec _dirdnchkval;
 public:
-    HFBoxAndDirectionDat() {;}
-    ~HFBoxAndDirectionDat() {;}
+    BoxAndDirDat() {;}
+    ~BoxAndDirDat() {;}
     // Directional upward equivalent density
     CpxNumVec& dirupeqnden() { return _dirupeqnden; }
     // Directional downward check value
     CpxNumVec& dirdnchkval() { return _dirdnchkval; }
 };
 
-#define HFBoxAndDirectionDat_Number 2
+#define BoxAndDirDat_Number 2
 enum {
-    HFBoxAndDirectionDat_dirupeqnden = 0,
-    HFBoxAndDirectionDat_dirdnchkval = 1,
+    BoxAndDirDat_dirupeqnden = 0,
+    BoxAndDirDat_dirdnchkval = 1,
 };
 
-class HFBoxAndDirectionPrtn{
+class BoxAndDirPrtn{
 public:
     IntNumTns _ownerinfo;
 public:
-    HFBoxAndDirectionPrtn() {;}
-    ~HFBoxAndDirectionPrtn() {;}
+    BoxAndDirPrtn() {;}
+    ~BoxAndDirPrtn() {;}
     IntNumTns& ownerinfo() { return _ownerinfo; }
-    int owner(HFBoxAndDirectionKey key) {
+    int owner(BoxAndDirKey key) {
 #ifndef RELEASE
-	CallStackEntry entry("HFBoxAndDirectionPrtn::owner");
+	CallStackEntry entry("BoxAndDirPrtn::owner");
 #endif
-        int lvl = key.first.first;
-        Index3 idx = key.first.second;
+        int lvl = key._boxkey.first;
+        Index3 idx = key._boxkey.second;
         int COEF = pow2(lvl) / _ownerinfo.m();
         idx = idx / COEF;
         return _ownerinfo(idx(0), idx(1), idx(2));
@@ -236,7 +278,7 @@ public:
 //---------------------------------------------------------------------------
 typedef std::pair< std::vector<BoxKey>, std::vector<BoxKey> > box_lists_t;
 typedef std::map< double, std::vector<BoxKey> > ldmap_t;
-typedef std::vector< std::vector<HFBoxAndDirectionKey> > level_hdkeys_t;
+typedef std::vector< std::vector<BoxAndDirKey> > level_hdkeys_t;
 typedef std::vector< std::map<Index3, std::vector<BoxKey> > > level_hdkeys_map_t;
 
 class Wave3d: public ComObject {
@@ -255,7 +297,7 @@ public:
     int _maxlevel;
     //
     ParVec<BoxKey, BoxDat, BoxPrtn> _boxvec;
-    ParVec<HFBoxAndDirectionKey, HFBoxAndDirectionDat, HFBoxAndDirectionPrtn> _bndvec;
+    ParVec<BoxAndDirKey, BoxAndDirDat, BoxAndDirPrtn> _bndvec;
     //
     CpxNumTns _denfft, _valfft;
     fftw_plan _fplan, _bplan;
@@ -286,8 +328,8 @@ public:
     int check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
               IntNumVec& chkkeyvec, double& relerr);
 
-    bool CompareHFBoxAndDirectionKey(HFBoxAndDirectionKey a, HFBoxAndDirectionKey b) {
-	return BoxWidth(a.first) < BoxWidth(b.first);
+    bool CompareBoxAndDirKey(BoxAndDirKey a, BoxAndDirKey b) {
+        return BoxWidth(a._boxkey) < BoxWidth(b._boxkey);
     }
 
 private:
@@ -396,7 +438,7 @@ private:
     int LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
                         NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden);
 
-    int HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
+    int HighFrequencyM2M(double W, BoxAndDirKey& bndkey,
                          NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
     int HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
                          DblNumMat& dcp, DblNumMat& uep);
@@ -408,12 +450,12 @@ private:
     // directional boundaries in the high-frequency interaction lists
     // of the target boxes.  dir specifies the direction of the boundaries.
     int HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
-                                    std::set<HFBoxAndDirectionKey>& reqbndset);
+                                    std::set<BoxAndDirKey>& reqbndset);
 
      // For all keys in level_keys, add the children keys to children_keys.
      int HighFreqChildrenKeys(double W,
 			      std::map<Index3, std::vector<BoxKey> >& level_keys,
-			      std::vector<HFBoxAndDirectionKey>& children_keys);
+			      std::vector<BoxAndDirKey>& children_keys);
 
     // Tools for data distribution.
     void PartitionDirections(level_hdkeys_t& level_hdkeys_out,
@@ -427,8 +469,10 @@ int deserialize(PtPrtn&, std::istream&, const std::vector<int>&);
 int serialize(const BoxDat&, std::ostream&, const std::vector<int>&);
 int deserialize(BoxDat&, std::istream&, const std::vector<int>&);
 //-------------------
-int serialize(const HFBoxAndDirectionDat&, std::ostream&, const std::vector<int>&);
-int deserialize(HFBoxAndDirectionDat&, std::istream&, const std::vector<int>&);
+int serialize(const BoxAndDirDat&, std::ostream&, const std::vector<int>&);
+int deserialize(BoxAndDirDat&, std::istream&, const std::vector<int>&);
 //-------------------
+int serialize(const BoxAndDirKey&, std::ostream&, const std::vector<int>&);
+int deserialize(BoxAndDirKey&, std::istream&, const std::vector<int>&);
 
 #endif  // _WAVE3D_HPP_

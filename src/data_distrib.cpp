@@ -25,14 +25,14 @@
 
 namespace par {
 template <>
-class Mpi_datatype<HFBoxAndDirectionKey> {
+class Mpi_datatype<BoxAndDirKey> {
 public:
     static MPI_Datatype value() {
         static bool         first = true;
         static MPI_Datatype datatype;
         if (first) {
             first = false;
-            MPI_Type_contiguous(sizeof(HFBoxAndDirectionKey), MPI_BYTE, &datatype);
+            MPI_Type_contiguous(sizeof(BoxAndDirKey), MPI_BYTE, &datatype);
             MPI_Type_commit(&datatype);
         }
         return datatype;
@@ -40,27 +40,27 @@ public:
 };
 }
 
-void BoxAndDirection(HFBoxAndDirectionKey& key, std::vector<int>& out_key) {
+void BoxAndDirection(BoxAndDirKey& key, std::vector<int>& out_key) {
 #ifndef RELEASE
     CallStackEntry entry("BoxAndDirection");
 #endif
     out_key.resize(6);
 
     // Direction information.
-    out_key[0] = key.second[0];
-    out_key[1] = key.second[1];
-    out_key[2] = key.second[2];
+    out_key[0] = key._dir[0];
+    out_key[1] = key._dir[1];
+    out_key[2] = key._dir[2];
     // Box index.
-    out_key[3] = key.first.second[0];
-    out_key[4] = key.first.second[1];
-    out_key[5] = key.first.second[2];
+    out_key[3] = key._boxkey.second[0];
+    out_key[4] = key._boxkey.second[1];
+    out_key[5] = key._boxkey.second[2];
 }
 
 void FormPartitionMap(HFBoxAndDirMap& map, std::vector<int>& start_data,
                       std::vector<int>& end_data, int level) {
     CHECK_TRUE(start_data.size() == end_data.size());
     CHECK_TRUE(start_data.size() % 6 == 0);
-    std::vector<HFBoxAndDirectionKey>& part = map.partition_;
+    std::vector<BoxAndDirKey>& part = map.partition_;
     // Keys are represented as 6 integers:
     //    (x, y, z) direction
     //    (x, y, z) box index
@@ -68,17 +68,17 @@ void FormPartitionMap(HFBoxAndDirMap& map, std::vector<int>& start_data,
         Index3 dir(start_data[i], start_data[i + 1], start_data[i + 2]);
         Index3 ind(start_data[i + 3], start_data[i + 4], start_data[i + 5]);
         BoxKey boxkey(level, ind);
-	part.push_back(HFBoxAndDirectionKey(boxkey, dir));
+	part.push_back(BoxAndDirKey(boxkey, dir));
     }
     
     // We only need the starting keys to determine the partition.  However,
     // we also store the ending keys for debugging.
-    std::vector<HFBoxAndDirectionKey>& end_part = map.end_partition_;
+    std::vector<BoxAndDirKey>& end_part = map.end_partition_;
     for (int i = 0; i < end_data.size(); i += 6) {
         Index3 dir(end_data[i], end_data[i + 1], end_data[i + 2]);
         Index3 ind(end_data[i + 3], end_data[i + 4], end_data[i + 5]);
         BoxKey boxkey(level, ind);
-	end_part.push_back(HFBoxAndDirectionKey(boxkey, dir));
+	end_part.push_back(BoxAndDirKey(boxkey, dir));
     }
 }
 
@@ -110,7 +110,7 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
         if (mpirank == 0) {
             std::cerr << "Partitioning level: " << i << std::endl;
         }
-        std::vector<HFBoxAndDirectionKey>& curr_level_keys = level_hdkeys_out[i];
+        std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys_out[i];
         CHECK_TRUE(curr_level_keys.size() > 0);
         par::bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );

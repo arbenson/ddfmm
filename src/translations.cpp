@@ -37,8 +37,8 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
             tmpdcp(d, k) = dcp(d, k) + trgctr(d);
         }
     }
-    HFBoxAndDirectionKey bndkey(trgkey, dir);
-    HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
+    BoxAndDirKey bndkey(trgkey, dir);
+    BoxAndDirDat& bnddat = _bndvec.access(bndkey);
     CpxNumVec& dcv = bnddat.dirdnchkval();
     std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
     for (int i = 0; i < tmpvec.size(); ++i) {
@@ -55,8 +55,8 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
                 tmpuep(d, k) = uep(d, k) + srcctr(d);
             }
         }
-        HFBoxAndDirectionKey bndkey(srckey, dir);
-        HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
+        BoxAndDirKey bndkey(srckey, dir);
+        BoxAndDirDat& bnddat = _bndvec.access(bndkey);
         CpxNumVec& ued = bnddat.dirupeqnden();
         //mateix
         CpxNumMat Mts;
@@ -76,15 +76,15 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
     return 0;
 }
 
-int Wave3d::HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
+int Wave3d::HighFrequencyM2M(double W, BoxAndDirKey& bndkey,
                              NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFrequencyM2M");
 #endif
     double eps = 1e-12;
-    BoxKey srckey = bndkey.first;
-    Index3 dir = bndkey.second;
-    HFBoxAndDirectionDat& bnddat = _bndvec.access( bndkey );
+    BoxKey srckey = bndkey._boxkey;
+    Index3 dir = bndkey._dir;
+    BoxAndDirDat& bnddat = _bndvec.access( bndkey );
     CpxNumVec& upeqnden = bnddat.dirupeqnden();
     CpxNumVec upchkval(ue2uc(0, 0, 0).m());
     setvalue(upchkval, cpx(0, 0));
@@ -118,8 +118,8 @@ int Wave3d::HighFrequencyM2M(double W, HFBoxAndDirectionKey& bndkey,
             if (data.first) {
                 BoxDat& chddat = data.second;
                 CHECK_TRUE(HasPoints(chddat));
-                HFBoxAndDirectionKey bndkey(chdkey, pdir);
-                HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
+                BoxAndDirKey bndkey(chdkey, pdir);
+                BoxAndDirDat& bnddat = _bndvec.access(bndkey);
                 CpxNumVec& chdued = bnddat.dirupeqnden();
                 SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
             }
@@ -151,8 +151,8 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
     CallStackEntry entry("Wave3d::HighFrequencyL2L");
 #endif
     double eps = 1e-12;
-    HFBoxAndDirectionKey bndkey(trgkey, dir);
-    HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
+    BoxAndDirKey bndkey(trgkey, dir);
+    BoxAndDirDat& bnddat = _bndvec.access(bndkey);
     CpxNumVec& dnchkval = bnddat.dirdnchkval();
     CpxNumMat& E1 = dc2de(0);
     CpxNumMat& E2 = dc2de(1);
@@ -198,8 +198,8 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
                 continue;
             }
             BoxDat& chddat = data.second;
-            HFBoxAndDirectionKey bndkey(chdkey, pdir);
-            HFBoxAndDirectionDat& bnddat = _bndvec.access(bndkey);
+            BoxAndDirKey bndkey(chdkey, pdir);
+            BoxAndDirDat& bnddat = _bndvec.access(bndkey);
             CpxNumVec& chddcv = bnddat.dirdnchkval();
             if (chddcv.m() == 0) {
                 chddcv.resize(de2dc(a,b,c).m());
