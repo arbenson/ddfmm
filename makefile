@@ -21,12 +21,9 @@ ifndef HOST
 endif
 include makeinc/${HOST}
 
-DENDRO_BASE = /home0/3/lexing/BENSON/dendro-3.0.1/include
-DENDRO_INCS = -I$(DENDRO_BASE) $(addprefix -I$(DENDRO_BASE)/, binOps fem oct omg pc seq test oda par point sys)
-
 # default rule
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(DEFINES) -Iinclude $(DENDRO_INCS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEFINES) -Iinclude -c $< -o $@
 
 LIB_SRC = src/wave3d.cpp \
           src/kernel3d.cpp \
@@ -51,7 +48,7 @@ libwave.a: ${LIB_OBJ}
 	$(AR) $(ARFLAGS) $@ $(LIB_OBJ)
 	$(RANLIB) $@
 
-tt: src/tt.o libwave.a parUtils.o binUtils.o
+tt: src/tt.o libwave.a
 	${CXX} -o $@ $^ ${LDFLAGS}
 
 file_io_test: src/file_io_test.o libwave.a

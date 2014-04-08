@@ -17,7 +17,9 @@
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "wave3d.hpp"
-#include "parUtils.h"
+
+#include "external/bitonic.h"
+#include "external/dtypes.h"
 
 #include "mpi.h"
 
@@ -166,7 +168,7 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
         }
         std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys_out[i];
         CHECK_TRUE(curr_level_keys.size() > 0);
-        par::bitonicSort(curr_level_keys, MPI_COMM_WORLD);
+        bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate starting keys for each processor.
