@@ -58,7 +58,7 @@ void BoxAndDirection(BoxAndDirKey& key, std::vector<int>& out_key) {
     out_key[5] = key._boxkey.second[2];
 }
 
-void FormPartitionMap(HFBoxAndDirMap& map, std::vector<int>& start_data,
+void FormPartitionMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
                       std::vector<int>& end_data, int level) {
     CHECK_TRUE(start_data.size() == end_data.size());
     CHECK_TRUE(start_data.size() % 6 == 0);
@@ -190,7 +190,7 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
                                     MPI_INT, MPI_COMM_WORLD));
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
-        HFBoxAndDirMap map;
+        BoxAndDirLevelPrtn map;
         FormPartitionMap(map, start_data, end_data, i);
     }
 }

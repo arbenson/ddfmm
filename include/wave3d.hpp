@@ -218,16 +218,16 @@ enum {
 
 
 //---------------------------------------------------------------------------
-class HFBoxAndDirMap {
+class BoxAndDirLevelPrtn {
 public:
-    HFBoxAndDirMap() {}
-    ~HFBoxAndDirMap() {}
+    BoxAndDirLevelPrtn() {}
+    ~BoxAndDirLevelPrtn() {}
     
     std::vector<BoxAndDirKey> partition_;
     std::vector<BoxAndDirKey> end_partition_;  // for debugging
 
     // Return process that owns the key.
-    int Owner(BoxAndDirKey& key) {
+    int owner(BoxAndDirKey& key) {
         int ind = std::lower_bound(partition_.begin(),
                                    partition_.end(), key) - partition_.begin();
         CHECK_TRUE(key <= end_partition_[ind]);

@@ -172,7 +172,7 @@ int Wave3d::SetupTree() {
     ParVec<int, Point3, PtPrtn>& pos = *_posptr;
 
     // Get all of the geometry information needed for this processor
-    std::vector<int> all(1,1);
+    std::vector<int> all(1, 1);
     SAFE_FUNC_EVAL( pos.getBegin(&(Wave3d::setup_Q1_wrapper), all) );
     SAFE_FUNC_EVAL( pos.getEnd(all) );
 
@@ -494,7 +494,7 @@ bool Wave3d::SetupTreeAdjacent(BoxKey meekey, BoxKey youkey) {
     Index3 youctr(  (2 * youkey.second+one) * pow2(md - youkey.first)  );
     int meerad = pow2(md - meekey.first);
     int yourad = pow2(md - youkey.first);
-    Index3 dif( ewabs(meectr-youctr) );
+    Index3 dif( ewabs(meectr - youctr) );
     int rad  = meerad + yourad;
     // return true iff at least one edge touch
     return dif[0] <= rad && dif[1] <= rad && dif[2] <= rad && dif.linfty() == rad;

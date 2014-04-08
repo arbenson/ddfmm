@@ -23,8 +23,7 @@
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
-class ParVec
-{
+class ParVec {
 public:
     std::map<Key,Data> _lclmap;
     Partition _prtn; //has function owner:Key->pid
@@ -236,7 +235,7 @@ int ParVec<Key,Data,Partition>::getBegin(int (*e2ps)(Key, Data&, std::vector<int
         ossvec[k] = new std::ostringstream();
     }
 
-    //1. serialize
+    // 1. serialize
     for (typename std::map<Key,Data>::iterator mi = _lclmap.begin();
         mi!=_lclmap.end(); ++mi) {
         Key key = mi->first;
@@ -259,12 +258,12 @@ int ParVec<Key,Data,Partition>::getBegin(int (*e2ps)(Key, Data&, std::vector<int
     // to vector
     strs2vec(ossvec);
 
-    //2. all the sendsize of the message
+    // 2. all the sendsize of the message
     std::vector<int> sszvec;
     std::vector<int> rszvec;
     getSizes(rszvec, sszvec);
 
-    //3. allocate space, send and receive
+    // 3. allocate space, send and receive
     makeBufReqs(rszvec, sszvec);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
