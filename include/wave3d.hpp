@@ -337,7 +337,7 @@ private:
     //access information from BoxKey
     Point3 BoxCenter(BoxKey& curkey);
     double BoxWidth(BoxKey& curkey) { return _K / pow2(curkey.first); }
-    bool IsCellLevelBox(const BoxKey& curkey) { return curkey.first == cell_level(); }
+    bool IsCellLevelBox(const BoxKey& curkey) { return curkey.first == CellLevel(); }
 
     // Return the key of the parent box of the box corresponding to curkey.
     BoxKey ParentKey(BoxKey& curkey) {
@@ -359,14 +359,19 @@ private:
 
     // Determine whether the box corresponding to curkey is owned
     // by this processor.
-    bool OwnBox(BoxKey& curkey, int mpirank) { return _boxvec.prtn().owner(curkey) == mpirank; }
+    bool OwnBox(BoxKey& curkey, int mpirank) {
+        return _boxvec.prtn().owner(curkey) == mpirank;
+    }
 
     // Return dimension of this problem.    
     int dim() { return 3; }
 
     // The level such that the box has width 1
-    int unitlevel() { return int(round(log(_K) / log(2))); } 
-    int cell_level() { return int(round(log(_geomprtn.m()) / log(2))); }
+    int UnitLevel() { return int(round(log(_K) / log(2))); } 
+
+    // The level where the geometry is partitioned.
+    int CellLevel() { return int(round(log(_geomprtn.m()) / log(2))); }
+
     Index3 nml2dir(Point3 nml, double W);
 
     // Compute the parent direction given the child direction.  If the child
@@ -378,15 +383,15 @@ private:
     std::vector<Index3> ChildDir(Index3 dir);
     double Dir2Width(Index3 dir);
 
-    int setup_tree();
+    int SetupTree();
     static int setup_Q1_wrapper(int key, Point3& dat, std::vector<int>& pids);
     static int setup_Q2_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids);
     int setup_Q1(int key, Point3& dat, std::vector<int>& pids);
     int setup_Q2(BoxKey key, BoxDat& dat, std::vector<int>& pids);
-    int setup_tree_callowlist( BoxKey, BoxDat& );
-    int setup_tree_calhghlist( BoxKey, BoxDat& );
-    bool setup_tree_find(BoxKey wntkey, BoxKey& reskey);
-    bool setup_tree_adjacent(BoxKey me, BoxKey yo);
+    int SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat);
+    int SetupTreeHighFreqLists(BoxKey curkey, BoxDat& curdat);
+    bool SetupTreeFind(BoxKey wntkey, BoxKey& reskey);
+    bool SetupTreeAdjacent(BoxKey me, BoxKey yo);
 
     int P();
 

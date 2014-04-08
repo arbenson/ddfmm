@@ -160,7 +160,7 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
     CHECK_TRUE(global_start_level == local_start_level);
 
     // Sort keys amongst processes.
-    for (int i = global_start_level; i < unitlevel(); ++i) {
+    for (int i = global_start_level; i < UnitLevel(); ++i) {
         if (mpirank == 0) {
             std::cerr << "Partitioning level: " << i << std::endl;
         }
