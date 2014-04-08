@@ -235,7 +235,6 @@ public:
 
 //---------------------------------------------------------------------------
 typedef std::pair< std::vector<BoxKey>, std::vector<BoxKey> > box_lists_t;
-typedef std::map< Index3, box_lists_t > hdmap_t;
 typedef std::map< double, std::vector<BoxKey> > ldmap_t;
 typedef std::vector< std::vector<HFBoxAndDirectionKey> > level_hdkeys_t;
 typedef std::vector< std::map<Index3, std::vector<BoxKey> > > level_hdkeys_map_t;
@@ -365,27 +364,15 @@ private:
     int LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset);
     int LowFreqDownwardComm(std::set<BoxKey>& reqboxset);
     int LowFreqDownwardPass(ldmap_t& ldmap);
-    int HighFreqPass(hdmap_t& hdmap);
 
-    int HighFreqPass(hdmap_t& hdmap,
-		     level_hdkeys_map_t& level_hdmap_out,
+    int HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
 		     level_hdkeys_map_t& level_hdmap_inc);
 
-    int EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
-                                std::set<HFBoxAndDirectionKey>& reqbndset);
-    int EvalDownwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap);
-
-# ifdef LIMITED_MEMORY
-    int GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
-                            std::vector< std::pair<double, Index3> >& compute_info);
-    int LevelCommunication(std::map< double, std::vector<HFBoxAndDirectionKey> >& request_bnds,
-                           double W);
-# endif
-    
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
-    int EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs);
+    int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
+                         std::vector<BoxKey>& srcvec);
 
-    int ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap,
+    int ConstructMaps(ldmap_t& ldmap,
 		      level_hdkeys_t& level_hdkeys_out,
 		      level_hdkeys_t& level_hdkeys_inc,
 		      level_hdkeys_map_t& level_hdmap_out,

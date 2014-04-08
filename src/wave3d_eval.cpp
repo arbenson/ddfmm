@@ -28,13 +28,6 @@
 // TODO(arbenson): this is a bit of hack.
 #define DVMAX 400
 
-#ifdef LIMITED_MEMORY
-bool CompareDownwardHighInfo(std::pair<double, Index3> a,
-                             std::pair<double, Index3> b) {
-    return a.first < b.first;
-}
-#endif
-
 int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqUpwardPass");
@@ -69,57 +62,7 @@ int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
     return 0;
 }
 
-int Wave3d::HighFreqPass(hdmap_t& hdmap) {
-# ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFreqPass");
-# endif
-    time_t t0, t1;
-    int mpirank = getMPIRank();
-    
-    if(mpirank == 0) {
-        std::cout << "Beginning high frequency pass..." << std::endl;
-    }
-    t0 = time(0);
-
-    // Find all directions on the first level (width = 1)
-    std::vector<Index3> basedirs;
-    for (hdmap_t::iterator mi = hdmap.begin(); mi != hdmap.end(); ++mi) {
-        Index3 dir = mi->first;
-        if (Dir2Width(dir) == 1) {
-            basedirs.push_back(dir);
-        }
-    }
-
-    std::set<HFBoxAndDirectionKey> reqbndset;
-    for (int i = 0; i < basedirs.size(); ++i) {
-        SAFE_FUNC_EVAL( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
-    }
-    t1 = time(0);
-    PrintParData(GatherParData(t0, t1), "High frequency upward pass");
-
-    t0 = time(0);
-    std::vector<int> mask(HFBoxAndDirectionDat_Number,0);
-    mask[HFBoxAndDirectionDat_dirupeqnden] = 1;
-    std::vector<HFBoxAndDirectionKey> reqbnd;
-    reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-    SAFE_FUNC_EVAL( _bndvec.getBegin(reqbnd, mask) );
-    SAFE_FUNC_EVAL( _bndvec.getEnd(mask) );
-    t1 = time(0);
-    PrintParData(GatherParData(t0, t1), "High frequency communication");
-
-    t0 = time(0);
-    for (int i = 0; i < basedirs.size(); ++i) {
-        Index3 dir = basedirs[i]; // LEXING: PRE HERE
-        SAFE_FUNC_EVAL( EvalDownwardHighRecursive(1, dir, hdmap) );
-    }
-    t1 = time(0);
-
-    PrintParData(GatherParData(t0, t1), "High frequency downward pass");
-    return 0;
-}
-
-
-int Wave3d::HighFreqPass(hdmap_t& hdmap, level_hdkeys_map_t& level_hdmap_out,
+int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
 			 level_hdkeys_map_t& level_hdmap_inc) {
 # ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
@@ -130,23 +73,9 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap, level_hdkeys_map_t& level_hdmap_out,
     if(mpirank == 0) {
         std::cout << "Beginning high frequency pass..." << std::endl;
     }
+
+    // Upward pass (M2M)
     t0 = time(0);
-
-    // Find all directions on the first level (width = 1)
-    std::vector<Index3> basedirs;
-    for (hdmap_t::iterator mi = hdmap.begin(); mi != hdmap.end(); ++mi) {
-        Index3 dir = mi->first;
-        if (Dir2Width(dir) == 1) {
-            basedirs.push_back(dir);
-        }
-    }
-
-#if 0
-    std::set<HFBoxAndDirectionKey> reqbndset;
-    for (int i = 0; i < basedirs.size(); ++i) {
-        SAFE_FUNC_EVAL( EvalUpwardHighRecursive(1, basedirs[i], hdmap, reqbndset) );
-    }
-#endif
 
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
@@ -159,6 +88,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap, level_hdkeys_map_t& level_hdmap_out,
 	}
     }
 
+    // Collect all keys needed for M2L
     std::set<HFBoxAndDirectionKey> reqbndset;
     for (int level = level_hdmap_inc.size() - 1; level >= 0; --level) {
 	std::map<Index3, std::vector<BoxKey> > level_inc = level_hdmap_inc[level];
@@ -171,7 +101,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap, level_hdkeys_map_t& level_hdmap_out,
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
-
+    // Communication for M2L
     t0 = time(0);
     std::vector<int> mask(HFBoxAndDirectionDat_Number,0);
     mask[HFBoxAndDirectionDat_dirupeqnden] = 1;
@@ -182,10 +112,19 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap, level_hdkeys_map_t& level_hdmap_out,
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency communication");
 
+    // Downwards pass
     t0 = time(0);
-    for (int i = 0; i < basedirs.size(); ++i) {
-        Index3 dir = basedirs[i]; // LEXING: PRE HERE
-        SAFE_FUNC_EVAL( EvalDownwardHighRecursive(1, dir, hdmap) );
+    for (int level = 0; level < level_hdmap_inc.size(); ++level) {
+        double W = _K / pow2(level);
+        std::map<Index3, std::vector<BoxKey> > level_inc = level_hdmap_inc[level];
+        std::map<Index3, std::vector<BoxKey> > level_out = level_hdmap_out[level];
+	for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
+            mi != level_inc.end(); ++mi) {
+            Index3 dir = mi->first;
+            std::vector<BoxKey>& keys_inc = mi->second;
+            std::vector<BoxKey>& keys_out = level_out[dir];
+	    SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_out) );
+	}
     }
     t1 = time(0);
 
@@ -193,7 +132,7 @@ int Wave3d::HighFreqPass(hdmap_t& hdmap, level_hdkeys_map_t& level_hdmap_out,
     return 0;
 }
 
-int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap,
+int Wave3d::ConstructMaps(ldmap_t& ldmap,
                           level_hdkeys_t& level_hdkeys_out,
                           level_hdkeys_t& level_hdkeys_inc,
                           level_hdkeys_map_t& level_hdmap_out,
@@ -225,7 +164,6 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap,
                 // For each outgoing direction of this box, add to the first list
                 for (std::set<Index3>::iterator si = curdat.outdirset().begin();
                     si != curdat.outdirset().end(); ++si) {
-                    hdmap[*si].first.push_back(curkey);
                     // into bndvec
                     _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
 		    int level = curkey.first;
@@ -236,7 +174,6 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap, hdmap_t& hdmap,
                 // For each incoming direction of this box, add to the second list
                 for (std::set<Index3>::iterator si = curdat.incdirset().begin();
                     si != curdat.incdirset().end(); ++si) {
-                    hdmap[*si].second.push_back(curkey);
                     // into bndvec
                     _bndvec.insert(HFBoxAndDirectionKey(curkey, *si), dummy);
 		    int level = curkey.first;
@@ -308,13 +245,12 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
 
     // Setup of low and high frequency maps
     ldmap_t ldmap;
-    hdmap_t hdmap;
     int max_level = 10;
     level_hdkeys_t level_hdkeys_out(max_level);
     level_hdkeys_t level_hdkeys_inc(max_level);
     level_hdkeys_map_t level_hdmap_out(max_level);
     level_hdkeys_map_t level_hdmap_inc(max_level);
-    ConstructMaps(ldmap, hdmap, level_hdkeys_out, level_hdkeys_inc,
+    ConstructMaps(ldmap, level_hdkeys_out, level_hdkeys_inc,
                   level_hdmap_out, level_hdmap_inc);
 
     PartitionDirections(level_hdkeys_out, level_hdkeys_inc);
@@ -323,7 +259,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     std::set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    HighFreqPass(hdmap, level_hdmap_out, level_hdmap_inc);
+    HighFreqPass(level_hdmap_out, level_hdmap_inc);
     LowFreqDownwardComm(reqboxset);
     LowFreqDownwardPass(ldmap);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
@@ -408,60 +344,6 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
 }
 
 //---------------------------------------------------------------------
-int Wave3d::EvalUpwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap,
-                                    std::set<HFBoxAndDirectionKey>& reqbndset) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::EvalUpwardHighRecursive");
-#endif
-    hdmap_t::iterator mi = hdmap.find(nowdir);
-    if (mi != hdmap.end()) {
-        box_lists_t& hdvecs = mi->second;
-        SAFE_FUNC_EVAL( EvalUpwardHigh(W, nowdir, hdvecs.first) );
-	SAFE_FUNC_EVAL( HighFreqInteractionListKeys(nowdir, hdvecs.second, reqbndset) );
-        std::vector<Index3> dirvec = ChildDir(nowdir);
-        for (int k = 0; k < dirvec.size(); ++k) {
-            SAFE_FUNC_EVAL( EvalUpwardHighRecursive(2 * W, dirvec[k], hdmap, reqbndset) );
-        }
-    }
-    return 0;
-}
-
-//---------------------------------------------------------------------
-int Wave3d::EvalDownwardHighRecursive(double W, Index3 nowdir, hdmap_t& hdmap) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::EvalDownwardHighRecursive");
-#endif
-    hdmap_t::iterator mi = hdmap.find(nowdir);
-    if (mi != hdmap.end()) {
-        std::vector<Index3> dirvec = ChildDir(nowdir);
-        for (int k = 0; k < dirvec.size(); ++k) {
-            SAFE_FUNC_EVAL( EvalDownwardHighRecursive(2 * W, dirvec[k], hdmap) );
-        }
-        SAFE_FUNC_EVAL( EvalDownwardHigh(W, nowdir, mi->second) );
-    }
-    return 0;
-}
-
-//---------------------------------------------------------------------
-# ifdef LIMITED_MEMORY
-int Wave3d::GetDownwardHighInfo(double W, Index3 nowdir, hdmap_t& hdmap,
-                                std::vector< std::pair<double, Index3> >& compute_info) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::DownwardHighCallStack");
-#endif
-    hdmap_t::iterator mi = hdmap.find(nowdir);
-    if (mi != hdmap.end()) {
-        std::vector<Index3> dirvec = ChildDir(nowdir);
-        for (int k = 0; k < dirvec.size(); ++k) {
-            SAFE_FUNC_EVAL( GetDownwardHighInfo(2 * W, dirvec[k], hdmap, compute_info) );
-        }
-        compute_info.push_back(std::pair<double, Index3>(W, nowdir));
-    }
-    return 0;
-}
-# endif
-
-//---------------------------------------------------------------------
 int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardHigh");
@@ -485,7 +367,8 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 }
 
 //---------------------------------------------------------------------
-int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
+int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
+                             std::vector<BoxKey>& srcvec) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardHigh");
 #endif
@@ -498,7 +381,6 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
     DblNumMat uep;
     SAFE_FUNC_EVAL( _mlibptr->DownwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     //LEXING: IMPORTANT
-    std::vector<BoxKey>& trgvec = hdvecs.second;
     for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
@@ -507,7 +389,6 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, box_lists_t& hdvecs) {
      }
 
     // Now that we are done at this level, clear data to save on memory.
-    std::vector<BoxKey>& srcvec = hdvecs.first;
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);

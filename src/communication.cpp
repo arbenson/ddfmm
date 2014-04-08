@@ -94,24 +94,6 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
     return 0;
 }
 
-#ifdef LIMITED_MEMORY
-int Wave3d::LevelCommunication(std::map< double, std::vector<HFBoxAndDirectionKey> >& request_bnds,
-                               double W) {
-    std::vector<int> mask(HFBoxAndDirectionDat_Number, 0);
-    mask[HFBoxAndDirectionDat_dirupeqnden] = 1;
-    _bndvec.initialize_data();
-    SAFE_FUNC_EVAL( _bndvec.getBegin(request_bnds[W], mask) );
-    SAFE_FUNC_EVAL( _bndvec.getEnd(mask) );
-    request_bnds[W].clear();
-    std::ostringstream recv_msg;
-    recv_msg << "kbytes received (W = " << W << ")";
-    PrintCommData(GatherCommData(_bndvec.kbytes_received()), recv_msg.str());
-    std::ostringstream sent_msg;
-    sent_msg << "kbytes sent (W = " << W << ")";
-    PrintCommData(GatherCommData(_bndvec.kbytes_sent()), sent_msg.str());
-}
-#endif
-
 int Wave3d::GatherDensities(std::vector<int>& reqpts,
                             ParVec<int, cpx, PtPrtn>& den) {
     int mpirank = getMPIRank();
