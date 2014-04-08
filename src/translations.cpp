@@ -227,7 +227,7 @@ int Wave3d::LowFrequencyM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     setvalue(upchkval,cpx(0,0));
     CpxNumVec& upeqnden = srcdat.upeqnden();
     // ue2dc
-    if (IsTerminal(srcdat)) {
+    if (IsLeaf(srcdat)) {
         DblNumMat upchkpos(ucp.m(), ucp.n());
         for (int k = 0; k < ucp.n(); ++k) {
             for (int d = 0; d < dim(); ++d) {
@@ -322,7 +322,7 @@ int Wave3d::LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
     Point3 trgctr = BoxCenter(trgkey);
 
     // Add potentials to children or to exact points
-    if (IsTerminal(trgdat)) {
+    if (IsLeaf(trgdat)) {
         DblNumMat dneqnpos(dep.m(), dep.n());
         for (int k = 0; k < dep.n(); ++k) {
             for (int d = 0; d < dim(); ++d) {
@@ -444,7 +444,7 @@ int Wave3d::XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
         BoxDat& neidat = _boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
         Point3 neictr = BoxCenter(neikey);
-        if(IsTerminal(trgdat) && trgdat.extpos().n() < dcp.n()) {
+        if(IsLeaf(trgdat) && trgdat.extpos().n() < dcp.n()) {
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
@@ -468,7 +468,7 @@ int Wave3d::WListCompute(BoxDat& trgdat, double W, DblNumMat& uep) {
         CHECK_TRUE(HasPoints(neidat));
         Point3 neictr = BoxCenter(neikey);
         // upchkpos
-        if (IsTerminal(neidat) && neidat.extpos().n() < uep.n()) {
+        if (IsLeaf(neidat) && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );

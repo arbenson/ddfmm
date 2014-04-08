@@ -223,7 +223,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsTerminal(curdat)) {
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsLeaf(curdat)) {
             std::vector<int>& curpis = curdat.ptidxvec();
             CpxNumVec& extden = curdat.extden();
             extden.resize(curpis.size());
@@ -288,7 +288,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsTerminal(curdat)) {
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsLeaf(curdat)) {
             CpxNumVec& extval = curdat.extval();
             std::vector<int>& curpis = curdat.ptidxvec();
             for (int k = 0; k < curpis.size(); ++k) {

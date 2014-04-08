@@ -35,7 +35,7 @@
 
 enum {
     WAVE3D_PTS = 1,
-    WAVE3D_TERMINAL = 2,
+    WAVE3D_LEAF = 2,
 };
 
 //---------------------------------------------------------------------------
@@ -352,7 +352,7 @@ private:
 
     BoxDat& BoxData(BoxKey& curkey) { return _boxvec.access(curkey); }
 
-    bool IsTerminal(BoxDat& curdat) { return curdat.tag() & WAVE3D_TERMINAL; }
+    bool IsLeaf(BoxDat& curdat) { return curdat.tag() & WAVE3D_LEAF; }
 
     // Returns true iff curdat contains points.
     bool HasPoints(BoxDat& curdat) { return curdat.tag() & WAVE3D_PTS; }

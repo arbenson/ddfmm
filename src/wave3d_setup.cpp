@@ -199,7 +199,7 @@ int Wave3d::SetupTree() {
                 }
             }
             //LEXING: VERY IMPORTANT
-            curdat.tag() |= WAVE3D_TERMINAL;
+            curdat.tag() |= WAVE3D_LEAF;
         }
         // Add my self into _tree
         _boxvec.insert(curkey, curdat); //LEXING: CHECK
@@ -344,7 +344,7 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                 if (reskey.first < curkey.first && HasPoints(resdat)) {
                     if (!adj) {
                         Xset.insert(reskey);
-                    } else if (IsTerminal(curdat)) {
+                    } else if (IsLeaf(curdat)) {
                         Uset.insert(reskey);
                     }
                 }
@@ -356,7 +356,7 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                         if (HasPoints(resdat)) {
                             Vset.insert(reskey);
                         }
-                    } else if (IsTerminal(curdat)) {
+                    } else if (IsLeaf(curdat)) {
                         std::queue<BoxKey> rest;
                         rest.push(reskey);
                         while (!rest.empty()) {
@@ -368,10 +368,10 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                             if (!adj && HasPoints(fntdat)) {
                                 Wset.insert(fntkey);
                             } 
-                            if (adj && IsTerminal(fntdat) && HasPoints(fntdat)) {
+                            if (adj && IsLeaf(fntdat) && HasPoints(fntdat)) {
                                 Uset.insert(fntkey);
                             }
-                            if (adj && !IsTerminal(fntdat)) {
+                            if (adj && !IsLeaf(fntdat)) {
                                 for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
                                     rest.push( ChildKey(fntkey, Index3(CHILD_IND1(ind),
                                                                        CHILD_IND2(ind),
@@ -384,7 +384,7 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
             }
         }
     }
-    if (IsTerminal(curdat) && HasPoints(curdat)) {
+    if (IsLeaf(curdat) && HasPoints(curdat)) {
         Uset.insert(curkey);
     }
     curdat.undeidxvec().insert(curdat.undeidxvec().begin(), Uset.begin(), Uset.end());
