@@ -186,8 +186,8 @@ int Wave3d::SetupTree() {
                 BoxKey key = ChildKey(curkey, Index3(a,b,c));
                 tmpq.push( std::pair<BoxKey, BoxDat>(key, chdboxtns(a, b, c)) );
             }
-            // Clear my own ptidxvec vector
-            curdat.ptidxvec().clear();
+            // Destory ptidxvec to save memory.
+	    std::vector<int>().swap(curdat.ptidxvec());
         } else {
             // Copy data into _extpos
             curdat.extpos().resize(3, curdat.ptidxvec().size());
@@ -224,6 +224,18 @@ int Wave3d::SetupTree() {
                 // High frequency regime
                 SAFE_FUNC_EVAL(SetupTreeHighFreqLists(curkey, curdat));
             }
+        }
+    }
+
+    // Delete endeidxvec since it was only used to build the interaction lists
+    // in the high-frequency regime.
+    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
+        mi != _boxvec.lclmap().end(); ++mi) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        if (OwnBox(curkey, mpirank)) {
+            // Save memory
+            std::vector<BoxKey>().swap(curdat.endeidxvec());
         }
     }
 

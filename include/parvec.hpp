@@ -286,7 +286,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
     _reqs = new MPI_Request[2 * mpisize];
     _stats = new MPI_Status[2 * mpisize];
 
-    //1. go thrw the keyvec to partition them among other procs
+    // 1. go through the keyvec to partition them among other procs
     std::vector< std::vector<Key> > skeyvec(mpisize);
     for(int i = 0; i < keyvec.size(); i++) {
         Key key = keyvec[i];
@@ -296,7 +296,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
         }
     }
 
-    //2. setdn receive size of keyvec
+    // 2. setdn receive size of keyvec
     std::vector<int> sszvec(mpisize);
     std::vector<int> rszvec(mpisize);
     for(int k = 0; k < mpisize; k++) {
@@ -305,7 +305,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
     SAFE_FUNC_EVAL( MPI_Alltoall( (void*)&(sszvec[0]), 1, MPI_INT, (void*)&(rszvec[0]), 1,
                        MPI_INT, MPI_COMM_WORLD ) );
 
-    //3. allocate space for the keys, send and receive
+    // 3. allocate space for the keys, send and receive
     std::vector< std::vector<Key> > rkeyvec(mpisize);
     for (int k = 0; k < mpisize; k++) {
         rkeyvec[k].resize(rszvec[k]);
@@ -323,9 +323,9 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
     delete[] reqs;
     delete[] stats;
 
-    skeyvec.clear(); //save space
+    skeyvec.clear(); // save space
 
-    //4. prepare the streams
+    // 4. prepare the streams
     std::vector<std::ostringstream*> ossvec(mpisize);
     for(int k = 0; k < mpisize; k++) {
         ossvec[k] = new std::ostringstream();
@@ -346,10 +346,10 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
     // to vector
     strs2vec(ossvec);
 
-    //5. all the sendsize of the message
+    // 5. all the sendsize of the message
     getSizes(rszvec, sszvec);
 
-    //6. allocate space, send and receive
+    // 6. allocate space, send and receive
     makeBufReqs(rszvec, sszvec);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
@@ -367,8 +367,7 @@ int ParVec<Key,Data,Partition>::getEnd( const std::vector<int>& mask ) {
     delete[] _reqs;
     delete[] _stats;
     _sbufvec.clear(); //save space
-    //4. write back
-    //to stream
+    // Write back to stream.
     std::vector<std::istringstream*> issvec(mpisize);
     for (int k = 0; k < mpisize; k++) {
         issvec[k] = new std::istringstream();
