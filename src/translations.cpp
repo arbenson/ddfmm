@@ -191,7 +191,7 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
             int a = CHILD_IND1(ind);
             int b = CHILD_IND2(ind);
             int c = CHILD_IND3(ind);             
-            BoxKey chdkey = ChildKey(trgkey, Index3(a,b,c));
+            BoxKey chdkey = ChildKey(trgkey, Index3(a, b, c));
             std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
             // If the box was empty, it will not be stored
             if (!data.first) {
@@ -202,10 +202,10 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
             BoxAndDirDat& bnddat = _bndvec.access(bndkey);
             CpxNumVec& chddcv = bnddat.dirdnchkval();
             if (chddcv.m() == 0) {
-                chddcv.resize(de2dc(a,b,c).m());
-                setvalue(chddcv,cpx(0,0));
+                chddcv.resize(de2dc(a, b, c).m());
+                setvalue(chddcv, cpx(0, 0));
             }
-            SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
+            SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
         }
     }
     return 0;
