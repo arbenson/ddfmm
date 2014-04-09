@@ -318,7 +318,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
         SAFE_FUNC_EVAL( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k] * sizeof(Key), MPI_BYTE,
                        k, 0, MPI_COMM_WORLD, &reqs[2 * k + 1] ) );
     }
-    SAFE_FUNC_EVAL( MPI_Waitall(2 * mpisize, &(reqs[0]), &(stats[0])) );
+    SAFE_FUNC_EVAL( MPI_Waitall(2 * mpisize, &reqs[0], &stats[0]) );
     delete[] reqs;
     delete[] stats;
 
@@ -362,7 +362,7 @@ int ParVec<Key,Data,Partition>::getEnd( const std::vector<int>& mask ) {
 #endif
     int mpisize = getMPISize();
     //LEXING: SEPARATE HERE
-    SAFE_FUNC_EVAL( MPI_Waitall(2*mpisize, &(_reqs[0]), &(_stats[0])) );
+    SAFE_FUNC_EVAL( MPI_Waitall(2 * mpisize, &(_reqs[0]), &(_stats[0])) );
     delete[] _reqs;
     delete[] _stats;
     _sbufvec.clear(); //save space
