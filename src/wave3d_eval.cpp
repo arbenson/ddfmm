@@ -264,7 +264,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     ConstructMaps(ldmap, level_hdkeys_out, level_hdkeys_inc,
                   level_hdmap_out, level_hdmap_inc);
 
-    PartitionDirections(level_hdkeys_out, level_hdkeys_inc);
+    std::vector<LevelBoxAndDirVec> level_hf_vecs(max_level);
+    PartitionDirections(level_hdkeys_out, level_hdkeys_inc, level_hf_vecs);
 
     // Main work of the algorithm
     std::set<BoxKey> reqboxset;

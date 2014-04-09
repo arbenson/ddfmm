@@ -60,9 +60,14 @@ void BoxAndDirection(BoxAndDirKey& key, std::vector<int>& out_key) {
 
 void FormPartitionMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
                       std::vector<int>& end_data, int level) {
+#ifndef RELEASE
+    CallStackEntry entry("FormPartitionMap");
+#endif
     CHECK_TRUE(start_data.size() == end_data.size());
-    CHECK_TRUE(start_data.size() % 6 == 0);
+    CHECK_TRUE(start_data.size() / getMPISize() == 6);
+
     std::vector<BoxAndDirKey>& part = map.partition_;
+    part.clear();
     // Keys are represented as 6 integers:
     //    (x, y, z) direction
     //    (x, y, z) box index
@@ -76,6 +81,7 @@ void FormPartitionMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
     // We only need the starting keys to determine the partition.  However,
     // we also store the ending keys for debugging.
     std::vector<BoxAndDirKey>& end_part = map.end_partition_;
+    end_part.clear();
     for (int i = 0; i < end_data.size(); i += 6) {
         Index3 dir(end_data[i], end_data[i + 1], end_data[i + 2]);
         Index3 ind(end_data[i + 3], end_data[i + 4], end_data[i + 5]);
@@ -85,14 +91,17 @@ void FormPartitionMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
 }
 
 void ScatterKeys(level_hdkeys_t& level_hdkeys) {
+#ifndef RELEASE
+    CallStackEntry entry("ScatterKeys");
+#endif
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
 
     // Get the size of the keys on each 
     int my_size = level_hdkeys.size();
     std::vector<int> sizes(mpisize);
-    SAFE_FUNC_EVAL( MPI_Alltoall(&my_size, 1, MPI_INT, &sizes[0], 1, MPI_INT,
-                                 MPI_COMM_WORLD) );
+    SAFE_FUNC_EVAL( MPI_Allgather(&my_size, 1, MPI_INT, &sizes[0], 1, MPI_INT,
+				  MPI_COMM_WORLD) );
 
     int my_index = -1;
     std::vector<int> empty_procs;
@@ -138,7 +147,8 @@ void ScatterKeys(level_hdkeys_t& level_hdkeys) {
 }
 
 void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
-                                 level_hdkeys_t& level_hdkeys_inc) {
+                                 level_hdkeys_t& level_hdkeys_inc,
+                                 std::vector<LevelBoxAndDirVec>& level_hf_vecs) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::PartitionDirections");
 #endif
@@ -163,11 +173,11 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
     CHECK_TRUE(global_start_level == local_start_level);
 
     // Sort keys amongst processes.
-    for (int i = global_start_level; i < UnitLevel(); ++i) {
+    for (int level = global_start_level; level < UnitLevel(); ++level) {
         if (mpirank == 0) {
-            std::cerr << "Partitioning level: " << i << std::endl;
+            std::cerr << "Partitioning level: " << level << std::endl;
         }
-        std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys_out[i];
+        std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys_out[level];
         CHECK_TRUE(curr_level_keys.size() > 0);
         bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
@@ -175,9 +185,9 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
         // Communicate starting keys for each processor.
         std::vector<int> start_data;
         BoxAndDirection(curr_level_keys[0], start_data);
-        std::vector<int> first_recv_buf(start_data.size() * mpisize);
-        SAFE_FUNC_EVAL(MPI_Alltoall((void *)&start_data[0], start_data.size(), MPI_INT,
-                                    (void *)&first_recv_buf[0], start_data.size(),
+        std::vector<int> start_recv_buf(start_data.size() * mpisize);
+        SAFE_FUNC_EVAL(MPI_Allgather((void *)&start_data[0], start_data.size(), MPI_INT,
+                                    (void *)&start_recv_buf[0], start_data.size(),
                                     MPI_INT, MPI_COMM_WORLD));
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
@@ -185,12 +195,17 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
         std::vector<int> end_data;
         BoxAndDirection(curr_level_keys.back(), end_data);
         std::vector<int> end_recv_buf(end_data.size() * mpisize);
-        SAFE_FUNC_EVAL(MPI_Alltoall(&end_data[0], end_data.size(), MPI_INT,
-                                    &end_recv_buf[0], end_data.size(),
-                                    MPI_INT, MPI_COMM_WORLD));
+        SAFE_FUNC_EVAL(MPI_Allgather(&end_data[0], end_data.size(), MPI_INT,
+                                     &end_recv_buf[0], end_data.size(),
+                                     MPI_INT, MPI_COMM_WORLD));
+        FormPartitionMap(level_hf_vecs[level].prtn(), start_recv_buf, end_recv_buf, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
-        BoxAndDirLevelPrtn map;
-        FormPartitionMap(map, start_data, end_data, i);
+	// Build my ParVec for this level.
+	for (int i = 0; i < curr_level_keys.size(); ++i) {
+            BoxAndDirKey key = curr_level_keys[i];
+	    BoxAndDirDat dummy;
+            level_hf_vecs[level].insert(key, dummy);
+	}
     }
 }

@@ -192,7 +192,7 @@ int Wave3d::SetupTree() {
             CHECK_TRUE(idx(d) >= 0 && idx(d) < numC);
         }
         // Put the points in
-        cellboxtns(idx(0),idx(1),idx(2)).ptidxvec().push_back( key );
+        cellboxtns(idx(0), idx(1), idx(2)).ptidxvec().push_back( key );
     }
     // Put all boxes owned by this process (whether or not is empty) in a queue.
     // TODO(arbenson): this should be more efficient.

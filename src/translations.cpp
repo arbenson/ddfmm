@@ -102,7 +102,7 @@ int Wave3d::HighFrequencyM2M(double W, BoxAndDirKey& bndkey,
                 BoxDat& chddat = data.second;
                 CHECK_TRUE(HasPoints(chddat));
                 CpxNumVec& chdued = chddat.upeqnden();
-                SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
+                SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
             }
         }
     } else {
@@ -121,7 +121,7 @@ int Wave3d::HighFrequencyM2M(double W, BoxAndDirKey& bndkey,
                 BoxAndDirKey bndkey(chdkey, pdir);
                 BoxAndDirDat& bnddat = _bndvec.access(bndkey);
                 CpxNumVec& chdued = bnddat.dirupeqnden();
-                SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a,b,c), chdued, 1.0, upchkval) );
+                SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
             }
         }
     }
@@ -136,7 +136,7 @@ int Wave3d::HighFrequencyM2M(double W, BoxAndDirKey& bndkey,
     CpxNumVec tmp1(E2.m(), false, dat1);
     CHECK_TRUE(DVMAX >= E2.m());
     upeqnden.resize(E1.m());
-    setvalue(upeqnden,cpx(0,0));
+    setvalue(upeqnden, cpx(0,0));
     SAFE_FUNC_EVAL( zgemv(1.0, E3, upchkval, 0.0, tmp0) );
     SAFE_FUNC_EVAL( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
     SAFE_FUNC_EVAL( zgemv(1.0, E1, tmp1, 0.0, upeqnden) );

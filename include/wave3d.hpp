@@ -200,13 +200,11 @@ public:
     }
 
     inline bool operator>=(const BoxAndDirKey& rhs) const {
-        return _boxkey >= rhs._boxkey ||
-               (_boxkey == rhs._boxkey && _dir >= rhs._dir);
+        return operator>(rhs) || operator==(rhs);
     }
 
     inline bool operator<=(const BoxAndDirKey& rhs) const {
-        return _boxkey <= rhs._boxkey ||
-               (_boxkey == rhs._boxkey && _dir <= rhs._dir);
+        return operator<(rhs) || operator==(rhs);
     }
 };
 
@@ -228,9 +226,17 @@ public:
 
     // Return process that owns the key.
     int owner(BoxAndDirKey& key) {
+#ifndef RELEASE
+	CallStackEntry entry("BoxAndDirLevelPrtn::owner");
+#endif
         int ind = std::lower_bound(partition_.begin(),
                                    partition_.end(), key) - partition_.begin();
-        CHECK_TRUE(key <= end_partition_[ind]);
+        --ind;
+        if (ind < static_cast<int>(partition_.size()) - 1 &&
+            key == partition_[ind + 1]) {
+	    ++ind;
+	}
+	CHECK_TRUE(key <= end_partition_[ind]);
         return ind;
     }
 };
@@ -255,6 +261,8 @@ enum {
     BoxAndDirDat_dirupeqnden = 0,
     BoxAndDirDat_dirdnchkval = 1,
 };
+
+typedef ParVec<BoxAndDirKey, BoxAndDirDat, BoxAndDirLevelPrtn> LevelBoxAndDirVec;
 
 class BoxAndDirPrtn{
 public:
@@ -464,7 +472,8 @@ private:
 
     // Tools for data distribution.
     void PartitionDirections(level_hdkeys_t& level_hdkeys_out,
-			     level_hdkeys_t& level_hdkeys_inc);
+			     level_hdkeys_t& level_hdkeys_inc,
+			     std::vector<LevelBoxAndDirVec>& level_hf_vecs);
 };
 
 //-------------------
