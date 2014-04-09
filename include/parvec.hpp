@@ -421,7 +421,7 @@ int ParVec<Key,Data,Partition>::putBegin(std::vector<Key>& keyvec,
     }
 
     //1. go thrw the keyvec to partition them among other procs
-    for (int i=0; i<keyvec.size(); i++) {
+    for (int i = 0; i<keyvec.size(); i++) {
         Key key = keyvec[i];
         int k = _prtn.owner(key); //the owner
         if (k != mpirank) {

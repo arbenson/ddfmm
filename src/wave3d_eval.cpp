@@ -81,14 +81,12 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
         std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
-        std::vector<BoxAndDirKey> children_keys;
-	HighFreqChildrenKeys(W, level_out, children_keys);
 
         // Handle communication for this level.  We need request the directional
 	// upward equivalent densities from the children needed on this level.
-        if (level >= UnitLevel()) {
-            // TODO(arbenson): Handle this.
-	} else {
+        // We assume that boxes on the unit level are partitioned by process,
+        // so we do not need to do any communication for that level.
+        if (level < UnitLevel()) {
             HighFreqM2MLevelComm(level_hf_vecs[level], level_hf_vecs[level + 1]);
 	}
 
@@ -98,7 +96,7 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
             std::vector<BoxKey>& keys_out = mi->second;
             SAFE_FUNC_EVAL( EvalUpwardHigh(W, dir, keys_out) );
         }
-        // TODO(arbenson): remove data from parvec
+        // TODO(arbenson): remove data from parvec to save memory
     }
 
     // Collect all keys needed for M2L
@@ -134,7 +132,14 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
         std::map<Index3, std::vector<BoxKey> > level_out = level_hdmap_out[level];
         std::vector<BoxAndDirKey> children_keys;
 	HighFreqChildrenKeys(W, level_inc, children_keys);
-        // TODO(arbenson): Scatter data for the keys
+
+	if (level == UnitLevel()) {
+            // TODO(arbenson): handle this
+	}
+        if (level < UnitLevel()) {
+            HighFreqL2LLevelCommPre(level_hf_vecs[level], level_hf_vecs[level + 1]);
+	}
+
         for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
             mi != level_inc.end(); ++mi) {
             Index3 dir = mi->first;
@@ -142,7 +147,8 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
             std::vector<BoxKey>& keys_out = level_out[dir];
             SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_out) );
         }
-        // TODO(arbenson): remove data from parvec
+
+        // TODO(arbenson): remove data from parvec to save memory
     }
     t1 = time(0);
 

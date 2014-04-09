@@ -48,11 +48,11 @@ public:
     std::vector<int>& ownerinfo() { return _ownerinfo; }
     int owner(int key) {
 #ifndef RELEASE
-	CallStackEntry entry("PtPrtn::owner");
+        CallStackEntry entry("PtPrtn::owner");
 #endif
         CHECK_TRUE(key < _ownerinfo[_ownerinfo.size() - 1]);
         // Get the process which owns the current point
-	std::vector<int>::iterator vi = lower_bound(_ownerinfo.begin(),
+        std::vector<int>::iterator vi = lower_bound(_ownerinfo.begin(),
                                                     _ownerinfo.end(), key + 1);
         return (vi - _ownerinfo.begin()) - 1;
     }
@@ -98,7 +98,7 @@ public:
         int num = 0;
         for (std::map< Index3, std::vector<BoxKey> >::iterator mi = _fndeidxvec.begin();
              mi != _fndeidxvec.end(); ++mi) {
-  	    num += mi->second.size();
+            num += mi->second.size();
         }
         return num;
     }
@@ -161,7 +161,7 @@ public:
     IntNumTns& ownerinfo() { return _ownerinfo; }
     int owner(BoxKey key) {
 #ifndef RELEASE
-	CallStackEntry entry("BoxPrtn::owner");
+        CallStackEntry entry("BoxPrtn::owner");
 #endif
         int lvl = key.first;
         Index3 idx = key.second;
@@ -227,16 +227,16 @@ public:
     // Return process that owns the key.
     int owner(BoxAndDirKey& key) {
 #ifndef RELEASE
-	CallStackEntry entry("BoxAndDirLevelPrtn::owner");
+        CallStackEntry entry("BoxAndDirLevelPrtn::owner");
 #endif
         int ind = std::lower_bound(partition_.begin(),
                                    partition_.end(), key) - partition_.begin();
         --ind;
         if (ind < static_cast<int>(partition_.size()) - 1 &&
             key == partition_[ind + 1]) {
-	    ++ind;
-	}
-	CHECK_TRUE(key <= end_partition_[ind]);
+            ++ind;
+        }
+        CHECK_TRUE(key <= end_partition_[ind]);
         return ind;
     }
 };
@@ -273,7 +273,7 @@ public:
     IntNumTns& ownerinfo() { return _ownerinfo; }
     int owner(BoxAndDirKey key) {
 #ifndef RELEASE
-	CallStackEntry entry("BoxAndDirPrtn::owner");
+        CallStackEntry entry("BoxAndDirPrtn::owner");
 #endif
         int lvl = key._boxkey.first;
         Index3 idx = key._boxkey.second;
@@ -349,7 +349,7 @@ private:
 
     // Return the key of the parent box of the box corresponding to curkey.
     BoxKey ParentKey(BoxKey& curkey) {
-	return BoxKey(curkey.first - 1, curkey.second / 2);
+        return BoxKey(curkey.first - 1, curkey.second / 2);
     }
 
     // Return the key of a child box of the box corresponding to curkey.
@@ -421,17 +421,17 @@ private:
     int LowFreqDownwardPass(ldmap_t& ldmap);
 
     int HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
-		     level_hdkeys_map_t& level_hdmap_inc,
-		     std::vector<LevelBoxAndDirVec>& level_hf_vecs);
+                     level_hdkeys_map_t& level_hdmap_inc,
+                     std::vector<LevelBoxAndDirVec>& level_hf_vecs);
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
                          std::vector<BoxKey>& srcvec);
 
     int ConstructMaps(ldmap_t& ldmap,
-		      level_hdkeys_t& level_hdkeys_out,
-		      level_hdkeys_t& level_hdkeys_inc,
-		      level_hdkeys_map_t& level_hdmap_out,
+                      level_hdkeys_t& level_hdkeys_out,
+                      level_hdkeys_t& level_hdkeys_inc,
+                      level_hdkeys_map_t& level_hdmap_out,
                       level_hdkeys_map_t& level_hdmap_inc);
     int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
     
@@ -468,16 +468,19 @@ private:
 
      // For all keys in level_keys, add the children keys to children_keys.
      int HighFreqChildrenKeys(double W,
-			      std::map<Index3, std::vector<BoxKey> >& level_keys,
-			      std::vector<BoxAndDirKey>& children_keys);
+                              std::map<Index3, std::vector<BoxKey> >& level_keys,
+                              std::vector<BoxAndDirKey>& children_keys);
 
-    int HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
-                             LevelBoxAndDirVec& child_level_vec);
+     int HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
+                              LevelBoxAndDirVec& child_level_vec);
 
-    // Tools for data distribution.
-    void PartitionDirections(level_hdkeys_t& level_hdkeys_out,
-			     level_hdkeys_t& level_hdkeys_inc,
-			     std::vector<LevelBoxAndDirVec>& level_hf_vecs);
+     int HighFreqL2LLevelCommPre(LevelBoxAndDirVec& curr_level_vec,
+                                 LevelBoxAndDirVec& child_level_vec);
+
+     // Tools for data distribution.
+     void PartitionDirections(level_hdkeys_t& level_hdkeys_out,
+                              level_hdkeys_t& level_hdkeys_inc,
+                              std::vector<LevelBoxAndDirVec>& level_hf_vecs);
 };
 
 //-------------------
