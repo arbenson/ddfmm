@@ -326,7 +326,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _boxvec.access(srckey);
-        LowFrequencyM2M(srckey, srcdat, uep, ucp, uc2ue, ue2uc);
+        LowFreqM2M(srckey, srcdat, uep, ucp, uc2ue, ue2uc);
 
         // Add boxes in U, V, W, and X lists of trgdat to reqboxset.           
         BoxDat& trgdat = srcdat;
@@ -356,8 +356,8 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
         BoxDat& trgdat = _boxvec.access(trgkey);
         CHECK_TRUE(HasPoints(trgdat));  // should have points
         CpxNumVec dneqnden;
-        LowFrequencyM2L(W, trgkey, trgdat, dcp, ue2dc, dneqnden, uep, dc2de);
-        LowFrequencyL2L(trgkey, trgdat, dep, de2dc, dneqnden);
+        LowFreqM2L(W, trgkey, trgdat, dcp, ue2dc, dneqnden, uep, dc2de);
+        LowFreqL2L(trgkey, trgdat, dep, de2dc, dneqnden);
     }
     return 0;
 }
@@ -379,7 +379,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 
         Point3 srcctr = BoxCenter(srckey);
         BoxAndDirKey bndkey(srckey, dir);
-        HighFrequencyM2M(W, bndkey, uc2ue, ue2uc);
+        HighFreqM2M(W, bndkey, uc2ue, ue2uc);
     }
 
     return 0;
@@ -403,8 +403,8 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
     for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _boxvec.access(trgkey);
-        SAFE_FUNC_EVAL( HighFrequencyM2L(W, dir, trgkey, trgdat, dcp, uep) );
-        SAFE_FUNC_EVAL( HighFrequencyL2L(W, dir, trgkey, dc2de, de2dc) );
+        SAFE_FUNC_EVAL( HighFreqM2L(W, dir, trgkey, trgdat, dcp, uep) );
+        SAFE_FUNC_EVAL( HighFreqL2L(W, dir, trgkey, dc2de, de2dc) );
      }
 
     // Now that we are done at this level, clear data to save on memory.

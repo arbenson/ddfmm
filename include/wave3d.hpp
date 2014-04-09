@@ -443,21 +443,21 @@ private:
                      DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
                      NumTns<CpxNumTns>& ue2dc);
 
-    int LowFrequencyM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
-                        DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
-                        NumTns<CpxNumMat>& ue2uc);
-    int LowFrequencyM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
-                        NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
-                        NumVec<CpxNumMat>& dc2de);
-    int LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
-                        NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden);
+    int LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
+                   DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
+                   NumTns<CpxNumMat>& ue2uc);
+    int LowFreqM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
+                   NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
+                   NumVec<CpxNumMat>& dc2de);
+    int LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
+                   NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden);
 
-    int HighFrequencyM2M(double W, BoxAndDirKey& bndkey,
-                         NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc);
-    int HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
-                         DblNumMat& dcp, DblNumMat& uep);
-    int HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
-                         NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc);
+    int HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
+                    NumTns<CpxNumMat>& ue2uc);
+    int HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
+                    DblNumMat& dcp, DblNumMat& uep);
+    int HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
+                    NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc);
 
     // Add keys to reqbndset for high-frequency M2L computations
     // For every target box, add all the keys corresponding to

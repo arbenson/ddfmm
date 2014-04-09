@@ -23,10 +23,10 @@
 // TODO(arbenson): this is a bit of hack.
 #define DVMAX 400
 
-int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
-                             DblNumMat& dcp, DblNumMat& uep) {
+int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
+                        DblNumMat& dcp, DblNumMat& uep) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFrequencyM2L");
+    CallStackEntry entry("Wave3d::HighFreqM2L");
 #endif
     CHECK_TRUE(HasPoints(trgdat));  // should have points
     Point3 trgctr = BoxCenter(trgkey);
@@ -76,10 +76,10 @@ int Wave3d::HighFrequencyM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat
     return 0;
 }
 
-int Wave3d::HighFrequencyM2M(double W, BoxAndDirKey& bndkey,
-                             NumVec<CpxNumMat>& uc2ue, NumTns<CpxNumMat>& ue2uc) {
+int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
+                        NumTns<CpxNumMat>& ue2uc) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFrequencyM2M");
+    CallStackEntry entry("Wave3d::HighFreqM2M");
 #endif
     double eps = 1e-12;
     BoxKey srckey = bndkey._boxkey;
@@ -144,11 +144,10 @@ int Wave3d::HighFrequencyM2M(double W, BoxAndDirKey& bndkey,
     return 0;
 }
 
-int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
-                             NumVec<CpxNumMat>& dc2de,
-                             NumTns<CpxNumMat>& de2dc) {
+int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
+                        NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFrequencyL2L");
+    CallStackEntry entry("Wave3d::HighFreqL2L");
 #endif
     double eps = 1e-12;
     BoxAndDirKey bndkey(trgkey, dir);
@@ -211,11 +210,11 @@ int Wave3d::HighFrequencyL2L(double W, Index3 dir, BoxKey trgkey,
     return 0;
 }
 
-int Wave3d::LowFrequencyM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
-                            DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
-                            NumTns<CpxNumMat>& ue2uc) {
+int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
+                       DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
+                       NumTns<CpxNumMat>& ue2uc) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::LowFrequencyM2M");
+    CallStackEntry entry("Wave3d::LowFreqM2M");
 #endif
     // TODO(arbenson): What was this being used for before?
     int tdof = 1;
@@ -268,11 +267,11 @@ int Wave3d::LowFrequencyM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     return 0;
 }
 
-int Wave3d::LowFrequencyM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
-                            NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
-                            NumVec<CpxNumMat>& dc2de) {
+int Wave3d::LowFreqM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
+                       NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
+                       NumVec<CpxNumMat>& dc2de) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::LowFrequencyM2L");
+    CallStackEntry entry("Wave3d::LowFreqM2L");
 #endif
     int _P = P();
     Point3 trgctr = BoxCenter(trgkey);
@@ -314,10 +313,10 @@ int Wave3d::LowFrequencyM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat&
     return 0;
 }
 
-int Wave3d::LowFrequencyL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
-                            NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden) {
+int Wave3d::LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
+                       NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::LowFrequencyL2L");
+    CallStackEntry entry("Wave3d::LowFreqL2L");
 #endif
     Point3 trgctr = BoxCenter(trgkey);
 
