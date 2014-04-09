@@ -22,42 +22,6 @@
 #include <set>
 #include <vector>
 
-int Wave3d::HighFreqChildrenKeys(double W,
-                                 std::map<Index3, std::vector<BoxKey> >& level_out,
-                                 std::vector<BoxAndDirKey>& children_keys) {
-#ifndef RELEASE
-  CallStackEntry entry("Wave3d::HighFreqChildrenKeys");
-#endif
-    double eps = 1e-12;
-    if (abs(W - 1) < eps) {
-        // We assume that all directions for a box at the unit level
-        // are assigned to the same processor.  Thus, the processor owns
-        // the subtree at that box, and no communication is needed for M2M.
-        return 0;
-    }
-
-    for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_out.begin();
-         mi != level_out.end(); ++mi) {
-        Index3 dir = mi->first;
-        std::vector<BoxKey>& keys = mi->second;
-        for (int i = 0; i < keys.size(); ++i) {
-            // Pick the direction such that the child wedges in that direction
-            // contain the parent wedge in direction dir
-            BoxKey curr_key = keys[i];
-            Index3 pdir = ParentDir(dir);
-            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);
-                BoxKey chdkey = ChildKey(curr_key, Index3(a, b, c));
-                children_keys.push_back(BoxAndDirKey(chdkey, pdir));
-            }
-        }
-    }
-    return 0;
-}
-
-
 int Wave3d::HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
                                         std::set<BoxAndDirKey>& reqbndset) {
 #ifndef RELEASE
@@ -116,17 +80,18 @@ int Wave3d::GatherDensities(std::vector<int>& reqpts,
     return 0;
 }
 
-int Wave3d::HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
-                                 LevelBoxAndDirVec& child_level_vec) {
-    std::vector<BoxAndDirKey> req_keys;
+int Wave3d::AllChildrenKeys(LevelBoxAndDirVec& vec,
+                            std::vector<BoxAndDirKey>& req_keys) {
+#ifndef RELEASE
+    CallStackEntry entry("AllChildrenKeys");
+#endif
     int mpirank = getMPIRank();
-    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_level_vec.lclmap().begin();
-        mi != curr_level_vec.lclmap().begin(); ++mi) {
+    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = vec.lclmap().begin();
+        mi != vec.lclmap().begin(); ++mi) {
         BoxAndDirKey key = mi->first;
-        if (curr_level_vec.prtn().owner(key) == mpirank) {
+        if (vec.prtn().owner(key) == mpirank) {
 	    Index3 dir = key._dir;
 	    BoxKey boxkey = key._boxkey;
-        
 	    Index3 pdir = ParentDir(dir);
 	    for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
 	        int a = CHILD_IND1(ind);
@@ -138,6 +103,16 @@ int Wave3d::HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
 	    }
 	}
     }
+    return 0;
+}
+
+int Wave3d::HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
+                                 LevelBoxAndDirVec& child_level_vec) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::HighFreqM2MLevelComm");
+#endif
+    std::vector<BoxAndDirKey> req_keys;
+    AllChildrenKeys(curr_level_vec, req_keys);
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirupeqnden] = 1;
     // Request data that I need.
@@ -148,30 +123,40 @@ int Wave3d::HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
 
 int Wave3d::HighFreqL2LLevelCommPre(LevelBoxAndDirVec& curr_level_vec,
                                     LevelBoxAndDirVec& child_level_vec) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::HighFreqL2LLevelCommPre");
+#endif
     std::vector<BoxAndDirKey> req_keys;
-    int mpirank = getMPIRank();
-    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_level_vec.lclmap().begin();
-        mi != curr_level_vec.lclmap().begin(); ++mi) {
-        BoxAndDirKey key = mi->first;
-        if (curr_level_vec.prtn().owner(key) == mpirank) {
-	    Index3 dir = key._dir;
-	    BoxKey boxkey = key._boxkey;
-        
-	    Index3 pdir = ParentDir(dir);
-	    for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-	        int a = CHILD_IND1(ind);
-		int b = CHILD_IND2(ind);
-		int c = CHILD_IND3(ind);             
-		BoxKey child_boxkey = ChildKey(boxkey, Index3(a, b, c));
-		// We need the child key.
-		req_keys.push_back(BoxAndDirKey(child_boxkey, pdir));
-	    }
-	}
-    }
+    AllChildrenKeys(curr_level_vec, req_keys);
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirdnchkval] = 1;
     // Request data that I need.
     child_level_vec.getBegin(req_keys, mask);
     child_level_vec.getEnd(mask);
+    return 0;
+}
+
+int Wave3d::HighFreqL2LLevelCommPost(LevelBoxAndDirVec& curr_level_vec,
+                                    LevelBoxAndDirVec& child_level_vec) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::HighFreqL2LLevelCommPost");
+#endif
+    std::vector<BoxAndDirKey> send_keys;
+    AllChildrenKeys(curr_level_vec, send_keys);
+    std::vector<int> mask(BoxAndDirDat_Number, 0);
+    mask[BoxAndDirDat_dirdnchkval] = 1;
+    // Request data that I need.
+    child_level_vec.putBegin(send_keys, mask);
+    child_level_vec.putEnd(mask);
+    return 0;
+}
+
+int Wave3d::HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset) {
+    std::vector<int> mask(BoxAndDirDat_Number,0);
+    mask[BoxAndDirDat_dirupeqnden] = 1;
+    std::vector<BoxAndDirKey> reqbnd;
+    reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
+    SAFE_FUNC_EVAL( _bndvec.getBegin(reqbnd, mask) );
+    SAFE_FUNC_EVAL( _bndvec.getEnd(mask) );
     return 0;
 }

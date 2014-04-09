@@ -414,19 +414,18 @@ int ParVec<Key,Data,Partition>::putBegin(std::vector<Key>& keyvec,
     _rbufvec.resize(mpisize);
     _reqs = new MPI_Request[2 * mpisize];
     _stats = new MPI_Status[2 * mpisize];
-    //1.
     std::vector<std::ostringstream*> ossvec(mpisize);
     for (int k = 0; k < mpisize; k++) {
         ossvec[k] = new std::ostringstream();
     }
 
-    //1. go thrw the keyvec to partition them among other procs
-    for (int i = 0; i<keyvec.size(); i++) {
+    // 1. Go through the keyvec to partition them among other procs
+    for (int i = 0; i < keyvec.size(); i++) {
         Key key = keyvec[i];
         int k = _prtn.owner(key); //the owner
         if (k != mpirank) {
             typename std::map<Key, Data>::iterator mi = _lclmap.find(key);
-            CHECK_TRUE( mi!=_lclmap.end() );
+            CHECK_TRUE( mi != _lclmap.end() );
             CHECK_TRUE( key == mi->first );
             Data& dat = mi->second;
             SAFE_FUNC_EVAL( serialize(key, *(ossvec[k]), mask) );
@@ -435,15 +434,15 @@ int ParVec<Key,Data,Partition>::putBegin(std::vector<Key>& keyvec,
         }
     }
 
-    //2. to vector
+    // 2. to vector
     strs2vec(ossvec);
 
-    //3. get size
+    // 3. get size
     std::vector<int> sszvec;
     std::vector<int> rszvec;
     getSizes(rszvec, sszvec);
 
-    //4. allocate space, send and receive
+    // 4. allocate space, send and receive
     makeBufReqs(rszvec, sszvec);
 
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );

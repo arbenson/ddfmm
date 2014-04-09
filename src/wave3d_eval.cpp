@@ -115,12 +115,7 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
 
     // Communication for M2L
     t0 = time(0);
-    std::vector<int> mask(BoxAndDirDat_Number,0);
-    mask[BoxAndDirDat_dirupeqnden] = 1;
-    std::vector<BoxAndDirKey> reqbnd;
-    reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-    SAFE_FUNC_EVAL( _bndvec.getBegin(reqbnd, mask) );
-    SAFE_FUNC_EVAL( _bndvec.getEnd(mask) );
+    SAFE_FUNC_EVAL(HighFreqM2LComm(reqbndset));
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency communication");
 
@@ -130,12 +125,11 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
         double W = _K / pow2(level);
         std::map<Index3, std::vector<BoxKey> > level_inc = level_hdmap_inc[level];
         std::map<Index3, std::vector<BoxKey> > level_out = level_hdmap_out[level];
-        std::vector<BoxAndDirKey> children_keys;
-	HighFreqChildrenKeys(W, level_inc, children_keys);
 
-	if (level == UnitLevel()) {
-            // TODO(arbenson): handle this
-	}
+        // Handle pre-communication for this level.  We request the directional
+	// downward check values for the children.
+        // We assume that boxes on the unit level are partitioned by process,
+        // so we do not need to do any communication for that level.
         if (level < UnitLevel()) {
             HighFreqL2LLevelCommPre(level_hf_vecs[level], level_hf_vecs[level + 1]);
 	}
@@ -147,6 +141,14 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
             std::vector<BoxKey>& keys_out = level_out[dir];
             SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_out) );
         }
+
+        // Handle post-communication for this level.  We send back the
+	// downward check values for the children.
+        // We assume that boxes on the unit level are partitioned by process,
+        // so we do not need to do any communication for that level.
+        if (level < UnitLevel()) {
+            HighFreqL2LLevelCommPost(level_hf_vecs[level], level_hf_vecs[level + 1]);
+	}
 
         // TODO(arbenson): remove data from parvec to save memory
     }

@@ -466,16 +466,16 @@ private:
     int HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
                                     std::set<BoxAndDirKey>& reqbndset);
 
-     // For all keys in level_keys, add the children keys to children_keys.
-     int HighFreqChildrenKeys(double W,
-                              std::map<Index3, std::vector<BoxKey> >& level_keys,
-                              std::vector<BoxAndDirKey>& children_keys);
-
+     // Routines for communication
+     int AllChildrenKeys(LevelBoxAndDirVec& vec,
+                         std::vector<BoxAndDirKey>& req_keys);
      int HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
                               LevelBoxAndDirVec& child_level_vec);
-
      int HighFreqL2LLevelCommPre(LevelBoxAndDirVec& curr_level_vec,
                                  LevelBoxAndDirVec& child_level_vec);
+     int HighFreqL2LLevelCommPost(LevelBoxAndDirVec& curr_level_vec,
+                                 LevelBoxAndDirVec& child_level_vec);
+     int HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset);
 
      // Tools for data distribution.
      void PartitionDirections(level_hdkeys_t& level_hdkeys_out,
