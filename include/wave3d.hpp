@@ -421,7 +421,8 @@ private:
     int LowFreqDownwardPass(ldmap_t& ldmap);
 
     int HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
-		     level_hdkeys_map_t& level_hdmap_inc);
+		     level_hdkeys_map_t& level_hdmap_inc,
+		     std::vector<LevelBoxAndDirVec>& level_hf_vecs);
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
@@ -469,6 +470,9 @@ private:
      int HighFreqChildrenKeys(double W,
 			      std::map<Index3, std::vector<BoxKey> >& level_keys,
 			      std::vector<BoxAndDirKey>& children_keys);
+
+    int HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
+                             LevelBoxAndDirVec& child_level_vec);
 
     // Tools for data distribution.
     void PartitionDirections(level_hdkeys_t& level_hdkeys_out,

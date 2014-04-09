@@ -63,7 +63,8 @@ int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
 }
 
 int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
-                         level_hdkeys_map_t& level_hdmap_inc) {
+                         level_hdkeys_map_t& level_hdmap_inc,
+			 std::vector<LevelBoxAndDirVec>& level_hf_vecs) {
 # ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
 # endif
@@ -83,7 +84,13 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
         std::vector<BoxAndDirKey> children_keys;
 	HighFreqChildrenKeys(W, level_out, children_keys);
 
-        // TODO(arbenson): Gather data for the keys
+        // Handle communication for this level.  We need request the directional
+	// upward equivalent densities from the children needed on this level.
+        if (level >= UnitLevel()) {
+            // TODO(arbenson): Handle this.
+	} else {
+            HighFreqM2MLevelComm(level_hf_vecs[level], level_hf_vecs[level + 1]);
+	}
 
         for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_out.begin();
             mi != level_out.end(); ++mi) {
@@ -271,7 +278,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     std::set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    HighFreqPass(level_hdmap_out, level_hdmap_inc);
+    HighFreqPass(level_hdmap_out, level_hdmap_inc, level_hf_vecs);
     LowFreqDownwardComm(reqboxset);
     LowFreqDownwardPass(ldmap);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
