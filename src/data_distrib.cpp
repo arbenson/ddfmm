@@ -25,6 +25,8 @@
 
 #include <vector>
 
+#define BOX_AND_DIR_KEY_MPI_SIZE (6)
+
 namespace par {
 template <>
 class Mpi_datatype<BoxAndDirKey> {
@@ -46,7 +48,7 @@ void BoxAndDirection(BoxAndDirKey& key, std::vector<int>& out_key) {
 #ifndef RELEASE
     CallStackEntry entry("BoxAndDirection");
 #endif
-    out_key.resize(6);
+    out_key.resize(BOX_AND_DIR_KEY_MPI_SIZE);
 
     // Direction information.
     out_key[0] = key._dir[0];
@@ -58,39 +60,41 @@ void BoxAndDirection(BoxAndDirKey& key, std::vector<int>& out_key) {
     out_key[5] = key._boxkey.second[2];
 }
 
+void FillKeyVector(std::vector<BoxAndDirKey>& keys, std::vector<int>& data,
+                   int level) {
+#ifndef RELEASE
+    CallStackEntry entry("FillKeyVector");
+#endif
+   keys.clear();
+   // Keys are represented as 6 integers:
+   //    (x, y, z) direction
+   //    (x, y, z) box index
+   for (int i = 0; i < data.size(); i += BOX_AND_DIR_KEY_MPI_SIZE) {
+        Index3 dir(data[i], data[i + 1], data[i + 2]);
+        Index3 ind(data[i + 3], data[i + 4], data[i + 5]);
+        BoxKey boxkey(level, ind);
+        keys.push_back(BoxAndDirKey(boxkey, dir));
+    }
+}
+
 void FormPartitionMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
                       std::vector<int>& end_data, int level) {
 #ifndef RELEASE
     CallStackEntry entry("FormPartitionMap");
 #endif
     CHECK_TRUE(start_data.size() == end_data.size());
-    CHECK_TRUE(start_data.size() / getMPISize() == 6);
+    CHECK_TRUE(start_data.size() / getMPISize() == BOX_AND_DIR_KEY_MPI_SIZE);
 
     std::vector<BoxAndDirKey>& part = map.partition_;
-    part.clear();
-    // Keys are represented as 6 integers:
-    //    (x, y, z) direction
-    //    (x, y, z) box index
-    for (int i = 0; i < start_data.size(); i += 6) {
-        Index3 dir(start_data[i], start_data[i + 1], start_data[i + 2]);
-        Index3 ind(start_data[i + 3], start_data[i + 4], start_data[i + 5]);
-        BoxKey boxkey(level, ind);
-        part.push_back(BoxAndDirKey(boxkey, dir));
-    }
+    FillKeyVector(part, start_data, level);
     
     // We only need the starting keys to determine the partition.  However,
     // we also store the ending keys for debugging.
     std::vector<BoxAndDirKey>& end_part = map.end_partition_;
-    end_part.clear();
-    for (int i = 0; i < end_data.size(); i += 6) {
-        Index3 dir(end_data[i], end_data[i + 1], end_data[i + 2]);
-        Index3 ind(end_data[i + 3], end_data[i + 4], end_data[i + 5]);
-        BoxKey boxkey(level, ind);
-        end_part.push_back(BoxAndDirKey(boxkey, dir));
-    }
+    FillKeyVector(end_part, end_data, level);
 }
 
-void ScatterKeys(level_hdkeys_t& level_hdkeys) {
+void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
 #ifndef RELEASE
     CallStackEntry entry("ScatterKeys");
 #endif
@@ -98,10 +102,10 @@ void ScatterKeys(level_hdkeys_t& level_hdkeys) {
     getMPIInfo(&mpirank, &mpisize);
 
     // Get the size of the keys on each 
-    int my_size = level_hdkeys.size();
+    int my_size = keys.size();
     std::vector<int> sizes(mpisize);
     SAFE_FUNC_EVAL( MPI_Allgather(&my_size, 1, MPI_INT, &sizes[0], 1, MPI_INT,
-				  MPI_COMM_WORLD) );
+                                  MPI_COMM_WORLD) );
 
     int my_index = -1;
     std::vector<int> empty_procs;
@@ -120,6 +124,13 @@ void ScatterKeys(level_hdkeys_t& level_hdkeys) {
        }
     }
 
+    if (mpirank == 1) {
+      for (int i = 0; i < sizes.size(); ++i) {
+        std::cout << sizes[i] << " ";
+      }
+      std::cout << std::endl;
+    }
+
     // Distribute data more or less evenly.
     if (my_size == 0) {
         // Compute who is going to send me a key
@@ -131,7 +142,11 @@ void ScatterKeys(level_hdkeys_t& level_hdkeys) {
             }
         }
         int num_to_recv = sizes[my_sender] / (count + 1);
-        // MPI_Irecv
+        std::vector<int> buf(num_to_recv * BOX_AND_DIR_KEY_MPI_SIZE);
+        MPI_Status status;
+        MPI_Recv(&buf[0], buf.size(), MPI_INT, my_sender, 0, MPI_COMM_WORLD,
+                 &status);
+        FillKeyVector(keys, buf, level);
     } else {
         // Compute to whom I am going to send data
         std::vector<int> dest_procs;
@@ -140,8 +155,34 @@ void ScatterKeys(level_hdkeys_t& level_hdkeys) {
                 dest_procs.push_back(nonempty_procs[i]);
             }
         }
-        for (int i = 0; i < dest_procs.size(); ++i) {
-            // MPI_Isend
+        int num_to_send = sizes[mpirank] / (dest_procs.size() + 1);
+        if (dest_procs.size() > 0) {
+            MPI_Request *reqs = new MPI_Request[dest_procs.size()];
+            for (int i = 0; i < dest_procs.size(); ++i) {
+              // Fill in data for this proc
+              std::vector<int> buf(num_to_send * BOX_AND_DIR_KEY_MPI_SIZE);
+              for (int j = 0; j < num_to_send; ++j) {
+                  std::vector<int> curr_key;
+                  BoxAndDirection(keys[i * num_to_send + j], curr_key);
+                  CHECK_TRUE(curr_key.size() == BOX_AND_DIR_KEY_MPI_SIZE);
+                  for (int k = 0; k < BOX_AND_DIR_KEY_MPI_SIZE; ++k) {
+                      buf[j * BOX_AND_DIR_KEY_MPI_SIZE + k] = curr_key[k];
+                  }
+              }
+              // TODO(arbenson): make this non-blocking
+              MPI_Send(&buf[0], buf.size(), MPI_INT, dest_procs[i], 0,
+                       MPI_COMM_WORLD);
+            }
+            // Remove keys from my list that are now on other processors.
+            std::vector<BoxAndDirKey> keys_to_keep;
+            for (int i = num_to_send * dest_procs.size(); i < keys.size(); ++i) {
+                keys_to_keep.push_back(keys[i]);
+            }
+            keys.clear();
+            keys.resize(keys_to_keep.size());
+            for (int i = 0; i < keys_to_keep.size(); ++i) {
+                keys[i] = keys_to_keep[i];
+            }
         }
     }
 }
@@ -154,8 +195,6 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
 #endif
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
-    ScatterKeys(level_hdkeys_out);
-    ScatterKeys(level_hdkeys_inc);
 
     // Figure out which level is the starting level.
     int local_start_level = 0;
@@ -178,6 +217,8 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
             std::cerr << "Partitioning level: " << level << std::endl;
         }
         std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys_out[level];
+        ScatterKeys(curr_level_keys, level);
+        SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
         CHECK_TRUE(curr_level_keys.size() > 0);
         bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
@@ -201,11 +242,12 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
         FormPartitionMap(level_hf_vecs[level].prtn(), start_recv_buf, end_recv_buf, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
-	// Build my ParVec for this level.
-	for (int i = 0; i < curr_level_keys.size(); ++i) {
+        // Build my ParVec for this level.
+        for (int i = 0; i < curr_level_keys.size(); ++i) {
             BoxAndDirKey key = curr_level_keys[i];
-	    BoxAndDirDat dummy;
+            BoxAndDirDat dummy;
             level_hf_vecs[level].insert(key, dummy);
-	}
+        }
     }
+
 }
