@@ -495,8 +495,8 @@ private:
      // Tools for data distribution.
      void PartitionDirections(level_hdkeys_t& level_hdkeys,
                               std::vector<LevelBoxAndDirVec>& level_hf_vecs);
-     int PartitionUnitLevel(level_hdkeys_t& level_hdkeys_out,
-                            level_hdkeys_t& level_hdkeys_inc);
+     int PartitionUnitLevel(std::vector<BoxAndDirKey>& keys_out,
+                            std::vector<BoxAndDirKey>& keys_inc);
 };
 
 //-------------------

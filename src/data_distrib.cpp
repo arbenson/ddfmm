@@ -26,6 +26,7 @@
 #include <vector>
 
 #define BOX_AND_DIR_KEY_MPI_SIZE (6)
+#define BOX_KEY_MPI_SIZE (3)
 
 namespace par {
 template <>
@@ -37,6 +38,21 @@ public:
         if (first) {
             first = false;
             MPI_Type_contiguous(sizeof(BoxAndDirKey), MPI_BYTE, &datatype);
+            MPI_Type_commit(&datatype);
+        }
+        return datatype;
+    }
+};
+
+template <>
+class Mpi_datatype<BoxKey> {
+public:
+    static MPI_Datatype value() {
+        static bool         first = true;
+        static MPI_Datatype datatype;
+        if (first) {
+            first = false;
+            MPI_Type_contiguous(sizeof(BoxKey), MPI_BYTE, &datatype);
             MPI_Type_commit(&datatype);
         }
         return datatype;
@@ -252,7 +268,46 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys,
 
 }
 
-int Wave3d::PartitionUnitLevel(level_hdkeys_t& level_hdkeys_out,
-                               level_hdkeys_t& level_hdkeys_inc) {
-    return 0;
+int Wave3d::PartitionUnitLevel(std::vector<BoxAndDirKey>& keys_out,
+			       std::vector<BoxAndDirKey>& keys_inc) {
+  int mpirank, mpisize;
+  getMPIInfo(&mpirank, &mpisize);
+  // Start by distributing the keys more or less uniformly.
+  ScatterKeys(keys_out, UnitLevel());
+  ScatterKeys(keys_inc, UnitLevel());
+
+  // Deal with just the set of boxes.
+  std::set<BoxKey> boxes_set;
+  for (int i = 0; i < keys_out.size(); ++i) {
+    boxes_set.insert(keys_out[i]._boxkey);
+  }
+  for (int i = 0; i < keys_inc.size(); ++i) {
+    boxes_set.insert(keys_inc[i]._boxkey);
+  }
+  std::vector<BoxKey> boxes(boxes_set.size());
+  boxes.insert(boxes.begin(), boxes_set.begin(), boxes_set.end());
+
+  // Sort
+  SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+  CHECK_TRUE(boxes.size() > 0);
+  bitonicSort(boxes, MPI_COMM_WORLD);
+  SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+
+  // Processor i sends starting box to processor i - 1.
+  // Processor i receives starting box to processor i + 1.
+  CHECK_TRUE(boxes.size() > 0);
+  Index3 start_box = boxes[0].second;
+  Index3 nbr_start_box(0, 0, 0);
+  MPI_Status status;
+  MPI_Sendrecv(start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT, mpirank == 0 ? mpisize - 1 : mpirank - 1, 0,
+               nbr_start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT, (mpirank + 1) % mpisize,
+               0, MPI_COMM_WORLD, &status);
+
+  // Local adjustments for ending position if they happen to overlap.
+  if (mpirank > 0) {
+    while (boxes.size() > 0 && nbr_start_box == boxes.back().second) {
+      boxes.pop_back();
+    }
+  }
+  CHECK_TRUE(boxes.size() > 0);
 }
