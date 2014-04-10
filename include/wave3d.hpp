@@ -247,19 +247,23 @@ class BoxAndDirDat {
 public:
     CpxNumVec _dirupeqnden;
     CpxNumVec _dirdnchkval;
-public:
+    std::vector<BoxAndDirKey> _interactionlist;
+
     BoxAndDirDat() {;}
     ~BoxAndDirDat() {;}
     // Directional upward equivalent density
     CpxNumVec& dirupeqnden() { return _dirupeqnden; }
     // Directional downward check value
     CpxNumVec& dirdnchkval() { return _dirdnchkval; }
+    // High-frequency interaction list
+    std::vector<BoxAndDirKey>& interactionlist() { return _interactionlist; }
 };
 
-#define BoxAndDirDat_Number 2
+#define BoxAndDirDat_Number 3
 enum {
     BoxAndDirDat_dirupeqnden = 0,
     BoxAndDirDat_dirdnchkval = 1,
+    BoxAndDirDat_interactionlist = 2,
 };
 
 typedef ParVec<BoxAndDirKey, BoxAndDirDat, BoxAndDirLevelPrtn> LevelBoxAndDirVec;
@@ -422,7 +426,8 @@ private:
 
     int HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
                      level_hdkeys_map_t& level_hdmap_inc,
-                     std::vector<LevelBoxAndDirVec>& level_hf_vecs);
+                     std::vector<LevelBoxAndDirVec>& level_hf_vecs_out,
+                     std::vector<LevelBoxAndDirVec>& level_hf_vecs_inc);
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
@@ -478,9 +483,10 @@ private:
      int HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset);
 
      // Tools for data distribution.
-     void PartitionDirections(level_hdkeys_t& level_hdkeys_out,
-                              level_hdkeys_t& level_hdkeys_inc,
+     void PartitionDirections(level_hdkeys_t& level_hdkeys,
                               std::vector<LevelBoxAndDirVec>& level_hf_vecs);
+     int PartitionUnitLevel(level_hdkeys_t& level_hdkeys_out,
+                            level_hdkeys_t& level_hdkeys_inc);
 };
 
 //-------------------

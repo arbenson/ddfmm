@@ -187,8 +187,7 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     }
 }
 
-void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
-                                 level_hdkeys_t& level_hdkeys_inc,
+void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys,
                                  std::vector<LevelBoxAndDirVec>& level_hf_vecs) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::PartitionDirections");
@@ -198,8 +197,8 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
 
     // Figure out which level is the starting level.
     int local_start_level = 0;
-    for (int i = 0; i < level_hdkeys_out.size(); ++i) {
-        if (level_hdkeys_out[i].size() > 0) {
+    for (int i = 0; i < level_hdkeys.size(); ++i) {
+        if (level_hdkeys[i].size() > 0) {
             local_start_level = i;
             break;
         }
@@ -216,7 +215,7 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
         if (mpirank == 0) {
             std::cerr << "Partitioning level: " << level << std::endl;
         }
-        std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys_out[level];
+        std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys[level];
         ScatterKeys(curr_level_keys, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
         CHECK_TRUE(curr_level_keys.size() > 0);
@@ -250,4 +249,9 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys_out,
         }
     }
 
+}
+
+int Wave3d::PartitionUnitLevel(level_hdkeys_t& level_hdkeys_out,
+                               level_hdkeys_t& level_hdkeys_inc) {
+    return 0;
 }

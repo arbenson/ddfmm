@@ -255,6 +255,7 @@ int serialize(const BoxAndDirDat& val, std::ostream& os,
     int i = 0;
     if (mask[i] == 1) serialize(val._dirupeqnden, os, mask);  i++;
     if (mask[i] == 1) serialize(val._dirdnchkval, os, mask);  i++;
+    if (mask[i] == 1) serialize(val._interactionlist, os, mask);  i++;
     CHECK_TRUE(i == BoxAndDirDat_Number);
     return 0;
 }
@@ -267,6 +268,7 @@ int deserialize(BoxAndDirDat& val, std::istream& is,
     int i = 0;
     if (mask[i] == 1) deserialize(val._dirupeqnden, is, mask);  i++;
     if (mask[i] == 1) deserialize(val._dirdnchkval, is, mask);  i++;
+    if (mask[i] == 1) deserialize(val._interactionlist, is, mask);  i++;
     CHECK_TRUE(i == BoxAndDirDat_Number);
     return 0;
 }
