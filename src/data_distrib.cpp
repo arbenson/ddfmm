@@ -276,6 +276,7 @@ int Wave3d::PartitionUnitLevel(std::vector<BoxAndDirKey>& keys_out,
   ScatterKeys(keys_out, UnitLevel());
   ScatterKeys(keys_inc, UnitLevel());
 
+  // TODO(arbenson): Use morton ordering here.
   // Deal with just the set of boxes.
   std::set<BoxKey> boxes_set;
   for (int i = 0; i < keys_out.size(); ++i) {
@@ -310,4 +311,19 @@ int Wave3d::PartitionUnitLevel(std::vector<BoxAndDirKey>& keys_out,
     }
   }
   CHECK_TRUE(boxes.size() > 0);
+
+  // Communicate starting keys for each processor.
+  std::vector<int> start_recv_buf(BOX_KEY_MPI_SIZE * mpisize);
+  SAFE_FUNC_EVAL(MPI_Allgather(start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT,
+			       &start_recv_buf[0], BOX_KEY_MPI_SIZE,
+			       MPI_INT, MPI_COMM_WORLD));
+  SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+  
+  // Communicate ending keys for each processor.
+  std::vector<int> end_recv_buf(BOX_KEY_MPI_SIZE * mpisize);
+  SAFE_FUNC_EVAL(MPI_Allgather(boxes.back().second.array(), BOX_KEY_MPI_SIZE, MPI_INT,
+			       &end_recv_buf[0], BOX_KEY_MPI_SIZE,
+			       MPI_INT, MPI_COMM_WORLD));
+  // FormPartitionMap(level_hf_vecs[level].prtn(), start_recv_buf, end_recv_buf, level);
+  SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 }
