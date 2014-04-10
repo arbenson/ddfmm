@@ -28,13 +28,11 @@ int Wave3d::HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_
   CallStackEntry entry("Wave3d::HighFreqInteractionListKeys");
 #endif
   for (int k = 0; k < target_boxes.size(); ++k) {
-      BoxKey trgkey = target_boxes[k];
-      BoxDat& trgdat = _boxvec.access(trgkey);
-      CHECK_TRUE(HasPoints(trgdat));
-      std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-      for (int i = 0; i < tmpvec.size(); ++i) {
-          BoxKey srckey = tmpvec[i];
-          reqbndset.insert(BoxAndDirKey(srckey, dir));
+      BoxAndDirKey trgkey = BoxAndDirKey(target_boxes[k], dir);
+      BoxAndDirDat& trgdat = _bndvec.access(trgkey);
+      std::vector<BoxAndDirKey>& interaction_list = trgdat.interactionlist();
+      for (int i = 0; i < interaction_list.size(); ++i) {
+          reqbndset.insert(interaction_list[i]);
       }
   }
   return 0;
