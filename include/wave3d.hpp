@@ -94,7 +94,7 @@ public:
     ~BoxDat() {;}
 
     // Size of directional interaction list
-    int DirInteractionListSize() {
+    int DirInteractionOAListSize() {
         int num = 0;
         for (std::map< Index3, std::vector<BoxKey> >::iterator mi = _fndeidxvec.begin();
              mi != _fndeidxvec.end(); ++mi) {
@@ -237,6 +237,31 @@ public:
             ++ind;
         }
         CHECK_TRUE(key <= end_partition_[ind]);
+        return ind;
+    }
+};
+
+class UnitLevelBoxPrtn {
+public:
+    UnitLevelBoxPrtn() {}
+    ~UnitLevelBoxPrtn() {}
+    std::vector<BoxKey> partition_;
+    std::vector<BoxKey> end_partition_;  // for debugging
+
+    // Return process that owns the key.
+    int owner(BoxAndDirKey& key) {
+#ifndef RELEASE
+        CallStackEntry entry("BoxAndDirLevelPrtn::owner");
+#endif
+        BoxKey boxkey = key._boxkey;
+        int ind = std::lower_bound(partition_.begin(),
+                                   partition_.end(), boxkey) - partition_.begin();
+        --ind;
+        if (ind < static_cast<int>(partition_.size()) - 1 &&
+            boxkey == partition_[ind + 1]) {
+            ++ind;
+        }
+        CHECK_TRUE(boxkey <= end_partition_[ind]);
         return ind;
     }
 };
@@ -428,7 +453,7 @@ private:
                      level_hdkeys_map_t& level_hdmap_inc,
                      std::vector<LevelBoxAndDirVec>& level_hf_vecs_out,
                      std::vector<LevelBoxAndDirVec>& level_hf_vecs_inc,
-		     level_hdkeys_t& level_hdkeys_out,
+                     level_hdkeys_t& level_hdkeys_out,
                      level_hdkeys_t& level_hdkeys_inc);
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
@@ -493,10 +518,13 @@ private:
                         std::set<BoxAndDirKey>& request_keys);
 
      // Tools for data distribution.
-     void PartitionDirections(level_hdkeys_t& level_hdkeys,
+     void PrtnDirections(level_hdkeys_t& level_hdkeys,
                               std::vector<LevelBoxAndDirVec>& level_hf_vecs);
-     int PartitionUnitLevel(std::vector<BoxAndDirKey>& keys_out,
+     int PrtnUnitLevel(std::vector<BoxAndDirKey>& keys_out,
                             std::vector<BoxAndDirKey>& keys_inc);
+
+     int FormUnitPrtnMap(UnitLevelBoxPrtn& prtn, std::vector<int>& start_data,
+                         std::vector<int>& end_data);
 };
 
 //-------------------

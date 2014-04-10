@@ -17,6 +17,7 @@
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "wave3d.hpp"
+#include "parvec.hpp"
 
 #include "external/bitonic.h"
 #include "external/dtypes.h"
@@ -93,10 +94,10 @@ void FillKeyVector(std::vector<BoxAndDirKey>& keys, std::vector<int>& data,
     }
 }
 
-void FormPartitionMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
+void FormPrtnMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
                       std::vector<int>& end_data, int level) {
 #ifndef RELEASE
-    CallStackEntry entry("FormPartitionMap");
+    CallStackEntry entry("FormPrtnMap");
 #endif
     CHECK_TRUE(start_data.size() == end_data.size());
     CHECK_TRUE(start_data.size() / getMPISize() == BOX_AND_DIR_KEY_MPI_SIZE);
@@ -203,10 +204,10 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     }
 }
 
-void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys,
+void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
                                  std::vector<LevelBoxAndDirVec>& level_hf_vecs) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::PartitionDirections");
+    CallStackEntry entry("Wave3d::PrtnDirections");
 #endif
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
@@ -229,7 +230,7 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys,
     // Sort keys amongst processes.
     for (int level = global_start_level; level < UnitLevel(); ++level) {
         if (mpirank == 0) {
-            std::cerr << "Partitioning level: " << level << std::endl;
+            std::cerr << "Prtning level: " << level << std::endl;
         }
         std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys[level];
         ScatterKeys(curr_level_keys, level);
@@ -254,7 +255,7 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys,
         SAFE_FUNC_EVAL(MPI_Allgather(&end_data[0], end_data.size(), MPI_INT,
                                      &end_recv_buf[0], end_data.size(),
                                      MPI_INT, MPI_COMM_WORLD));
-        FormPartitionMap(level_hf_vecs[level].prtn(), start_recv_buf, end_recv_buf, level);
+        FormPrtnMap(level_hf_vecs[level].prtn(), start_recv_buf, end_recv_buf, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Build my ParVec for this level.
@@ -268,62 +269,94 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys,
 
 }
 
-int Wave3d::PartitionUnitLevel(std::vector<BoxAndDirKey>& keys_out,
-			       std::vector<BoxAndDirKey>& keys_inc) {
-  int mpirank, mpisize;
-  getMPIInfo(&mpirank, &mpisize);
-  // Start by distributing the keys more or less uniformly.
-  ScatterKeys(keys_out, UnitLevel());
-  ScatterKeys(keys_inc, UnitLevel());
+int Wave3d::FormUnitPrtnMap(UnitLevelBoxPrtn& prtn,
+                            std::vector<int>& start_data,
+                            std::vector<int>& end_data) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::FormUnitPrtnMap");
+#endif
+  int mpisize = getMPISize();
+  CHECK_TRUE(start_data.size() == end_data.size());
+  CHECK_TRUE(start_data.size() / BOX_KEY_MPI_SIZE == mpisize);
+  std::vector<BoxKey>& part = prtn.partition_;
+  part.resize(0);
+  std::vector<BoxKey>& end_part = prtn.end_partition_;
+  end_part.resize(0);
+  for (int i = 0; i < start_data.size(); i += BOX_KEY_MPI_SIZE) {
+        Index3 start_ind(start_data[i], start_data[i + 1], start_data[i + 2]);
+        Index3 end_ind(end_data[i], end_data[i + 1], end_data[i + 2]);
+        part.push_back(BoxKey(UnitLevel(), start_ind));
+        end_part.push_back(BoxKey(UnitLevel(), end_ind));
+   }
+}
 
-  // TODO(arbenson): Use morton ordering here.
-  // Deal with just the set of boxes.
-  std::set<BoxKey> boxes_set;
-  for (int i = 0; i < keys_out.size(); ++i) {
-    boxes_set.insert(keys_out[i]._boxkey);
-  }
-  for (int i = 0; i < keys_inc.size(); ++i) {
-    boxes_set.insert(keys_inc[i]._boxkey);
-  }
-  std::vector<BoxKey> boxes(boxes_set.size());
-  boxes.insert(boxes.begin(), boxes_set.begin(), boxes_set.end());
 
-  // Sort
-  SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-  CHECK_TRUE(boxes.size() > 0);
-  bitonicSort(boxes, MPI_COMM_WORLD);
-  SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+int Wave3d::PrtnUnitLevel(std::vector<BoxAndDirKey>& keys_out,
+                          std::vector<BoxAndDirKey>& keys_inc) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::PrtnUnitLevel");
+#endif
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
+    // Start by distributing the keys more or less uniformly.
+    ScatterKeys(keys_out, UnitLevel());
+    ScatterKeys(keys_inc, UnitLevel());
 
-  // Processor i sends starting box to processor i - 1.
-  // Processor i receives starting box to processor i + 1.
-  CHECK_TRUE(boxes.size() > 0);
-  Index3 start_box = boxes[0].second;
-  Index3 nbr_start_box(0, 0, 0);
-  MPI_Status status;
-  MPI_Sendrecv(start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT, mpirank == 0 ? mpisize - 1 : mpirank - 1, 0,
-               nbr_start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT, (mpirank + 1) % mpisize,
-               0, MPI_COMM_WORLD, &status);
+    // TODO(arbenson): Use morton ordering here.
+    // Deal with just the set of boxes.
+    std::set<BoxKey> boxes_set;
+    for (int i = 0; i < keys_out.size(); ++i) {
+        boxes_set.insert(keys_out[i]._boxkey);
+    }
+    for (int i = 0; i < keys_inc.size(); ++i) {
+        boxes_set.insert(keys_inc[i]._boxkey);
+    }
+    std::vector<BoxKey> boxes(boxes_set.size());
+    boxes.insert(boxes.begin(), boxes_set.begin(), boxes_set.end());
+
+    // Sort
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+    CHECK_TRUE(boxes.size() > 0);
+    bitonicSort(boxes, MPI_COMM_WORLD);
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+
+    // Processor i sends starting box to processor i - 1.
+    // Processor i receives starting box to processor i + 1.
+    CHECK_TRUE(boxes.size() > 0);
+    Index3 start_box = boxes[0].second;
+    Index3 nbr_start_box(0, 0, 0);
+    MPI_Status status;
+    MPI_Sendrecv(start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT,
+                 mpirank == 0 ? mpisize - 1 : mpirank - 1, 0,
+                 nbr_start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT, (mpirank + 1) % mpisize,
+                 0, MPI_COMM_WORLD, &status);
 
   // Local adjustments for ending position if they happen to overlap.
-  if (mpirank > 0) {
-    while (boxes.size() > 0 && nbr_start_box == boxes.back().second) {
-      boxes.pop_back();
+    if (mpirank > 0) {
+        while (boxes.size() > 0 && nbr_start_box == boxes.back().second) {
+            boxes.pop_back();
+        }
     }
-  }
-  CHECK_TRUE(boxes.size() > 0);
+    CHECK_TRUE(boxes.size() > 0);
 
-  // Communicate starting keys for each processor.
-  std::vector<int> start_recv_buf(BOX_KEY_MPI_SIZE * mpisize);
-  SAFE_FUNC_EVAL(MPI_Allgather(start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT,
-			       &start_recv_buf[0], BOX_KEY_MPI_SIZE,
-			       MPI_INT, MPI_COMM_WORLD));
-  SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+    // Communicate starting keys for each processor.
+    std::vector<int> start_recv_buf(BOX_KEY_MPI_SIZE * mpisize);
+    SAFE_FUNC_EVAL(MPI_Allgather(start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT,
+                                 &start_recv_buf[0], BOX_KEY_MPI_SIZE,
+                                 MPI_INT, MPI_COMM_WORLD));
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
   
-  // Communicate ending keys for each processor.
-  std::vector<int> end_recv_buf(BOX_KEY_MPI_SIZE * mpisize);
-  SAFE_FUNC_EVAL(MPI_Allgather(boxes.back().second.array(), BOX_KEY_MPI_SIZE, MPI_INT,
-			       &end_recv_buf[0], BOX_KEY_MPI_SIZE,
-			       MPI_INT, MPI_COMM_WORLD));
-  // FormPartitionMap(level_hf_vecs[level].prtn(), start_recv_buf, end_recv_buf, level);
-  SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+    // Communicate ending keys for each processor.
+    std::vector<int> end_recv_buf(BOX_KEY_MPI_SIZE * mpisize);
+    SAFE_FUNC_EVAL(MPI_Allgather(boxes.back().second.array(), BOX_KEY_MPI_SIZE, MPI_INT,
+                                 &end_recv_buf[0], BOX_KEY_MPI_SIZE,
+                                 MPI_INT, MPI_COMM_WORLD));
+
+    // Form the parvec
+    ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn> vec;
+    FormUnitPrtnMap(vec.prtn(), start_recv_buf, end_recv_buf);
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+    // TODO(arbenson): fill in the parvec
+    
+    return 0;  
 }
