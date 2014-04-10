@@ -215,6 +215,13 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
                     level_hdkeys_inc[level].push_back(BoxAndDirKey(curkey, *si));
                     level_hdmap_inc[level][dir].push_back(curkey);
                 }
+
+                // Save memory by clearing interaction lists stored in curdat.
+		for (std::map< Index3, std::vector<BoxKey> >::iterator mi = curdat.fndeidxvec().begin();
+                     mi != curdat.fndeidxvec().end(); ++mi) {
+                    std::vector<BoxKey>& tmpvec = mi->second;
+                    std::vector<BoxKey>().swap(tmpvec);
+		}
             }
         }
     }
