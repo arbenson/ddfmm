@@ -247,6 +247,7 @@ void Wave3d::PartitionDirections(level_hdkeys_t& level_hdkeys,
             BoxAndDirDat dummy;
             level_hf_vecs[level].insert(key, dummy);
         }
+        // TODO(arbenson): communicate high frequency interaction lists
     }
 
 }

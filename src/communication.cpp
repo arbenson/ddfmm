@@ -27,15 +27,32 @@ int Wave3d::HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_
 #ifndef RELEASE
   CallStackEntry entry("Wave3d::HighFreqInteractionListKeys");
 #endif
-  for (int k = 0; k < target_boxes.size(); ++k) {
-      BoxAndDirKey trgkey = BoxAndDirKey(target_boxes[k], dir);
-      BoxAndDirDat& trgdat = _bndvec.access(trgkey);
-      std::vector<BoxAndDirKey>& interaction_list = trgdat.interactionlist();
-      for (int i = 0; i < interaction_list.size(); ++i) {
-          reqbndset.insert(interaction_list[i]);
-      }
-  }
-  return 0;
+    for (int k = 0; k < target_boxes.size(); ++k) {
+        BoxAndDirKey trgkey = BoxAndDirKey(target_boxes[k], dir);
+	BoxAndDirDat& trgdat = _bndvec.access(trgkey);
+	std::vector<BoxAndDirKey>& interaction_list = trgdat.interactionlist();
+	for (int i = 0; i < interaction_list.size(); ++i) {
+            reqbndset.insert(interaction_list[i]);
+	}
+    }
+    return 0;
+}
+
+int Wave3d::HighFreqInteractionListKeys(LevelBoxAndDirVec& vec,
+					std::vector<BoxAndDirKey>& keys_inc,
+					std::set<BoxAndDirKey>& request_keys) {
+#ifndef RELEASE
+  CallStackEntry entry("Wave3d::HighFreqInteractionListKeys");
+#endif
+    for (int i = 0; i < keys_inc.size(); ++i) {
+        BoxAndDirKey key = keys_inc[i];
+        BoxAndDirDat dat = vec.access(key);
+	std::vector<BoxAndDirKey>& interaction_list = dat.interactionlist();
+	for (int j = 0; j < interaction_list.size(); ++j) {
+	    request_keys.insert(interaction_list[j]);
+	}
+    }
+    return 0;
 }
 
 int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
@@ -150,7 +167,7 @@ int Wave3d::HighFreqL2LLevelCommPost(LevelBoxAndDirVec& curr_level_vec,
 }
 
 int Wave3d::HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset) {
-    std::vector<int> mask(BoxAndDirDat_Number,0);
+    std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirupeqnden] = 1;
     std::vector<BoxAndDirKey> reqbnd;
     reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
@@ -158,3 +175,16 @@ int Wave3d::HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset) {
     SAFE_FUNC_EVAL( _bndvec.getEnd(mask) );
     return 0;
 }
+
+int Wave3d::HighFreqM2LComm(LevelBoxAndDirVec& vec,
+                            std::set<BoxAndDirKey>& request_keys) {
+    std::vector<int> mask(BoxAndDirDat_Number, 0);
+    mask[BoxAndDirDat_dirupeqnden] = 1;
+    std::vector<BoxAndDirKey> req;
+    req.insert(req.begin(), request_keys.begin(), request_keys.end());
+    SAFE_FUNC_EVAL( vec.getBegin(req, mask) );
+    SAFE_FUNC_EVAL( vec.getEnd(mask) );
+    return 0;
+}
+
+

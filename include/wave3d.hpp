@@ -427,7 +427,9 @@ private:
     int HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
                      level_hdkeys_map_t& level_hdmap_inc,
                      std::vector<LevelBoxAndDirVec>& level_hf_vecs_out,
-                     std::vector<LevelBoxAndDirVec>& level_hf_vecs_inc);
+                     std::vector<LevelBoxAndDirVec>& level_hf_vecs_inc,
+		     level_hdkeys_t& level_hdkeys_out,
+                     level_hdkeys_t& level_hdkeys_inc);
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
@@ -464,23 +466,31 @@ private:
     int HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                     NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc);
 
+
+    // Routines for communication
+
     // Add keys to reqbndset for high-frequency M2L computations
     // For every target box, add all the keys corresponding to
     // directional boundaries in the high-frequency interaction lists
     // of the target boxes.  dir specifies the direction of the boundaries.
     int HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
-                                    std::set<BoxAndDirKey>& reqbndset);
+                                     std::set<BoxAndDirKey>& reqbndset);
 
-     // Routines for communication
-     int AllChildrenKeys(LevelBoxAndDirVec& vec,
-                         std::vector<BoxAndDirKey>& req_keys);
-     int HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
-                              LevelBoxAndDirVec& child_level_vec);
-     int HighFreqL2LLevelCommPre(LevelBoxAndDirVec& curr_level_vec,
-                                 LevelBoxAndDirVec& child_level_vec);
-     int HighFreqL2LLevelCommPost(LevelBoxAndDirVec& curr_level_vec,
-                                 LevelBoxAndDirVec& child_level_vec);
-     int HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset);
+    int HighFreqInteractionListKeys(LevelBoxAndDirVec& vec,
+                                    std::vector<BoxAndDirKey>& keys_inc,
+                                    std::set<BoxAndDirKey>& request_keys);
+
+    int AllChildrenKeys(LevelBoxAndDirVec& vec,
+                        std::vector<BoxAndDirKey>& req_keys);
+    int HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
+                             LevelBoxAndDirVec& child_level_vec);
+    int HighFreqL2LLevelCommPre(LevelBoxAndDirVec& curr_level_vec,
+                                LevelBoxAndDirVec& child_level_vec);
+    int HighFreqL2LLevelCommPost(LevelBoxAndDirVec& curr_level_vec,
+                                LevelBoxAndDirVec& child_level_vec);
+    int HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset);
+    int HighFreqM2LComm(LevelBoxAndDirVec& vec,
+                        std::set<BoxAndDirKey>& request_keys);
 
      // Tools for data distribution.
      void PartitionDirections(level_hdkeys_t& level_hdkeys,
