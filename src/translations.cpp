@@ -40,9 +40,10 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
     BoxAndDirKey bndkey(trgkey, dir);
     BoxAndDirDat& bnddat = _bndvec.access(bndkey);
     CpxNumVec& dcv = bnddat.dirdnchkval();
-    std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-    for (int i = 0; i < tmpvec.size(); ++i) {
-        BoxKey srckey = tmpvec[i];
+    std::vector<BoxAndDirKey>& interactionlist = bnddat.interactionlist();
+    for (int i = 0; i < interactionlist.size(); ++i) {
+        BoxAndDirKey key = interactionlist[i];
+        BoxKey srckey = key._boxkey;
         Point3 srcctr = BoxCenter(srckey);
         // difference vector
         Point3 diff = trgctr - srcctr;
@@ -55,18 +56,15 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
                 tmpuep(d, k) = uep(d, k) + srcctr(d);
             }
         }
-        BoxAndDirKey bndkey(srckey, dir);
-        BoxAndDirDat& bnddat = _bndvec.access(bndkey);
+        BoxAndDirDat& bnddat = _bndvec.access(key);
         CpxNumVec& ued = bnddat.dirupeqnden();
-        //mateix
         CpxNumMat Mts;
         SAFE_FUNC_EVAL( _kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
-        //allocate space if necessary
+        // allocate space if necessary
         if (dcv.m() == 0) {
             dcv.resize(Mts.m());
             setvalue(dcv, cpx(0, 0)); //LEXING: CHECK
         }
-        //SAFE_FUNC_EVAL( ued.m() != 0 );
         if (ued.m() == 0) {
             ued.resize(Mts.n());
             setvalue(ued, cpx(0, 0));
