@@ -231,12 +231,6 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
             }
         }
     }
-
-    for (int i = 0; i < level_hdkeys_inc.size(); ++i) {
-      std::vector<BoxAndDirKey>& keys_inc = level_hdkeys_inc[i];
-      std::vector<BoxAndDirKey>& keys_out = level_hdkeys_out[i];
-      std::cerr << keys_inc.size() << " " << keys_out.size() << std::endl;
-    }
     return 0;
 }
 
@@ -348,7 +342,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
             }
         }
     }
-    //call val->put
     val.putBegin(wrtpts, all);  val.putEnd(all);
     val.discard(wrtpts);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );

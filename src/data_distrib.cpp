@@ -82,7 +82,6 @@ void FillKeyVector(std::vector<BoxAndDirKey>& keys, std::vector<int>& data,
 #ifndef RELEASE
     CallStackEntry entry("FillKeyVector");
 #endif
-   keys.clear();
    // Keys are represented as 6 integers:
    //    (x, y, z) direction
    //    (x, y, z) box index
@@ -124,84 +123,52 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     SAFE_FUNC_EVAL( MPI_Allgather(&my_size, 1, MPI_INT, &sizes[0], 1, MPI_INT,
                                   MPI_COMM_WORLD) );
 
-    int my_index = -1;
-    std::vector<int> empty_procs;
-    std::vector<int> nonempty_procs;
-    for (int p = 0; p < sizes.size(); ++p) {
-       if (sizes[p] > 0) {
-           nonempty_procs.push_back(p);
-           if (p == mpirank) {
-               my_index = nonempty_procs.size() - 1;
-           }
-       } else {
-           empty_procs.push_back(p);
-           if (p == mpirank) {
-               my_index = empty_procs.size() - 1;
-           }
-       }
+    std::vector<int> counts(mpisize);
+    std::vector< std::vector<int> > recv_bufs(mpisize);
+    for (int i = 0; i < mpisize; ++i) {
+        counts[i] = sizes[i] / mpisize;
+        recv_bufs[i].resize(counts[i] * BOX_AND_DIR_KEY_MPI_SIZE);
     }
 
-    if (mpirank == 1) {
-      for (int i = 0; i < sizes.size(); ++i) {
-        std::cout << sizes[i] << " ";
+    // Create buffer to scatter
+    std::vector<int> my_data(keys.size() * BOX_AND_DIR_KEY_MPI_SIZE);
+    for (int i = 0; i < keys.size(); ++i) {
+        std::vector<int> curr_key;
+	BoxAndDirection(keys[i], curr_key);
+	CHECK_TRUE(curr_key.size() == BOX_AND_DIR_KEY_MPI_SIZE);
+	for (int k = 0; k < BOX_AND_DIR_KEY_MPI_SIZE; ++k) {
+	    my_data[i * BOX_AND_DIR_KEY_MPI_SIZE + k] = curr_key[k];
+	}
+    }
+
+    // Do the scatters
+    for (int i = 0; i < mpisize; ++i) {
+      int *sendbuf = NULL;
+      if (i == mpirank) {
+          sendbuf = &my_data[0];
       }
-      std::cout << std::endl;
+      MPI_Scatter(sendbuf, counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
+		  &(recv_bufs[i][0]), counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
+                  i, MPI_COMM_WORLD);
     }
 
-    // Distribute data more or less evenly.
-    if (my_size == 0) {
-        // Compute who is going to send me a key
-        int my_sender = nonempty_procs[my_index % nonempty_procs.size()];
-        int count = 0;
-        for (int i = 0; i < empty_procs.size(); ++i) {
-            if (nonempty_procs[i % nonempty_procs.size()] == my_sender) {
-                ++count;
-            }
-        }
-        int num_to_recv = sizes[my_sender] / (count + 1);
-        std::vector<int> buf(num_to_recv * BOX_AND_DIR_KEY_MPI_SIZE);
-        MPI_Status status;
-        MPI_Recv(&buf[0], buf.size(), MPI_INT, my_sender, 0, MPI_COMM_WORLD,
-                 &status);
-        FillKeyVector(keys, buf, level);
-    } else {
-        // Compute to whom I am going to send data
-        std::vector<int> dest_procs;
-        for (int i = 0; i < empty_procs.size(); ++i) {
-            if (nonempty_procs[i % nonempty_procs.size()] == mpirank) {
-                dest_procs.push_back(nonempty_procs[i]);
-            }
-        }
-        int num_to_send = sizes[mpirank] / (dest_procs.size() + 1);
-        if (dest_procs.size() > 0) {
-            MPI_Request *reqs = new MPI_Request[dest_procs.size()];
-            for (int i = 0; i < dest_procs.size(); ++i) {
-              // Fill in data for this proc
-              std::vector<int> buf(num_to_send * BOX_AND_DIR_KEY_MPI_SIZE);
-              for (int j = 0; j < num_to_send; ++j) {
-                  std::vector<int> curr_key;
-                  BoxAndDirection(keys[i * num_to_send + j], curr_key);
-                  CHECK_TRUE(curr_key.size() == BOX_AND_DIR_KEY_MPI_SIZE);
-                  for (int k = 0; k < BOX_AND_DIR_KEY_MPI_SIZE; ++k) {
-                      buf[j * BOX_AND_DIR_KEY_MPI_SIZE + k] = curr_key[k];
-                  }
-              }
-              // TODO(arbenson): make this non-blocking
-              MPI_Send(&buf[0], buf.size(), MPI_INT, dest_procs[i], 0,
-                       MPI_COMM_WORLD);
-            }
-            // Remove keys from my list that are now on other processors.
-            std::vector<BoxAndDirKey> keys_to_keep;
-            for (int i = num_to_send * dest_procs.size(); i < keys.size(); ++i) {
-                keys_to_keep.push_back(keys[i]);
-            }
-            keys.clear();
-            keys.resize(keys_to_keep.size());
-            for (int i = 0; i < keys_to_keep.size(); ++i) {
-                keys[i] = keys_to_keep[i];
-            }
-        }
+    // Clean up
+    my_data.clear();
+    // Get the tail end of the keys that didn't get transferred.
+    std::vector<BoxAndDirKey> keys_to_keep;
+    for (int i = mpisize * counts[mpirank]; i < keys.size(); ++i) {
+      keys_to_keep.push_back(keys[i]);
     }
+    keys.clear();
+    
+    // Insert into keys
+    for (int i = 0; i < mpisize; ++i) {
+      FillKeyVector(keys, recv_bufs[i], level);
+    }
+    for (int i = 0; i < keys_to_keep.size(); ++i) {
+      keys.push_back(keys_to_keep[i]);
+    }
+    keys_to_keep.clear();
 }
 
 void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
@@ -213,19 +180,19 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
     getMPIInfo(&mpirank, &mpisize);
 
     // Figure out which level is the starting level.
-    int local_start_level = 0;
+    int local_start_level = level_hdkeys.size();
     for (int i = 0; i < level_hdkeys.size(); ++i) {
         if (level_hdkeys[i].size() > 0) {
             local_start_level = i;
             break;
         }
     }
+    std::cout << "local start level on " << mpirank << ": " << local_start_level << std::endl;
 
     // Make sure that my starting level agrees with everyone else.
     int global_start_level = 0;
     MPI_Allreduce(&local_start_level, &global_start_level, 1, MPI_INT, MPI_MIN,
                   MPI_COMM_WORLD);
-    CHECK_TRUE(global_start_level == local_start_level);
 
     // Sort keys amongst processes.
     for (int level = global_start_level; level < UnitLevel(); ++level) {
@@ -233,9 +200,12 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
             std::cerr << "Prtning level: " << level << std::endl;
         }
         std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys[level];
+        int s1 = curr_level_keys.size();
         ScatterKeys(curr_level_keys, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-        CHECK_TRUE(curr_level_keys.size() > 0);
+        int s2 = curr_level_keys.size();
+	std::cout << "Key sizes: " << s1 << " " << s2 << std::endl;
+        CHECK_TRUE_MSG(curr_level_keys.size() > 0, "Empty keys");
         bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
@@ -244,8 +214,8 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         BoxAndDirection(curr_level_keys[0], start_data);
         std::vector<int> start_recv_buf(start_data.size() * mpisize);
         SAFE_FUNC_EVAL(MPI_Allgather((void *)&start_data[0], start_data.size(), MPI_INT,
-                                    (void *)&start_recv_buf[0], start_data.size(),
-                                    MPI_INT, MPI_COMM_WORLD));
+                                     (void *)&start_recv_buf[0], start_data.size(),
+                                     MPI_INT, MPI_COMM_WORLD));
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate ending keys for each processor.
@@ -317,13 +287,13 @@ int Wave3d::PrtnUnitLevel() {
 
     // Sort
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    CHECK_TRUE(boxes.size() > 0);
+    CHECK_TRUE_MSG(boxes.size() > 0, "empty boxes before sort");
     bitonicSort(boxes, MPI_COMM_WORLD);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
     // Processor i sends starting box to processor i - 1.
     // Processor i receives starting box to processor i + 1.
-    CHECK_TRUE(boxes.size() > 0);
+    CHECK_TRUE_MSG(boxes.size() > 0, "empty boxes after sort");
     Index3 start_box = boxes[0].second;
     Index3 nbr_start_box(0, 0, 0);
     MPI_Status status;
@@ -332,13 +302,13 @@ int Wave3d::PrtnUnitLevel() {
                  nbr_start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT, (mpirank + 1) % mpisize,
                  0, MPI_COMM_WORLD, &status);
 
-  // Local adjustments for ending position if they happen to overlap.
+    // Local adjustments for ending position if they happen to overlap.
     if (mpirank > 0) {
         while (boxes.size() > 0 && nbr_start_box == boxes.back().second) {
             boxes.pop_back();
         }
     }
-    CHECK_TRUE(boxes.size() > 0);
+    CHECK_TRUE_MSG(boxes.size() > 0, "empty boxes after adjustments");
 
     // Communicate starting keys for each processor.
     std::vector<int> start_recv_buf(BOX_KEY_MPI_SIZE * mpisize);
