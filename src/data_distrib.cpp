@@ -188,7 +188,7 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
             break;
         }
     }
-    std::cout << "local start level on " << mpirank << ": " << local_start_level << std::endl;
+    //std::cout << "local start level on " << mpirank << ": " << local_start_level << std::endl;
 
     // Make sure that my starting level agrees with everyone else.
     int global_start_level = 0;
@@ -205,7 +205,7 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         ScatterKeys(curr_level_keys, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
         int s2 = curr_level_keys.size();
-	std::cout << "Key sizes: " << s1 << " " << s2 << std::endl;
+	//std::cout << "Key sizes: " << s1 << " " << s2 << std::endl;
         CHECK_TRUE_MSG(curr_level_keys.size() > 0, "Empty keys");
         bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
@@ -283,8 +283,9 @@ int Wave3d::PrtnUnitLevel() {
     for (int i = 0; i < keys_inc.size(); ++i) {
         boxes_set.insert(keys_inc[i]._boxkey);
     }
-    std::vector<BoxKey> boxes(boxes_set.size());
+    std::vector<BoxKey> boxes;
     boxes.insert(boxes.begin(), boxes_set.begin(), boxes_set.end());
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
     // Sort
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
