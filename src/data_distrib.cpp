@@ -390,3 +390,30 @@ int Wave3d::TransferDataToLevels() {
     }
     return 0;
 }
+
+
+// This transfer moves the unit level box data to the new partition.
+int Wave3d::TransferUnitLevelData(BoxKey key, BoxDat& dat,
+                                  std::vector<int>& pids) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::TransferUnitLevelData");
+#endif
+    pids.clear();
+    int level = key.first;
+    if (level == UnitLevel()) {
+        Index3 dummy_dir(1, 1, 1);
+        BoxAndDirKey box_and_dir_key(key, dummy_dir);
+        pids.push_back(_level_prtns._unit_vec.prtn().owner(box_and_dir_key));
+    }
+    return 0;
+}
+
+int Wave3d::TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
+                                          std::vector<int>& pids) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::TransferUnitLevelData_wrapper");
+#endif
+    return (Wave3d::_self)->TransferUnitLevelData(key, dat, pids);
+}
+
+

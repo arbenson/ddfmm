@@ -535,15 +535,19 @@ private:
 
      // Tools for data distribution.
      void PrtnDirections(level_hdkeys_t& level_hdkeys,
-			 std::vector<LevelBoxAndDirVec>& level_hf_vecs);
+                         std::vector<LevelBoxAndDirVec>& level_hf_vecs);
      int PrtnUnitLevel();
      int FormUnitPrtnMap(UnitLevelBoxPrtn& prtn, std::vector<int>& start_data,
                          std::vector<int>& end_data);
 
      int TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
-				std::vector<int>& pids);
+                               std::vector<int>& pids);
      static int TransferBoxAndDirData_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
                                               std::vector<int>& pids);
+     int TransferUnitLevelData(BoxKey key, BoxDat& dat,
+                               std::vector<int>& pids);
+     static int TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
+					      std::vector<int>& pids);
      int TransferDataToLevels();
 };
 

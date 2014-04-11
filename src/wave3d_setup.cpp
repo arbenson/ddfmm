@@ -114,8 +114,8 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq) {
         }
         // We take an action if we are in the high frequency regime with points OR
         // we are in the low frequency regime with sufficient number of points and
-	// not at the max depth.
-	// If no action is taken, we are at a leaf node.
+        // not at the max depth.
+        // If no action is taken, we are at a leaf node.
         bool action = (curkey.first <= UnitLevel() && curdat.ptidxvec().size() > 0) ||
             (curdat.ptidxvec().size() > ptsmax() && curkey.first < maxlevel() - 1);
         if (action) {
@@ -140,8 +140,11 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq) {
                 BoxKey key = ChildKey(curkey, Index3(a,b,c));
 		tmpq.push( std::pair<BoxKey, BoxDat>(key, chdboxtns(a, b, c)) );
             }
-            // Destory ptidxvec to save memory.
-	    std::vector<int>().swap(curdat.ptidxvec());
+            // Destory ptidxvec to save memory.  Leave the unit level ones
+            // in for later partitioning.
+            if (curkey.first != UnitLevel()) {
+	        std::vector<int>().swap(curdat.ptidxvec());
+	    }
         } else {
             // Copy data into _extpos
             curdat.extpos().resize(3, curdat.ptidxvec().size());
@@ -155,8 +158,8 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq) {
             //LEXING: VERY IMPORTANT
             curdat.tag() |= WAVE3D_LEAF;
         }
-        // Add my self into _tree
-        _boxvec.insert(curkey, curdat); //LEXING: CHECK
+        // Add my self into the tree
+        _boxvec.insert(curkey, curdat);
     }
 }
 
@@ -261,7 +264,7 @@ int Wave3d::SetupTree() {
     }
     std::vector<BoxKey> reqbox;
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
-    std::vector<int> mask2(BoxDat_Number,0);
+    std::vector<int> mask2(BoxDat_Number, 0);
     mask2[BoxDat_extpos] = 1;
     SAFE_FUNC_EVAL( _boxvec.getBegin(reqbox, mask2) );
     SAFE_FUNC_EVAL( _boxvec.getEnd(mask2) );
@@ -535,7 +538,7 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, std::vector<int>& pids) {
     } else {
         std::set<int> idset;
         Point3 ctr = BoxCenter(boxkey);
-	// LEXING: THIS TAKE CARES THE LOW FREQUENCY PART
+        // LEXING: THIS TAKE CARES THE LOW FREQUENCY PART
         double D = std::max(4 * W * W + 4 * W, 1.0);
         int il = std::max((int)floor((ctr(0) + _K / 2 - D) / widC), 0);
         int iu = std::min((int)ceil( (ctr(0) + _K / 2 + D) / widC), numC);

@@ -305,10 +305,17 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
                    _level_prtns._hf_vecs_inc);
     PrtnUnitLevel();
 
-    std::vector<int> mask(BoxAndDirDat_Number, 0);
-    mask[BoxAndDirDat_interactionlist] = 1;
-    SAFE_FUNC_EVAL(_bndvec.getBegin(&Wave3d::TransferBoxAndDirData_wrapper, mask));
-    SAFE_FUNC_EVAL(_bndvec.getEnd(mask));
+    // Gather box data at the unit level for the partitioning of the trees.
+    std::vector<int> mask1(BoxDat_Number, 0);
+    mask1[BoxDat_tag] = 1;
+    mask1[BoxDat_ptidxvec] = 1;
+    SAFE_FUNC_EVAL(_boxvec.getBegin(&Wave3d::TransferUnitLevelData_wrapper, mask1));
+    SAFE_FUNC_EVAL(_boxvec.getEnd(mask1));
+
+    std::vector<int> mask2(BoxAndDirDat_Number, 0);
+    mask2[BoxAndDirDat_interactionlist] = 1;
+    SAFE_FUNC_EVAL(_bndvec.getBegin(&Wave3d::TransferBoxAndDirData_wrapper, mask2));
+    SAFE_FUNC_EVAL(_bndvec.getEnd(mask2));
     TransferDataToLevels();
 
     // Main work of the algorithm
