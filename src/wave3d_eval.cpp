@@ -319,8 +319,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     mask[BoxAndDirDat_interactionlist] = 1;
     SAFE_FUNC_EVAL(_bndvec.getBegin(&Wave3d::TransferBoxAndDirData_wrapper, mask));
     SAFE_FUNC_EVAL(_bndvec.getEnd(mask));
-    // Now, put the data into our level-by-level partitions
-    //    for (std::map_bndvec.lclmap().begin()
+    TransferDataToLevels();
 
     // Main work of the algorithm
     std::set<BoxKey> reqboxset;
