@@ -291,11 +291,13 @@ int Wave3d::FormUnitPrtnMap(UnitLevelBoxPrtn& prtn,
 }
 
 
-int Wave3d::PrtnUnitLevel(std::vector<BoxAndDirKey>& keys_out,
-                          std::vector<BoxAndDirKey>& keys_inc) {
+int Wave3d::PrtnUnitLevel() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::PrtnUnitLevel");
 #endif
+    std::vector<BoxAndDirKey>& keys_out = _level_prtns._hdkeys_out[UnitLevel()];
+    std::vector<BoxAndDirKey>& keys_inc = _level_prtns._hdkeys_inc[UnitLevel()];
+
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
     // Start by distributing the keys more or less uniformly.
@@ -353,10 +355,25 @@ int Wave3d::PrtnUnitLevel(std::vector<BoxAndDirKey>& keys_out,
                                  MPI_INT, MPI_COMM_WORLD));
 
     // Form the parvec
-    ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn> vec;
-    FormUnitPrtnMap(vec.prtn(), start_recv_buf, end_recv_buf);
+    FormUnitPrtnMap(_level_prtns._unit_vec.prtn(), start_recv_buf, end_recv_buf);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+
     // TODO(arbenson): fill in the parvec
-    
     return 0;  
 }
+
+#if 0
+int Wave3d::TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat, std::vector<int>& pids) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::TransferBoxAndDirData");
+#endif
+    pids.clear();
+    int level = key._boxkey.first;
+    if (level == UnitLevel()) {
+        pids.push_back(_unitvec.prtn().owner(key));
+    } else {
+        LevelBoxAndDirVec& vec = _high_freq_vecs_inc[level];
+    }
+    return 0;
+}
+#endif

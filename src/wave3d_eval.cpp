@@ -63,11 +63,7 @@ int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
 }
 
 int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
-                         level_hdkeys_map_t& level_hdmap_inc,
-                         std::vector<LevelBoxAndDirVec>& level_hf_vecs_out,
-                         std::vector<LevelBoxAndDirVec>& level_hf_vecs_inc,
-                         level_hdkeys_t& level_hdkeys_out,
-                         level_hdkeys_t& level_hdkeys_inc) {
+                         level_hdkeys_map_t& level_hdmap_inc) {
 # ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
 # endif
@@ -90,8 +86,7 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
         // We assume that boxes on the unit level are partitioned by process,
         // so we do not need to do any communication for that level.
         if (level < UnitLevel()) {
-            HighFreqM2MLevelComm(level_hf_vecs_out[level],
-                                 level_hf_vecs_out[level + 1]);
+            HighFreqM2MLevelComm(level);
         }
 
         for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_out.begin();
@@ -117,15 +112,13 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
     PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
     // Improved parallelism M2L communication
-    for (int level = 0; level < level_hdkeys_inc.size(); ++level) {
+    for (int level = 0; level < _level_prtns._hdkeys_inc.size(); ++level) {
         if (level == UnitLevel()) {
             // TODO(arbenson): handle unit level case
         } else {
             std::set<BoxAndDirKey> request_keys;
-            HighFreqInteractionListKeys(level_hf_vecs_inc[level],
-                                        level_hdkeys_inc[level],
-                                        request_keys);
-            HighFreqM2LComm(level_hf_vecs_out[level], request_keys);
+            HighFreqInteractionListKeys(level, request_keys);
+            HighFreqM2LComm(level, request_keys);
             SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
         }
     }
@@ -148,7 +141,7 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
         // We assume that boxes on the unit level are partitioned by process,
         // so we do not need to do any communication for that level.
         if (level < UnitLevel()) {
-            HighFreqL2LLevelCommPre(level_hf_vecs_out[level], level_hf_vecs_out[level + 1]);
+            HighFreqL2LLevelCommPre(level);
         }
 
         for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
@@ -164,7 +157,7 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
         // We assume that boxes on the unit level are partitioned by process,
         // so we do not need to do any communication for that level.
         if (level < UnitLevel()) {
-            HighFreqL2LLevelCommPost(level_hf_vecs_inc[level], level_hf_vecs_inc[level + 1]);
+            HighFreqL2LLevelCommPost(level);
         }
 
         // TODO(arbenson): remove data from parvec to save memory
@@ -176,12 +169,13 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
 }
 
 int Wave3d::ConstructMaps(ldmap_t& ldmap,
-                          level_hdkeys_t& level_hdkeys_out,
-                          level_hdkeys_t& level_hdkeys_inc,
                           level_hdkeys_map_t& level_hdmap_out,
                           level_hdkeys_map_t& level_hdmap_inc) {
     int mpirank = getMPIRank();
     double eps = 1e-12;
+    level_hdkeys_t& level_hdkeys_out = _level_prtns._hdkeys_out;
+    level_hdkeys_t& level_hdkeys_inc = _level_prtns._hdkeys_inc;
+
     // construct maps, low frequency level by level, high frequency dir by dir
     // 
     // ldmap  maps box widths to a list of BoxKeys which correspond
@@ -310,34 +304,29 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     // Setup of low and high frequency maps
     ldmap_t ldmap;
     int max_level = 10;
-    level_hdkeys_t level_hdkeys_out(max_level);
-    level_hdkeys_t level_hdkeys_inc(max_level);
+    _level_prtns.init(max_level);
     level_hdkeys_map_t level_hdmap_out(max_level);
     level_hdkeys_map_t level_hdmap_inc(max_level);
-    ConstructMaps(ldmap, level_hdkeys_out, level_hdkeys_inc,
-                  level_hdmap_out, level_hdmap_inc);
+    ConstructMaps(ldmap, level_hdmap_out, level_hdmap_inc);
 
-    std::vector<LevelBoxAndDirVec> level_hf_vecs_out(max_level);
-    PrtnDirections(level_hdkeys_out, level_hf_vecs_out);
-    std::vector<LevelBoxAndDirVec> level_hf_vecs_inc(max_level);
-    PrtnDirections(level_hdkeys_inc, level_hf_vecs_inc);
-    PrtnUnitLevel(level_hdkeys_out[UnitLevel()],
-                       level_hdkeys_inc[UnitLevel()]);
+    PrtnDirections(_level_prtns._hdkeys_out,
+                   _level_prtns._hf_vecs_out);
+    PrtnDirections(_level_prtns._hdkeys_inc,
+                   _level_prtns._hf_vecs_inc);
+    PrtnUnitLevel();
 
     // Main work of the algorithm
     std::set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    HighFreqPass(level_hdmap_out, level_hdmap_inc,
-                 level_hf_vecs_out, level_hf_vecs_inc,
-                 level_hdkeys_out, level_hdkeys_inc);
+    HighFreqPass(level_hdmap_out, level_hdmap_inc);
     LowFreqDownwardComm(reqboxset);
     LowFreqDownwardPass(ldmap);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
     //set val from extval
     std::vector<int> wrtpts;
-    for(std::map<int,Point3>::iterator mi = pos.lclmap().begin();
+    for(std::map<int, Point3>::iterator mi = pos.lclmap().begin();
         mi != pos.lclmap().end(); ++mi) {
         if (pos.prtn().owner(mi->first) != mpirank) {
             wrtpts.push_back(mi->first);

@@ -266,6 +266,7 @@ public:
     }
 };
 
+
 //---------------------------------------------------------------------------
 // Boundary data
 class BoxAndDirDat {
@@ -291,8 +292,6 @@ enum {
     BoxAndDirDat_interactionlist = 2,
 };
 
-typedef ParVec<BoxAndDirKey, BoxAndDirDat, BoxAndDirLevelPrtn> LevelBoxAndDirVec;
-
 class BoxAndDirPrtn{
 public:
     IntNumTns _ownerinfo;
@@ -312,12 +311,37 @@ public:
     }
 };
 
-//---------------------------------------------------------------------------
+typedef ParVec<BoxAndDirKey, BoxAndDirDat, BoxAndDirLevelPrtn> LevelBoxAndDirVec;
 typedef std::pair< std::vector<BoxKey>, std::vector<BoxKey> > box_lists_t;
 typedef std::map< double, std::vector<BoxKey> > ldmap_t;
 typedef std::vector< std::vector<BoxAndDirKey> > level_hdkeys_t;
 typedef std::vector< std::map<Index3, std::vector<BoxKey> > > level_hdkeys_map_t;
 
+//---------------------------------------------------------------------------
+// Handler of all partitions
+class LevelPartitions {
+public:
+  LevelPartitions() {;}
+  ~LevelPartitions() {;}
+
+  void init(int max_level) {
+    _hf_vecs_out.resize(max_level);
+    _hf_vecs_inc.resize(max_level);
+    _hdkeys_out.resize(max_level);
+    _hdkeys_inc.resize(max_level);
+  }
+  
+  std::vector<LevelBoxAndDirVec> _hf_vecs_out;  // outgoing partition for M2M
+  std::vector<LevelBoxAndDirVec> _hf_vecs_inc;  // outgoing partition for M2L + L2L
+
+  ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn> _unit_vec;
+
+  level_hdkeys_t _hdkeys_out;  // which keys I am responsible for
+  level_hdkeys_t _hdkeys_inc;  // which keys I am responsible for
+};
+
+
+//---------------------------------------------------------------------------
 class Wave3d: public ComObject {
 public:
     //-----------------------
@@ -370,6 +394,8 @@ public:
     }
 
 private:
+    LevelPartitions _level_prtns;
+
     double width() { return _K; }
     //access information from BoxKey
     Point3 BoxCenter(BoxKey& curkey);
@@ -450,19 +476,13 @@ private:
     int LowFreqDownwardPass(ldmap_t& ldmap);
 
     int HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
-                     level_hdkeys_map_t& level_hdmap_inc,
-                     std::vector<LevelBoxAndDirVec>& level_hf_vecs_out,
-                     std::vector<LevelBoxAndDirVec>& level_hf_vecs_inc,
-                     level_hdkeys_t& level_hdkeys_out,
-                     level_hdkeys_t& level_hdkeys_inc);
+                     level_hdkeys_map_t& level_hdmap_inc);
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
                          std::vector<BoxKey>& srcvec);
 
     int ConstructMaps(ldmap_t& ldmap,
-                      level_hdkeys_t& level_hdkeys_out,
-                      level_hdkeys_t& level_hdkeys_inc,
                       level_hdkeys_map_t& level_hdmap_out,
                       level_hdkeys_map_t& level_hdmap_inc);
     int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
@@ -501,28 +521,22 @@ private:
     int HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
                                      std::set<BoxAndDirKey>& reqbndset);
 
-    int HighFreqInteractionListKeys(LevelBoxAndDirVec& vec,
-                                    std::vector<BoxAndDirKey>& keys_inc,
+    int HighFreqInteractionListKeys(int level,
                                     std::set<BoxAndDirKey>& request_keys);
 
     int AllChildrenKeys(LevelBoxAndDirVec& vec,
                         std::vector<BoxAndDirKey>& req_keys);
-    int HighFreqM2MLevelComm(LevelBoxAndDirVec& curr_level_vec,
-                             LevelBoxAndDirVec& child_level_vec);
-    int HighFreqL2LLevelCommPre(LevelBoxAndDirVec& curr_level_vec,
-                                LevelBoxAndDirVec& child_level_vec);
-    int HighFreqL2LLevelCommPost(LevelBoxAndDirVec& curr_level_vec,
-                                LevelBoxAndDirVec& child_level_vec);
+    int HighFreqM2MLevelComm(int level);
+    int HighFreqL2LLevelCommPre(int level);
+    int HighFreqL2LLevelCommPost(int level);
     int HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset);
-    int HighFreqM2LComm(LevelBoxAndDirVec& vec,
+    int HighFreqM2LComm(int level,
                         std::set<BoxAndDirKey>& request_keys);
 
      // Tools for data distribution.
      void PrtnDirections(level_hdkeys_t& level_hdkeys,
-                              std::vector<LevelBoxAndDirVec>& level_hf_vecs);
-     int PrtnUnitLevel(std::vector<BoxAndDirKey>& keys_out,
-                            std::vector<BoxAndDirKey>& keys_inc);
-
+			 std::vector<LevelBoxAndDirVec>& level_hf_vecs);
+     int PrtnUnitLevel();
      int FormUnitPrtnMap(UnitLevelBoxPrtn& prtn, std::vector<int>& start_data,
                          std::vector<int>& end_data);
 };
