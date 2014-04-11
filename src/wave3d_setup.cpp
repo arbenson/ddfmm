@@ -424,7 +424,7 @@ int Wave3d::SetupTreeHighFreqLists(BoxKey curkey, BoxDat& curdat) {
     double D = W * W + W; // Far field distance
     double threshold = D - eps;
     if (IsCellLevelBox(curkey)) {
-        //LEXING: CHECK THE FOLLOWING
+        // LEXING: CHECK THE FOLLOWING
         for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
              IsCellLevelBox(mi->first); mi++) {
             BoxKey othkey = mi->first;
@@ -524,29 +524,30 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, std::vector<int>& pids) {
 #endif
     //for each ent, get all the pids that might need it
     int numC = _geomprtn.m();
-    double widC = _K/numC;
+    double widC = _K / numC;
     double W = BoxWidth(boxkey);
     if (IsCellLevelBox(boxkey)) {
-        //LEXING: CELL LEVEL BOXES ARE NEEDED FOR ALL CPUS
+        // LEXING: CELL LEVEL BOXES ARE NEEDED FOR ALL CPUS
         pids.clear();
-        for (int i = 0; i < getMPISize(); i++) {
+        for (int i = 0; i < getMPISize(); ++i) {
             pids.push_back(i);
         }
     } else {
         std::set<int> idset;
         Point3 ctr = BoxCenter(boxkey);
-        double D = std::max(4 * W * W + 4 * W, 1.0); //LEXING: THIS TAKE CARES THE LOW FREQUENCY PART
-        int il = std::max((int)floor((ctr(0)+_K/2-D)/widC),0);
-        int iu = std::min((int)ceil( (ctr(0)+_K/2+D)/widC),numC);
-        int jl = std::max((int)floor((ctr(1)+_K/2-D)/widC),0);
-        int ju = std::min((int)ceil( (ctr(1)+_K/2+D)/widC),numC);
-        int kl = std::max((int)floor((ctr(2)+_K/2-D)/widC),0);
-        int ku = std::min((int)ceil( (ctr(2)+_K/2+D)/widC),numC);
+	// LEXING: THIS TAKE CARES THE LOW FREQUENCY PART
+        double D = std::max(4 * W * W + 4 * W, 1.0);
+        int il = std::max((int)floor((ctr(0) + _K / 2 - D) / widC), 0);
+        int iu = std::min((int)ceil( (ctr(0) + _K / 2 + D) / widC), numC);
+        int jl = std::max((int)floor((ctr(1) + _K / 2 - D) / widC), 0);
+        int ju = std::min((int)ceil( (ctr(1) + _K / 2 + D) / widC), numC);
+        int kl = std::max((int)floor((ctr(2) + _K / 2 - D) / widC), 0);
+        int ku = std::min((int)ceil( (ctr(2) + _K / 2 + D) / widC), numC);
         //LEXING: IMPROVE THIS
-        for (int i = il; i < iu; i++) {
-            for (int j = jl; j < ju; j++) {
-                for (int k = kl; k < ku; k++) {
-                    idset.insert( _geomprtn(i,j,k) );
+        for (int i = il; i < iu; ++i) {
+            for (int j = jl; j < ju; ++j) {
+                for (int k = kl; k < ku; ++k) {
+                    idset.insert( _geomprtn(i, j, k) );
                 }
             }
         }
