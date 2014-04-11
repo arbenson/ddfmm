@@ -143,13 +143,14 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
 
     // Do the scatters
     for (int i = 0; i < mpisize; ++i) {
-      int *sendbuf = NULL;
-      if (i == mpirank) {
-          sendbuf = &my_data[0];
-      }
-      MPI_Scatter(sendbuf, counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
-		  &(recv_bufs[i][0]), counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
-                  i, MPI_COMM_WORLD);
+        int *sendbuf = NULL;
+	if (i == mpirank) {
+            sendbuf = &my_data[0];
+	}
+	// TODO (arbenson): make this asynchronous        
+	MPI_Scatter(sendbuf, counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
+	            &(recv_bufs[i][0]), counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
+                    i, MPI_COMM_WORLD);
     }
 
     // Clean up
@@ -157,16 +158,16 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     // Get the tail end of the keys that didn't get transferred.
     std::vector<BoxAndDirKey> keys_to_keep;
     for (int i = mpisize * counts[mpirank]; i < keys.size(); ++i) {
-      keys_to_keep.push_back(keys[i]);
+        keys_to_keep.push_back(keys[i]);
     }
     keys.clear();
     
     // Insert into keys
     for (int i = 0; i < mpisize; ++i) {
-      FillKeyVector(keys, recv_bufs[i], level);
+        FillKeyVector(keys, recv_bufs[i], level);
     }
     for (int i = 0; i < keys_to_keep.size(); ++i) {
-      keys.push_back(keys_to_keep[i]);
+        keys.push_back(keys_to_keep[i]);
     }
     keys_to_keep.clear();
 }
