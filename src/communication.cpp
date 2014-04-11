@@ -29,29 +29,42 @@ int Wave3d::HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_
 #endif
     for (int k = 0; k < target_boxes.size(); ++k) {
         BoxAndDirKey trgkey = BoxAndDirKey(target_boxes[k], dir);
-	BoxAndDirDat& trgdat = _bndvec.access(trgkey);
-	std::vector<BoxAndDirKey>& interaction_list = trgdat.interactionlist();
-	for (int i = 0; i < interaction_list.size(); ++i) {
+        BoxAndDirDat& trgdat = _bndvec.access(trgkey);
+        std::vector<BoxAndDirKey>& interaction_list = trgdat.interactionlist();
+        for (int i = 0; i < interaction_list.size(); ++i) {
             reqbndset.insert(interaction_list[i]);
-	}
+        }
     }
     return 0;
 }
 
 int Wave3d::HighFreqInteractionListKeys(int level,
-					std::set<BoxAndDirKey>& request_keys) {
+                                        std::set<BoxAndDirKey>& request_keys) {
 #ifndef RELEASE
   CallStackEntry entry("Wave3d::HighFreqInteractionListKeys");
 #endif
-    LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
-    std::vector<BoxAndDirKey>& keys_inc = _level_prtns._hdkeys_inc[level];
-    for (int i = 0; i < keys_inc.size(); ++i) {
-        BoxAndDirKey key = keys_inc[i];
-        BoxAndDirDat dat = vec.access(key);
-	std::vector<BoxAndDirKey>& interaction_list = dat.interactionlist();
-	for (int j = 0; j < interaction_list.size(); ++j) {
-	    request_keys.insert(interaction_list[j]);
-	}
+    if (level == UnitLevel()) {
+        // Loop over all boxes.  Only incoming computations have a non-empty
+        // interaction list.
+        std::map<BoxAndDirKey, BoxAndDirDat>& lclmap = _level_prtns._unit_vec.lclmap();
+        for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = lclmap.begin();
+             mi != lclmap.end(); ++mi) {
+            std::vector<BoxAndDirKey>& interaction_list = mi->second.interactionlist();
+            for (int j = 0; j < interaction_list.size(); ++j) {
+                request_keys.insert(interaction_list[j]);
+            }
+        }
+    } else {
+        LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
+        std::vector<BoxAndDirKey>& keys_inc = _level_prtns._hdkeys_inc[level];
+        for (int i = 0; i < keys_inc.size(); ++i) {
+            BoxAndDirKey key = keys_inc[i];
+            BoxAndDirDat dat = vec.access(key);
+            std::vector<BoxAndDirKey>& interaction_list = dat.interactionlist();
+            for (int j = 0; j < interaction_list.size(); ++j) {
+                request_keys.insert(interaction_list[j]);
+            }
+        }
     }
     return 0;
 }
@@ -106,18 +119,18 @@ int Wave3d::AllChildrenKeys(LevelBoxAndDirVec& vec,
         mi != vec.lclmap().begin(); ++mi) {
         BoxAndDirKey key = mi->first;
         if (vec.prtn().owner(key) == mpirank) {
-	    Index3 dir = key._dir;
-	    BoxKey boxkey = key._boxkey;
-	    Index3 pdir = ParentDir(dir);
-	    for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-	        int a = CHILD_IND1(ind);
-		int b = CHILD_IND2(ind);
-		int c = CHILD_IND3(ind);             
-		BoxKey child_boxkey = ChildKey(boxkey, Index3(a, b, c));
-		// We need the child key.
-		req_keys.push_back(BoxAndDirKey(child_boxkey, pdir));
-	    }
-	}
+            Index3 dir = key._dir;
+            BoxKey boxkey = key._boxkey;
+            Index3 pdir = ParentDir(dir);
+            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
+                int a = CHILD_IND1(ind);
+                int b = CHILD_IND2(ind);
+                int c = CHILD_IND3(ind);             
+                BoxKey child_boxkey = ChildKey(boxkey, Index3(a, b, c));
+                // We need the child key.
+                req_keys.push_back(BoxAndDirKey(child_boxkey, pdir));
+            }
+        }
     }
     return 0;
 }
