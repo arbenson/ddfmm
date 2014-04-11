@@ -539,6 +539,11 @@ private:
      int PrtnUnitLevel();
      int FormUnitPrtnMap(UnitLevelBoxPrtn& prtn, std::vector<int>& start_data,
                          std::vector<int>& end_data);
+
+     int TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
+				std::vector<int>& pids);
+     static int TransferBoxAndDirData_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
+                                              std::vector<int>& pids);
 };
 
 //-------------------

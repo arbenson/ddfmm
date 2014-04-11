@@ -362,18 +362,25 @@ int Wave3d::PrtnUnitLevel() {
     return 0;  
 }
 
-#if 0
-int Wave3d::TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat, std::vector<int>& pids) {
+int Wave3d::TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
+                                  std::vector<int>& pids) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::TransferBoxAndDirData");
 #endif
     pids.clear();
     int level = key._boxkey.first;
     if (level == UnitLevel()) {
-        pids.push_back(_unitvec.prtn().owner(key));
+        pids.push_back(_level_prtns._unit_vec.prtn().owner(key));
     } else {
-        LevelBoxAndDirVec& vec = _high_freq_vecs_inc[level];
+        LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
     }
     return 0;
 }
+
+int Wave3d::TransferBoxAndDirData_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
+                                          std::vector<int>& pids) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::TransferBoxAndDirData_wrapper");
 #endif
+    return (Wave3d::_self)->TransferBoxAndDirData(key, dat, pids);
+}
