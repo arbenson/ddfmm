@@ -544,6 +544,7 @@ private:
 				std::vector<int>& pids);
      static int TransferBoxAndDirData_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
                                               std::vector<int>& pids);
+     int TransferDataToLevels();
 };
 
 //-------------------
