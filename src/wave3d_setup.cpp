@@ -81,7 +81,7 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     SAFE_FUNC_EVAL(SetupTree());
     //plans
     int _P = P();
-    _denfft.resize(2*_P, 2*_P, 2*_P);
+    _denfft.resize(2 * _P, 2 * _P, 2 * _P);
     _fplan = fftw_plan_dft_3d(2 * _P, 2 * _P, 2 * _P, (fftw_complex*) (_denfft.data()),
                               (fftw_complex*)(_denfft.data()), FFTW_FORWARD,
                               FFTW_MEASURE);
@@ -94,7 +94,7 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
                               (fftw_complex*) (_valfft.data()), FFTW_BACKWARD,
                                                FFTW_ESTIMATE); 
     CHECK_TRUE(_bplan != NULL);
-    setvalue(_valfft,cpx(0,0));
+    setvalue(_valfft,cpx(0, 0));
     return 0;
 }
 
@@ -214,28 +214,7 @@ int Wave3d::SetupTree() {
 
     // Construct the tree.
     RecursiveBoxInsert(tmpq);
- 
-    // call get setup_Q2
-    std::vector<int> mask1(BoxDat_Number,0);
-    mask1[BoxDat_tag] = 1;
-    SAFE_FUNC_EVAL( _boxvec.getBegin( &(Wave3d::setup_Q2_wrapper), mask1 ) );
-    SAFE_FUNC_EVAL( _boxvec.getEnd( mask1 ) );
-    // Compute lists, low list and high list
-    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); mi++) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
-        // For all of my boxes with points, setup the call list.
-        if (OwnBox(curkey, mpirank) && HasPoints(curdat)) {
-            if (BoxWidth(curkey) < 1 - eps) { // strictly < 1
-                // Low frequency regime
-                SAFE_FUNC_EVAL(SetupTreeLowFreqLists(curkey, curdat));
-            } else {
-                // High frequency regime
-                SAFE_FUNC_EVAL(SetupTreeHighFreqLists(curkey, curdat));
-            }
-        }
-    }
+    SetupCallLists();
 
     // Delete endeidxvec since it was only used to build the interaction lists
     // in the high-frequency regime.
@@ -249,80 +228,9 @@ int Wave3d::SetupTree() {
         }
     }
 
-    // 3. get extpos
-    std::set<BoxKey> reqboxset;
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
-            reqboxset.insert(curdat.undeidxvec().begin(), curdat.undeidxvec().end());
-            reqboxset.insert(curdat.vndeidxvec().begin(), curdat.vndeidxvec().end());
-            reqboxset.insert(curdat.wndeidxvec().begin(), curdat.wndeidxvec().end());
-            reqboxset.insert(curdat.xndeidxvec().begin(), curdat.xndeidxvec().end());
-        }
-    }
-    std::vector<BoxKey> reqbox;
-    reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
-    std::vector<int> mask2(BoxDat_Number, 0);
-    mask2[BoxDat_extpos] = 1;
-    SAFE_FUNC_EVAL( _boxvec.getBegin(reqbox, mask2) );
-    SAFE_FUNC_EVAL( _boxvec.getEnd(mask2) );
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
-           for (std::vector<BoxKey>::iterator vi = curdat.vndeidxvec().begin();
-                vi != curdat.vndeidxvec().end(); ++vi) {
-                BoxKey neikey = (*vi);
-                BoxDat& neidat = _boxvec.access(neikey);
-                neidat.fftnum() ++;
-            }
-        }
-    }
+    GetExtPos();
+    GetHighFreqDirs();
 
-    // 4. dirupeqndenvec, dirdnchkvalvec
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); mi++) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
-        double W = BoxWidth(curkey);
-        if (OwnBox(curkey, mpirank) && W > 1 - eps && HasPoints(curdat)) {
-            if (!IsCellLevelBox(curkey)) {
-                BoxKey parkey = ParentKey(curkey);
-                BoxDat& pardat = BoxData(parkey);
-                for (std::set<Index3>::iterator si = pardat.outdirset().begin();
-                    si != pardat.outdirset().end(); si++) {
-                    Index3 nowdir = ParentDir(*si);
-                    curdat.outdirset().insert(nowdir);
-                }
-                for (std::set<Index3>::iterator si = pardat.incdirset().begin();
-                    si != pardat.incdirset().end(); si++) {
-                    Index3 nowdir = ParentDir(*si);
-                    curdat.incdirset().insert(nowdir);
-                }
-            }
-            Point3 curctr = BoxCenter(curkey);
-            for (std::map< Index3, std::vector<BoxKey> >::iterator mi = curdat.fndeidxvec().begin();
-                mi != curdat.fndeidxvec().end(); mi++) {
-                std::vector<BoxKey>& tmplist = mi->second;
-                for (int k = 0; k < tmplist.size(); k++) {
-                    BoxKey othkey = tmplist[k];
-                    Point3 othctr = BoxCenter(othkey);
-                    Point3 tmp = othctr - curctr;
-                    tmp /= tmp.l2();
-                    Index3 dir = nml2dir(tmp, W);
-                    curdat.outdirset().insert(dir);
-
-                    tmp = curctr - othctr;
-                    tmp /= tmp.l2();
-                    dir = nml2dir(tmp, W);
-                    curdat.incdirset().insert(dir);
-                }
-            }
-        }
-    }
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
@@ -559,6 +467,128 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, std::vector<int>& pids) {
     }
     return 0;
 }
+
+
+int Wave3d::SetupCallLists() {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::SetupCallLists");
+#endif
+    int mpirank = getMPIRank();
+    double eps = 1e-12;
+
+    // call get setup_Q2 to get the right boxes
+    std::vector<int> mask1(BoxDat_Number,0);
+    mask1[BoxDat_tag] = 1;
+    SAFE_FUNC_EVAL( _boxvec.getBegin( &(Wave3d::setup_Q2_wrapper), mask1 ) );
+    SAFE_FUNC_EVAL( _boxvec.getEnd( mask1 ) );
+    // Compute lists, low list and high list
+    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
+        mi != _boxvec.lclmap().end(); mi++) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        // For all of my boxes with points, setup the call list.
+        if (OwnBox(curkey, mpirank) && HasPoints(curdat)) {
+            if (BoxWidth(curkey) < 1 - eps) { // strictly < 1
+                // Low frequency regime
+                SAFE_FUNC_EVAL(SetupTreeLowFreqLists(curkey, curdat));
+            } else {
+                // High frequency regime
+                SAFE_FUNC_EVAL(SetupTreeHighFreqLists(curkey, curdat));
+            }
+        }
+    }
+    return 0;
+}
+
+int Wave3d::GetExtPos() {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::GetExtPos");
+#endif
+    int mpirank = getMPIRank();
+    std::set<BoxKey> reqboxset;
+    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
+        mi != _boxvec.lclmap().end(); ++mi) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
+            reqboxset.insert(curdat.undeidxvec().begin(), curdat.undeidxvec().end());
+            reqboxset.insert(curdat.vndeidxvec().begin(), curdat.vndeidxvec().end());
+            reqboxset.insert(curdat.wndeidxvec().begin(), curdat.wndeidxvec().end());
+            reqboxset.insert(curdat.xndeidxvec().begin(), curdat.xndeidxvec().end());
+        }
+    }
+    std::vector<BoxKey> reqbox;
+    reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
+    std::vector<int> mask2(BoxDat_Number, 0);
+    mask2[BoxDat_extpos] = 1;
+    SAFE_FUNC_EVAL( _boxvec.getBegin(reqbox, mask2) );
+    SAFE_FUNC_EVAL( _boxvec.getEnd(mask2) );
+    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
+        mi != _boxvec.lclmap().end(); ++mi) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
+           for (std::vector<BoxKey>::iterator vi = curdat.vndeidxvec().begin();
+                vi != curdat.vndeidxvec().end(); ++vi) {
+                BoxKey neikey = (*vi);
+                BoxDat& neidat = _boxvec.access(neikey);
+                neidat.fftnum() ++;
+            }
+        }
+    }
+    return 0;
+}
+
+int Wave3d::GetHighFreqDirs() {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::GetHighFreqDirs");
+#endif
+    int mpirank = getMPIRank();
+    double eps = 1e-12;
+
+    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
+       mi != _boxvec.lclmap().end(); mi++) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        double W = BoxWidth(curkey);
+        if (OwnBox(curkey, mpirank) && W > 1 - eps && HasPoints(curdat)) {
+            if (!IsCellLevelBox(curkey)) {
+                BoxKey parkey = ParentKey(curkey);
+                BoxDat& pardat = BoxData(parkey);
+                for (std::set<Index3>::iterator si = pardat.outdirset().begin();
+                    si != pardat.outdirset().end(); si++) {
+                    Index3 nowdir = ParentDir(*si);
+                    curdat.outdirset().insert(nowdir);
+                }
+                for (std::set<Index3>::iterator si = pardat.incdirset().begin();
+                    si != pardat.incdirset().end(); si++) {
+                    Index3 nowdir = ParentDir(*si);
+                    curdat.incdirset().insert(nowdir);
+                }
+            }
+            Point3 curctr = BoxCenter(curkey);
+            for (std::map< Index3, std::vector<BoxKey> >::iterator mi = curdat.fndeidxvec().begin();
+                mi != curdat.fndeidxvec().end(); mi++) {
+                std::vector<BoxKey>& tmplist = mi->second;
+                for (int k = 0; k < tmplist.size(); k++) {
+                    BoxKey othkey = tmplist[k];
+                    Point3 othctr = BoxCenter(othkey);
+                    Point3 tmp = othctr - curctr;
+                    tmp /= tmp.l2();
+                    Index3 dir = nml2dir(tmp, W);
+                    curdat.outdirset().insert(dir);
+
+                    tmp = curctr - othctr;
+                    tmp /= tmp.l2();
+                    dir = nml2dir(tmp, W);
+                    curdat.incdirset().insert(dir);
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 
 //---------------------------------------------------------------------
 int Wave3d::setup_Q1_wrapper(int key, Point3& dat, std::vector<int>& pids) {

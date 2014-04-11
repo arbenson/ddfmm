@@ -255,7 +255,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
 
     GatherDensities(reqpts, den);
 
-    // Compute extden using ptidxvec
+    // Compute extden on leaf nodes using ptidxvec
     for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;

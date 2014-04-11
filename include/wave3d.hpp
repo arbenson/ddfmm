@@ -335,6 +335,7 @@ public:
   std::vector<LevelBoxAndDirVec> _hf_vecs_inc;  // outgoing partition for M2L + L2L
 
   ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn> _unit_vec;
+  ParVec<BoxKey, BoxDat, BoxPrtn> _lf_boxvec;  // boxes in low frequency regime
 
   level_hdkeys_t _hdkeys_out;  // which keys I am responsible for
   level_hdkeys_t _hdkeys_inc;  // which keys I am responsible for
@@ -457,6 +458,9 @@ private:
     bool SetupTreeAdjacent(BoxKey me, BoxKey yo);
     int RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq);
     int P();
+    int SetupCallLists();
+    int GetExtPos();
+    int GetHighFreqDirs();
 
     // Functions for evaluation
 
