@@ -264,7 +264,6 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
             BoxAndDirDat dummy;
             level_hf_vecs[level].insert(key, dummy);
         }
-        // TODO(arbenson): communicate high frequency interaction lists
     }
 
 }
@@ -358,7 +357,7 @@ int Wave3d::PrtnUnitLevel() {
     FormUnitPrtnMap(_level_prtns._unit_vec.prtn(), start_recv_buf, end_recv_buf);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
-    // TODO(arbenson): fill in the parvec
+    // Note: parvec gets filled in later with call to TransferDataToLevels()
     return 0;  
 }
 
