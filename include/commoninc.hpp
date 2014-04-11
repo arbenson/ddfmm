@@ -51,6 +51,8 @@ inline int pow2(int l) { assert(l >= 0); return (1 << l); }
 
 #define SAFE_FUNC_EVAL(fun)  { int ierr = fun; if (ierr != 0) { throw new std::exception(); } }
 #define CHECK_TRUE(expr) { if((expr) == 0) { std::cerr << "wrong" << std::endl; throw new std::exception(); } }
+#define CHECK_TRUE_MSG(expr, msg) { if((expr) == 0) { std::cerr << msg << std::endl; throw new std::exception(); } }
+//#define CHECK_TRUE(expr) { if((expr) == 0) { assert(0); } }
 
 template <class T, class S>
 std::istream& operator>>(std::istream& is, std::pair<T,S>& a)
