@@ -202,13 +202,19 @@ int Wave3d::HighFreqM2LComm(int level,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqM2LComm");
 #endif
-    LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_out[level];
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirupeqnden] = 1;
     std::vector<BoxAndDirKey> req;
     req.insert(req.begin(), request_keys.begin(), request_keys.end());
-    SAFE_FUNC_EVAL( vec.getBegin(req, mask) );
-    SAFE_FUNC_EVAL( vec.getEnd(mask) );
+    if (level == UnitLevel()) {
+        ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
+        SAFE_FUNC_EVAL( vec.getBegin(req, mask) );
+        SAFE_FUNC_EVAL( vec.getEnd(mask) );
+    } else {
+        LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_out[level];
+        SAFE_FUNC_EVAL( vec.getBegin(req, mask) );
+        SAFE_FUNC_EVAL( vec.getEnd(mask) );
+    }
     return 0;
 }
 

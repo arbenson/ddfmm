@@ -115,12 +115,8 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
     for (int level = 0; level < _level_prtns._hdkeys_inc.size(); ++level) {
         std::set<BoxAndDirKey> request_keys;
         HighFreqInteractionListKeys(level, request_keys);
-        if (level == UnitLevel()) {
-            // TODO(arbenson): handle unit level case
-        } else {
-            HighFreqM2LComm(level, request_keys);
-            SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
-        }
+	HighFreqM2LComm(level, request_keys);
+        SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
     }
 
     // Communication for M2L
