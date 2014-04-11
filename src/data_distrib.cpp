@@ -362,6 +362,9 @@ int Wave3d::PrtnUnitLevel() {
     return 0;  
 }
 
+// This transfer holds two purposes:
+//    1. Pass the high-frequency interaction lists to the appropriate processors
+//    2. Get the unit-level directions (we currently only have the boxes)
 int Wave3d::TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
                                   std::vector<int>& pids) {
 #ifndef RELEASE
@@ -373,6 +376,10 @@ int Wave3d::TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
         pids.push_back(_level_prtns._unit_vec.prtn().owner(key));
     } else {
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
+        // It is an incoming direction iff the interaction list is nonempty
+        if (dat.interactionlist().size() > 0) {
+	    pids.push_back(vec.prtn().owner(key));
+	}
     }
     return 0;
 }
@@ -383,4 +390,32 @@ int Wave3d::TransferBoxAndDirData_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
     CallStackEntry entry("Wave3d::TransferBoxAndDirData_wrapper");
 #endif
     return (Wave3d::_self)->TransferBoxAndDirData(key, dat, pids);
+}
+
+int Wave3d::TransferDataToLevels() {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::TransferDataToLevels");
+#endif
+    int mpirank = getMPIRank();
+    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = _bndvec.lclmap().begin();
+       mi != _bndvec.lclmap().end(); ++mi) {
+        BoxAndDirKey key = mi->first;
+        BoxAndDirDat dat = mi->second;
+        int level = key._boxkey.first;
+        if (level == UnitLevel()) {
+            // Put unit-level directions into the appropriate vector
+            if (_level_prtns._unit_vec.prtn().owner(key) == mpirank) {
+                _level_prtns._unit_vec.lclmap()[key] = dat;
+            }
+        } else {
+            CHECK_TRUE(level < _level_prtns._hf_vecs_inc.size());
+            // Put high-frequency directions into the appropriate vector
+            LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
+	    // It is an incoming direction iff the interaction list is nonempty
+	    if (dat.interactionlist().size() > 0 && vec.prtn().owner(key) == mpirank) {
+	        vec.lclmap()[key] = dat;
+            }
+        }
+    }
+    return 0;
 }
