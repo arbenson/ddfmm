@@ -205,7 +205,7 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
 }
 
 void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
-                                 std::vector<LevelBoxAndDirVec>& level_hf_vecs) {
+                            std::vector<LevelBoxAndDirVec>& level_hf_vecs) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::PrtnDirections");
 #endif
