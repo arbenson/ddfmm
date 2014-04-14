@@ -306,6 +306,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     SAFE_FUNC_EVAL(_bndvec.getEnd(mask2));
     TransferDataToLevels();
 
+    // Now we have the unit level information, so we can setup our part of the tree.
+    SetupLowFreqOctree();
+
     // Main work of the algorithm
     std::set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);

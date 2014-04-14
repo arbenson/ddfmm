@@ -94,7 +94,7 @@ void FillKeyVector(std::vector<BoxAndDirKey>& keys, std::vector<int>& data,
 }
 
 void FormPrtnMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
-                      std::vector<int>& end_data, int level) {
+		 std::vector<int>& end_data, int level) {
 #ifndef RELEASE
     CallStackEntry entry("FormPrtnMap");
 #endif
@@ -188,9 +188,8 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
             break;
         }
     }
-    //std::cout << "local start level on " << mpirank << ": " << local_start_level << std::endl;
 
-    // Make sure that my starting level agrees with everyone else.
+    // Get the starting level.
     int global_start_level = 0;
     MPI_Allreduce(&local_start_level, &global_start_level, 1, MPI_INT, MPI_MIN,
                   MPI_COMM_WORLD);
