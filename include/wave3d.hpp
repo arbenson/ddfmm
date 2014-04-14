@@ -266,6 +266,37 @@ public:
     }
 };
 
+class BoxPrtn2 {
+public:
+    BoxPrtn2() {;}
+    ~BoxPrtn2() {;}
+    std::vector<BoxKey> partition_;
+    std::vector<BoxKey> end_partition_;  // for debugging
+    int unit_level_;
+
+    // Return process that owns the key.
+    int owner(BoxKey& key) {
+#ifndef RELEASE
+        CallStackEntry entry("BoxPrtn2::owner");
+#endif
+        int level = key.first;
+        Index3 idx = key.second;
+        int num_unit_boxes = pow2(unit_level_);
+        int COEF = pow2(level) / num_unit_boxes;
+        idx = idx / COEF;
+        BoxKey new_key(unit_level_, idx);
+        
+        int ind = std::lower_bound(partition_.begin(),
+                                   partition_.end(), new_key) - partition_.begin();
+        --ind;
+        if (ind < static_cast<int>(partition_.size()) - 1 &&
+            new_key == partition_[ind + 1]) {
+            ++ind;
+        }
+        return ind;
+    }
+};
+
 
 //---------------------------------------------------------------------------
 // Boundary data
@@ -359,7 +390,7 @@ public:
   std::vector<LevelBoxAndDirVec> _hf_vecs_inc;  // outgoing partition for M2L + L2L
 
   ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn> _unit_vec;
-  ParVec<BoxKey, BoxDat, BoxPrtn> _lf_boxvec;  // boxes in low frequency regime
+  ParVec<BoxKey, BoxDat, BoxPrtn2> _lf_boxvec;  // boxes in low frequency regime
 
   level_hdkeys_t _hdkeys_out;  // which keys I am responsible for
   level_hdkeys_t _hdkeys_inc;  // which keys I am responsible for
@@ -487,8 +518,7 @@ private:
     bool SetupTreeFind(BoxKey wntkey, BoxKey& reskey);
     bool SetupTreeAdjacent(BoxKey me, BoxKey yo);
     int RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
-                           ParVec<BoxKey, BoxDat, BoxPrtn>& boxvec,
-                           bool save_unit_level);
+                           bool first_pass);
     int P();
     int SetupCallLists();
     int GetExtPos();

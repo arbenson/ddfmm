@@ -326,6 +326,10 @@ int Wave3d::PrtnUnitLevel() {
 
     // Form the parvec
     FormUnitPrtnMap(_level_prtns._unit_vec.prtn(), start_recv_buf, end_recv_buf);
+    // Copy to low-frequency boxvec partition.
+    _level_prtns._lf_boxvec.prtn().partition_ = _level_prtns._unit_vec.prtn().partition_;
+    _level_prtns._lf_boxvec.prtn().end_partition_ = _level_prtns._unit_vec.prtn().end_partition_;
+    _level_prtns._lf_boxvec.prtn().unit_level_ = UnitLevel();
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
     // Note: parvec gets filled in later with call to TransferDataToLevels()

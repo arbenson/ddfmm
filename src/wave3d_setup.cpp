@@ -99,8 +99,7 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
 }
 
 int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
-			       ParVec<BoxKey, BoxDat, BoxPrtn>& boxvec,
-                               bool save_unit_level) {
+                               bool first_pass) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::RecursiveBoxInsert");
 #endif
@@ -145,7 +144,7 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
             }
             // Destory ptidxvec to save memory.  Leave the unit level ones
             // in for later partitioning.
-            if (curkey.first != UnitLevel() && save_unit_level) {
+            if (curkey.first != UnitLevel() && first_pass) {
 	        std::vector<int>().swap(curdat.ptidxvec());
 	    }
         } else {
@@ -162,7 +161,11 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
             curdat.tag() |= WAVE3D_LEAF;
         }
         // Add my self into the tree
-        boxvec.insert(curkey, curdat);
+        if (first_pass) {
+	  _boxvec.insert(curkey, curdat);
+	} else {
+	  _level_prtns._lf_boxvec.insert(curkey, curdat);
+	}
     }
 }
 
@@ -217,7 +220,7 @@ int Wave3d::SetupTree() {
     cellboxtns.resize(0, 0, 0);
 
     // Construct the tree.
-    RecursiveBoxInsert(tmpq, _boxvec, true);
+    RecursiveBoxInsert(tmpq, true);
     SetupCallLists();
 
     // Delete endeidxvec since it was only used to build the interaction lists
@@ -283,7 +286,7 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                     }
                 }
 
-                if ( reskey.first == curkey.first ) {
+                if (reskey.first == curkey.first) {
                     if (!adj) {
                         Index3 bb = reskey.second - curkey.second;
                         CHECK_TRUE( bb.linfty() <= 3 );
@@ -388,8 +391,8 @@ bool Wave3d::SetupTreeFind(BoxKey wntkey, BoxKey& trykey) {
 #endif
     trykey = wntkey;
     while(!IsCellLevelBox(trykey)) {
-        std::map<BoxKey,BoxDat>::iterator mi=_boxvec.lclmap().find(trykey);
-        if (mi!=_boxvec.lclmap().end()) {
+        std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().find(trykey);
+        if (mi != _boxvec.lclmap().end()) {
             return true; //found
         }
         trykey = ParentKey(trykey);
@@ -639,9 +642,7 @@ int Wave3d::SetupLowFreqOctree() {
     std::vector<int> all(1, 1);
     SAFE_FUNC_EVAL( pos.getBegin(&(Wave3d::DistribUnitPts_wrapper), all) );
     SAFE_FUNC_EVAL( pos.getEnd(all) );
-#if 0
-    RecursiveBoxInsert(lf_q, _level_prtns._lf_boxvec, false);
-#endif
+    RecursiveBoxInsert(lf_q, false);
     return 0;
 }
 
