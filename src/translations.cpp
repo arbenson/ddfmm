@@ -56,7 +56,8 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
                 tmpuep(d, k) = uep(d, k) + srcctr(d);
             }
         }
-        BoxAndDirDat& bnddat = _bndvec.access(key);
+        int level = srckey.first;
+        BoxAndDirDat& bnddat = _level_prtns._hf_vecs_out[level].access(bndkey);
         CpxNumVec& ued = bnddat.dirupeqnden();
         CpxNumMat Mts;
         SAFE_FUNC_EVAL( _kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
@@ -95,6 +96,7 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             int c = CHILD_IND3(ind);
             BoxKey key = ChildKey(srckey, Index3(a, b, c));
             // Do not compute unless _boxvec has the child key
+            // TODO(arbenson): use updated boxvec
             std::pair<bool, BoxDat&> data = _boxvec.contains(key);
             if (data.first) {
                 BoxDat& chddat = data.second;
@@ -114,10 +116,10 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             BoxKey chdkey = ChildKey(srckey, Index3(a, b, c));
             std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
             if (data.first) {
-                BoxDat& chddat = data.second;
-                CHECK_TRUE(HasPoints(chddat));
+	      //                BoxDat& chddat = data.second;
+	      //CHECK_TRUE(HasPoints(chddat));
                 BoxAndDirKey bndkey(chdkey, pdir);
-                BoxAndDirDat& bnddat = _bndvec.access(bndkey);
+                BoxAndDirDat& bnddat = _level_prtns._hf_vecs_out[chdkey.first].access(bndkey);
                 CpxNumVec& chdued = bnddat.dirupeqnden();
                 SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
             }
@@ -189,14 +191,8 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
             int b = CHILD_IND2(ind);
             int c = CHILD_IND3(ind);             
             BoxKey chdkey = ChildKey(trgkey, Index3(a, b, c));
-            std::pair<bool, BoxDat&> data = _boxvec.contains(chdkey);
-            // If the box was empty, it will not be stored
-            if (!data.first) {
-                continue;
-            }
-            BoxDat& chddat = data.second;
             BoxAndDirKey bndkey(chdkey, pdir);
-            BoxAndDirDat& bnddat = _bndvec.access(bndkey);
+            BoxAndDirDat& bnddat = _level_prtns._hf_vecs_inc[chdkey.first].access(bndkey);
             CpxNumVec& chddcv = bnddat.dirdnchkval();
             if (chddcv.m() == 0) {
                 chddcv.resize(de2dc(a, b, c).m());

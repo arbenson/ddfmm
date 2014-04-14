@@ -329,6 +329,30 @@ public:
     _hf_vecs_inc.resize(max_level);
     _hdkeys_out.resize(max_level);
     _hdkeys_inc.resize(max_level);
+    _level_hdmap_out.resize(max_level);
+    _level_hdmap_inc.resize(max_level);
+  }
+
+  void FormMaps() {
+    for (int i = 0; i < _hdkeys_out.size(); ++i) {
+      std::vector<BoxAndDirKey>& keys = _hdkeys_out[i];
+      std::map<Index3, std::vector<BoxKey> >& key_map = _level_hdmap_out[i];
+      for (int j = 0; j < keys.size(); ++j) {
+        Index3 dir = keys[j]._dir;
+        BoxKey boxkey = keys[j]._boxkey;
+	key_map[dir].push_back(boxkey);
+      }
+    }
+    // TODO(arbenson): abstract away these loops
+    for (int i = 0; i < _hdkeys_inc.size(); ++i) {
+      std::vector<BoxAndDirKey>& keys = _hdkeys_inc[i];
+      std::map<Index3, std::vector<BoxKey> >& key_map = _level_hdmap_inc[i];
+      for (int j = 0; j < keys.size(); ++j) {
+        Index3 dir = keys[j]._dir;
+        BoxKey boxkey = keys[j]._boxkey;
+	key_map[dir].push_back(boxkey);
+      }
+    }
   }
   
   std::vector<LevelBoxAndDirVec> _hf_vecs_out;  // outgoing partition for M2M
@@ -339,6 +363,9 @@ public:
 
   level_hdkeys_t _hdkeys_out;  // which keys I am responsible for
   level_hdkeys_t _hdkeys_inc;  // which keys I am responsible for
+
+  level_hdkeys_map_t _level_hdmap_out;
+  level_hdkeys_map_t _level_hdmap_inc;
 };
 
 
@@ -447,7 +474,7 @@ private:
     std::vector<Index3> ChildDir(Index3 dir);
     double Dir2Width(Index3 dir);
 
-    int SetupTree();
+    int SetupTree(ParVec<BoxKey, BoxDat, BoxPrtn>& boxvec, bool);
     static int setup_Q1_wrapper(int key, Point3& dat, std::vector<int>& pids);
     static int setup_Q2_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids);
     int setup_Q1(int key, Point3& dat, std::vector<int>& pids);

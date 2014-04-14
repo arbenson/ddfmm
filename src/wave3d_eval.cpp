@@ -95,33 +95,20 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
             std::vector<BoxKey>& keys_out = mi->second;
             SAFE_FUNC_EVAL( EvalUpwardHigh(W, dir, keys_out) );
         }
-        // TODO(arbenson): remove data from parvec to save memory
-    }
 
-    // Collect all keys needed for M2L
-    std::set<BoxAndDirKey> reqbndset;
-    for (int level = level_hdmap_inc.size() - 1; level >= 0; --level) {
-        double W = _K / pow2(level);
-        std::map<Index3, std::vector<BoxKey> >& level_inc = level_hdmap_inc[level];
-        for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
-            mi != level_inc.end(); ++mi) {
-            SAFE_FUNC_EVAL( HighFreqInteractionListKeys(mi->first, mi->second, reqbndset) );
-        }
+        // TODO(arbenson): remove data from parvec to save memory
     }
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
-    // Improved parallelism M2L communication
+    // Communication for M2L
+    t0 = time(0);
     for (int level = 0; level < _level_prtns._hdkeys_inc.size(); ++level) {
         std::set<BoxAndDirKey> request_keys;
         HighFreqInteractionListKeys(level, request_keys);
 	HighFreqM2LComm(level, request_keys);
         SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
     }
-
-    // Communication for M2L
-    t0 = time(0);
-    SAFE_FUNC_EVAL(HighFreqM2LComm(reqbndset));
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency communication");
 
@@ -304,6 +291,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     PrtnDirections(_level_prtns._hdkeys_inc,
                    _level_prtns._hf_vecs_inc);
     PrtnUnitLevel();
+    _level_prtns.FormMaps();
 
     // Gather box data at the unit level for the partitioning of the trees.
     std::vector<int> mask1(BoxDat_Number, 0);
@@ -322,7 +310,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     std::set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    HighFreqPass(level_hdmap_out, level_hdmap_inc);
+    HighFreqPass(_level_prtns._level_hdmap_out, _level_prtns._level_hdmap_inc);
     LowFreqDownwardComm(reqboxset);
     LowFreqDownwardPass(ldmap);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );

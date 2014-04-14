@@ -78,7 +78,7 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     tp.ownerinfo() = _geomprtn;
     _bndvec.prtn() = tp;
     //generate octree
-    SAFE_FUNC_EVAL(SetupTree());
+    SAFE_FUNC_EVAL(SetupTree(_boxvec, true));
     //plans
     int _P = P();
     _denfft.resize(2 * _P, 2 * _P, 2 * _P);
@@ -164,53 +164,60 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq) {
 }
 
 //---------------------------------------------------------------------
-int Wave3d::SetupTree() {
+int Wave3d::SetupTree(ParVec<BoxKey, BoxDat, BoxPrtn>& boxvec,
+                      bool initial_setup) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::SetupTree");
 #endif
     int mpirank = getMPIRank();
     double eps = 1e-12;
     double K = this->K();
-    // pos contains all data read by this processor
-    ParVec<int, Point3, PtPrtn>& pos = *_posptr;
 
-    // Get all of the geometry information needed for this processor
-    std::vector<int> all(1, 1);
-    SAFE_FUNC_EVAL( pos.getBegin(&(Wave3d::setup_Q1_wrapper), all) );
-    SAFE_FUNC_EVAL( pos.getEnd(all) );
-
-    int numC = _geomprtn.m();
-    int lvlC = CellLevel();
-    // Generate cell level boxes, put them into queue
-    Point3 bctr = ctr();  // overall center of domain
-    NumTns<BoxDat> cellboxtns(numC, numC, numC);
-    // Fill boxes with points.
-    for (std::map<int,Point3>::iterator mi = pos.lclmap().begin();
-         mi != pos.lclmap().end(); ++mi) {
+    std::queue< std::pair<BoxKey, BoxDat> > tmpq;
+    if (initial_setup) {
+      // pos contains all data read by this processor
+      ParVec<int, Point3, PtPrtn>& pos = *_posptr;
+    
+      // Get all of the geometry information needed for this processor
+      std::vector<int> all(1, 1);
+      SAFE_FUNC_EVAL( pos.getBegin(&(Wave3d::setup_Q1_wrapper), all) );
+      SAFE_FUNC_EVAL( pos.getEnd(all) );
+      
+      int numC = _geomprtn.m();
+      int lvlC = CellLevel();
+      // Generate cell level boxes, put them into queue
+      Point3 bctr = ctr();  // overall center of domain
+      NumTns<BoxDat> cellboxtns(numC, numC, numC);
+      // Fill boxes with points.
+      for (std::map<int,Point3>::iterator mi = pos.lclmap().begin();
+	   mi != pos.lclmap().end(); ++mi) {
         int key = mi->first;
         Point3 pos = mi->second;
         Index3 idx;
         for(int d = 0; d < 3; d++) {
-            idx(d) = (int) floor(numC * ((pos(d) - bctr(d) + K / 2) / K));
-            CHECK_TRUE(idx(d) >= 0 && idx(d) < numC);
+	  idx(d) = (int) floor(numC * ((pos(d) - bctr(d) + K / 2) / K));
+	  CHECK_TRUE(idx(d) >= 0 && idx(d) < numC);
         }
         // Put the points in
         cellboxtns(idx(0), idx(1), idx(2)).ptidxvec().push_back( key );
-    }
-    // Put all boxes owned by this process (whether or not is empty) in a queue.
-    // TODO(arbenson): this should be more efficient.
-    std::queue< std::pair<BoxKey,BoxDat> > tmpq;
-    for (int a = 0; a < numC; ++a) {
+      }
+      // Put all boxes owned by this process (whether or not is empty) in a queue.
+      // TODO(arbenson): this should be more efficient.
+      for (int a = 0; a < numC; ++a) {
         for (int b = 0; b < numC; ++b) {
-            for (int c = 0; c < numC; ++c) {
-                if (_geomprtn(a, b, c) == mpirank) {
-                    BoxKey key(lvlC, Index3(a, b, c));
-                    tmpq.push( std::pair<BoxKey,BoxDat>(key, cellboxtns(a, b, c)) );
-                }
-            }
+	  for (int c = 0; c < numC; ++c) {
+	    if (_geomprtn(a, b, c) == mpirank) {
+	      BoxKey key(lvlC, Index3(a, b, c));
+	      tmpq.push( std::pair<BoxKey, BoxDat>(key, cellboxtns(a, b, c)) );
+	    }
+	  }
         }
+      }
+      cellboxtns.resize(0, 0, 0);
+    } else {
+      // Start with the low frequency regime
+      // TODO(arbenson): implement this
     }
-    cellboxtns.resize(0, 0, 0);
 
     // Construct the tree.
     RecursiveBoxInsert(tmpq);
@@ -467,7 +474,6 @@ int Wave3d::setup_Q2(BoxKey boxkey, BoxDat& boxdat, std::vector<int>& pids) {
     }
     return 0;
 }
-
 
 int Wave3d::SetupCallLists() {
 #ifndef RELEASE
