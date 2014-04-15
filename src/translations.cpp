@@ -99,7 +99,7 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
             if (data.first) {
                 BoxDat& chddat = data.second;
-                CHECK_TRUE(HasPoints(chddat));
+                CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
                 CpxNumVec& chdued = chddat.upeqnden();
                 SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
             }
