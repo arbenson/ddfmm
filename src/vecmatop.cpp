@@ -23,48 +23,50 @@
 
 //Y <- a M X + b Y
 // ---------------------------------------------------------------------- 
-int dgemm(double alpha, const DblNumMat& A, const DblNumMat& B, double beta, DblNumMat& C)
-{
+int dgemm(double alpha, const DblNumMat& A, const DblNumMat& B, double beta,
+	  DblNumMat& C) {
 #ifndef RELEASE
     CallStackEntry entry("dgemm");
 #endif
-  assert( A.m() == C.m() );  assert( A.n() == B.m() );  assert( B.n() == C.n() );
-  SAFE_FUNC_EVAL( dgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
-  return 0;
+    CHECK_TRUE_MSG(A.m() == C.m(), "A.m != C.m");
+    CHECK_TRUE_MSG(A.n() == B.m(), "A.n != B.m" );
+    CHECK_TRUE_MSG(B.n() == C.n(), "B.n != C.n");
+    SAFE_FUNC_EVAL( dgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
+    return 0;
 }
 // ---------------------------------------------------------------------- 
-int dgemm(int m, int n, int k, double alpha, double* A, double* B, double beta, double* C)
-{
+int dgemm(int m, int n, int k, double alpha, double* A, double* B, double beta,
+	  double* C) {
 #ifndef RELEASE
     CallStackEntry entry("dgemm");
 #endif
-  char transa = 'N';
-  char transb = 'N';
-  assert(m!=0 && n!=0 && k!=0);
-  dgemm_(&transa, &transb, &m, &n, &k,
-	 &alpha, A, &m, B, &k, &beta, C, &m);
-  return 0;
+    char transa = 'N';
+    char transb = 'N';
+    CHECK_TRUE_MSG(m != 0 && n != 0 && k != 0, "Zero dimensions");
+    dgemm_(&transa, &transb, &m, &n, &k,
+	   &alpha, A, &m, B, &k, &beta, C, &m);
+    return 0;
 }
 //Y <- a M X + b Y
 // ---------------------------------------------------------------------- 
-int dgemv(double alpha, const DblNumMat& A, const DblNumVec& X, double beta, DblNumVec& Y)
-{
+int dgemv(double alpha, const DblNumMat& A, const DblNumVec& X, double beta,
+	  DblNumVec& Y) {
 #ifndef RELEASE
     CallStackEntry entry("dgemv");
 #endif
-  assert(Y.m() == A.m());
-  assert(A.n() == X.m());
-  SAFE_FUNC_EVAL( dgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
+    CHECK_TRUE_MSG(Y.m() == A.m(), "Y.m != A.m");
+    CHECK_TRUE_MSG(A.n() == X.m(), "A.n != X.m");
+    SAFE_FUNC_EVAL( dgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
   return 0;
 }
 // ---------------------------------------------------------------------- 
-int dgemv(int m, int n, double alpha, double* A, double* X, double beta, double* Y)
-{
+int dgemv(int m, int n, double alpha, double* A, double* X, double beta,
+	  double* Y) {
 #ifndef RELEASE
     CallStackEntry entry("dgemv");
 #endif
   char trans = 'N';
-  assert(m!=0 && n!=0);
+  CHECK_TRUE_MSG(m != 0 && n != 0, "Zero dimensions");
   int incx = 1;
   int incy = 1;
   dgemv_(&trans, &m, &n, &alpha, A, &m, X, &incx, &beta, Y, &incy);
@@ -75,51 +77,51 @@ int dgemv(int m, int n, double alpha, double* A, double* X, double beta, double*
 
 
 // ---------------------------------------------------------------------- 
-int zgemm(cpx alpha, const CpxNumMat& A, const CpxNumMat& B, cpx beta, CpxNumMat& C)
-{
+int zgemm(cpx alpha, const CpxNumMat& A, const CpxNumMat& B, cpx beta,
+	  CpxNumMat& C) {
 #ifndef RELEASE
     CallStackEntry entry("zgemm");
 #endif
-  assert( A.m() == C.m() );  assert( A.n() == B.m() );  assert( B.n() == C.n() );
-  SAFE_FUNC_EVAL( zgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
+    CHECK_TRUE_MSG(A.m() == C.m(), "A.m != C.m");
+    CHECK_TRUE_MSG(A.n() == B.m(), "A.n != B.m");
+    CHECK_TRUE_MSG(B.n() == C.n(), "B.n != C.n");
+    SAFE_FUNC_EVAL( zgemm(C.m(), C.n(), A.n(), alpha, A.data(), B.data(), beta, C.data()) );
   return 0;
 }
 // ---------------------------------------------------------------------- 
-int zgemm(int m, int n, int k, cpx alpha, cpx* A, cpx* B, cpx beta, cpx* C)
-{
+int zgemm(int m, int n, int k, cpx alpha, cpx* A, cpx* B, cpx beta, cpx* C) {
 #ifndef RELEASE
     CallStackEntry entry("zgemm");
 #endif
-  char transa = 'N';
-  char transb = 'N';
-  assert(m!=0 && n!=0 && k!=0);
-  zgemm_(&transa, &transb, &m, &n, &k,
-		 &alpha, A, &m, B, &k, &beta, C, &m);
-  return 0;
+    char transa = 'N';
+    char transb = 'N';
+    CHECK_TRUE_MSG(m != 0 && n != 0 && k != 0, "Zero dimensions");
+    zgemm_(&transa, &transb, &m, &n, &k,
+	   &alpha, A, &m, B, &k, &beta, C, &m);
+    return 0;
 }
 //Y <- a M X + b Y
 // ---------------------------------------------------------------------- 
-int zgemv(cpx alpha, const CpxNumMat& A, const CpxNumVec& X, cpx beta, CpxNumVec& Y)
-{
+int zgemv(cpx alpha, const CpxNumMat& A, const CpxNumVec& X, cpx beta,
+	  CpxNumVec& Y) {
 #ifndef RELEASE
     CallStackEntry entry("zgemv");
 #endif
-  assert(Y.m() == A.m());
-  assert(A.n() == X.m());
-  SAFE_FUNC_EVAL( zgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
-  return 0;
+    CHECK_TRUE_MSG(Y.m() == A.m(), "Y.m != A.m");
+    CHECK_TRUE_MSG(A.n() == X.m(), "A.n != X.m");
+    SAFE_FUNC_EVAL( zgemv(A.m(), A.n(), alpha, A.data(), X.data(), beta, Y.data()) );
+    return 0;
 }
 // ---------------------------------------------------------------------- 
-int zgemv(int m, int n, cpx alpha, cpx* A, cpx* X, cpx beta, cpx* Y)
-{
+int zgemv(int m, int n, cpx alpha, cpx* A, cpx* X, cpx beta, cpx* Y) {
 #ifndef RELEASE
     CallStackEntry entry("zgemv");
 #endif
-  CHECK_TRUE(m > 0 && A != NULL && X != NULL);
-  char trans = 'N';
-  assert(m!=0 && n!=0);
-  int incx = 1;
-  int incy = 1;
-  zgemv_(&trans, &m, &n, &alpha, A, &m, X, &incx, &beta, Y, &incy);
-  return 0;
+    CHECK_TRUE_MSG(m > 0 && A != NULL && X != NULL, "Bad data or dimensions");
+    char trans = 'N';
+    CHECK_TRUE_MSG(m != 0 && n != 0, "Zero dimensions");
+    int incx = 1;
+    int incy = 1;
+    zgemv_(&trans, &m, &n, &alpha, A, &m, X, &incx, &beta, Y, &incy);
+    return 0;
 }

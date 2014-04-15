@@ -555,6 +555,7 @@ private:
     int ConstructMaps(ldmap_t& ldmap,
                       level_hdkeys_map_t& level_hdmap_out,
                       level_hdkeys_map_t& level_hdmap_inc);
+    int ConstructMaps2(ldmap_t& ldmap);
     int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
     
     int UListCompute(BoxDat& trgdat);

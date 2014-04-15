@@ -64,9 +64,9 @@ int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
 
 int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
                          level_hdkeys_map_t& level_hdmap_inc) {
-# ifndef RELEASE
+#ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
-# endif
+#endif
     time_t t0, t1;
     int mpirank = getMPIRank();
     
@@ -154,6 +154,9 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
 int Wave3d::ConstructMaps(ldmap_t& ldmap,
                           level_hdkeys_map_t& level_hdmap_out,
                           level_hdkeys_map_t& level_hdmap_inc) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::ConstructMaps");
+#endif
     int mpirank = getMPIRank();
     double eps = 1e-12;
     level_hdkeys_t& level_hdkeys_out = _level_prtns._hdkeys_out;
@@ -168,7 +171,7 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
     //     1. BoxKeys that have the direction in its outgoing direction list
     //     2. BoxKeys that have the direction in its incoming direction list
     //
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
+    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
@@ -178,7 +181,7 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
             // by this processor get put in the low-frequency map.
             if (W < 1 - eps) {
                 ldmap[W].push_back(curkey);
-            } else {
+	    } else {
                 // High frequency regime
                 BoxAndDirDat dummy;
                 // For each outgoing direction of this box, add to the first list
@@ -219,6 +222,25 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
         }
     }
     return 0;
+}
+
+int Wave3d::ConstructMaps2(ldmap_t& ldmap) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::ConstructMaps2");
+#endif
+    ldmap.clear();
+    int mpirank = getMPIRank();
+    double eps = 1e-12;
+    for (std::map<BoxKey, BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
+	 mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        double W = BoxWidth(curkey);
+        if (HasPoints(curdat) && _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank) {
+	    CHECK_TRUE(W < 1 - eps);
+            ldmap[W].push_back(curkey);
+	}
+    }
 }
 
 
@@ -308,6 +330,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
 
     // Now we have the unit level information, so we can setup our part of the tree.
     SetupLowFreqOctree();
+    ConstructMaps2(ldmap);
 
     // Main work of the algorithm
     std::set<BoxKey> reqboxset;
@@ -359,7 +382,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
     SAFE_FUNC_EVAL( _mlibptr->UpwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
-        BoxDat& srcdat = _boxvec.access(srckey);
+        BoxDat& srcdat = _level_prtns._lf_boxvec.access(srckey);
         LowFreqM2M(srckey, srcdat, uep, ucp, uc2ue, ue2uc);
 
         // Add boxes in U, V, W, and X lists of trgdat to reqboxset.           
@@ -387,7 +410,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
     //------------------
     for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
-        BoxDat& trgdat = _boxvec.access(trgkey);
+        BoxDat& trgdat = _level_prtns._lf_boxvec.access(trgkey);
         CHECK_TRUE(HasPoints(trgdat));  // should have points
         CpxNumVec dneqnden;
         LowFreqM2L(W, trgkey, trgdat, dcp, ue2dc, dneqnden, uep, dc2de);
