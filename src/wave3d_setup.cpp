@@ -236,7 +236,9 @@ int Wave3d::SetupTree() {
         }
     }
 
+#if 0
     GetExtPos();
+#endif
     GetHighFreqDirs();
 
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
@@ -604,11 +606,11 @@ int Wave3d::GetExtPos() {
 #endif
     int mpirank = getMPIRank();
     std::set<BoxKey> reqboxset;
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
+    for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
+        mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
+        if (HasPoints(curdat) && _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank) {
             reqboxset.insert(curdat.undeidxvec().begin(), curdat.undeidxvec().end());
             reqboxset.insert(curdat.vndeidxvec().begin(), curdat.vndeidxvec().end());
             reqboxset.insert(curdat.wndeidxvec().begin(), curdat.wndeidxvec().end());
@@ -619,17 +621,17 @@ int Wave3d::GetExtPos() {
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
     std::vector<int> mask2(BoxDat_Number, 0);
     mask2[BoxDat_extpos] = 1;
-    SAFE_FUNC_EVAL( _boxvec.getBegin(reqbox, mask2) );
-    SAFE_FUNC_EVAL( _boxvec.getEnd(mask2) );
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
+    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(reqbox, mask2) );
+    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask2) );
+    for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
+	 mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
+        if (HasPoints(curdat) && _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank) {
            for (std::vector<BoxKey>::iterator vi = curdat.vndeidxvec().begin();
                 vi != curdat.vndeidxvec().end(); ++vi) {
                 BoxKey neikey = (*vi);
-                BoxDat& neidat = _boxvec.access(neikey);
+                BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
                 neidat.fftnum() ++;
             }
         }
@@ -719,6 +721,7 @@ int Wave3d::SetupLowFreqOctree() {
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(&(Wave3d::DistribLowFreqBoxes_wrapper), mask) );
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
     SetupLowFreqCallLists();
+    GetExtPos();
     return 0;
 }
 
