@@ -214,7 +214,7 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     Point3 srcctr = BoxCenter(srckey);
     // get array
     CpxNumVec upchkval(tdof * ucp.n());
-    setvalue(upchkval,cpx(0, 0));
+    setvalue(upchkval, cpx(0, 0));
     CpxNumVec& upeqnden = srcdat.upeqnden();
     // ue2dc
     if (IsLeaf(srcdat)) {

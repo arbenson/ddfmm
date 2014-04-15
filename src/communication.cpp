@@ -97,6 +97,49 @@ int Wave3d::GatherDensities(std::vector<int>& reqpts,
     CallStackEntry entry("Wave3d::GatherDensities");
 #endif
     int mpirank = getMPIRank();
+    ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
+    // Go through posptr to get nonlocal points
+    for(std::map<int, Point3>::iterator mi = pos.lclmap().begin();
+        mi != pos.lclmap().end(); ++mi) {
+        reqpts.push_back( mi->first );
+    }
+    std::vector<int> all(1, 1);
+    time_t t0 = time(0);
+    SAFE_FUNC_EVAL( den.getBegin(reqpts, all) );
+    SAFE_FUNC_EVAL( den.getEnd(all) );
+    time_t t1 = time(0);
+    if (mpirank == 0) {
+        std::cout << "Density communication: " << difftime(t1, t0)
+                  << " secs" << std::endl;
+    }
+    return 0;
+}
+
+int Wave3d::GatherDensities2(ParVec<int, cpx, PtPrtn>& den) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::GatherDensities");
+#endif
+    int mpirank = getMPIRank();
+
+    std::set<int> req_dens;
+    for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
+        mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        if (HasPoints(curdat) &&
+	    _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank &&
+	    IsLeaf(curdat)) {
+            std::vector<int>& curpis = curdat.ptidxvec();
+            for (int k = 0; k < curpis.size(); ++k) {
+                int poff = curpis[k];
+		req_dens.insert(poff);
+            }
+        }
+    }
+
+    // Go through posptr to get nonlocal points
+    std::vector<int> reqpts;
+    reqpts.insert(reqpts.begin(), req_dens.begin(), req_dens.end());
     std::vector<int> all(1, 1);
     time_t t0 = time(0);
     SAFE_FUNC_EVAL( den.getBegin(reqpts, all) );

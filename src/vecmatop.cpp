@@ -100,7 +100,7 @@ int zgemm(int m, int n, int k, cpx alpha, cpx* A, cpx* B, cpx beta, cpx* C) {
 	   &alpha, A, &m, B, &k, &beta, C, &m);
     return 0;
 }
-//Y <- a M X + b Y
+//Y <- alpha A X + beta Y
 // ---------------------------------------------------------------------- 
 int zgemv(cpx alpha, const CpxNumMat& A, const CpxNumVec& X, cpx beta,
 	  CpxNumVec& Y) {

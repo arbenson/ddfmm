@@ -557,6 +557,7 @@ private:
                       level_hdkeys_map_t& level_hdmap_inc);
     int ConstructMaps2(ldmap_t& ldmap);
     int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
+    int GatherDensities2(ParVec<int,cpx,PtPrtn>& den);
     
     int UListCompute(BoxDat& trgdat);
     int XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,

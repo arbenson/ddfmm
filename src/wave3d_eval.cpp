@@ -253,15 +253,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     _self = this;
     time_t t0, t1, t2, t3;
     int mpirank = getMPIRank();
-    std::vector<int> all(1, 1);
-    ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
-    // Go through posptr to get nonlocal points
-    std::vector<int> reqpts;
-    for(std::map<int,Point3>::iterator mi = pos.lclmap().begin();
-        mi != pos.lclmap().end(); ++mi) {
-        reqpts.push_back( mi->first );
-    }
 
+#if 0
     GatherDensities(reqpts, den);
 
     // Compute extden on leaf nodes using ptidxvec
@@ -280,6 +273,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         }
     }
     SAFE_FUNC_EVAL( den.discard(reqpts) );
+#endif
 
     // Delete of empty boxes
     std::list<BoxKey> to_delete;
@@ -330,6 +324,30 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
 
     // Now we have the unit level information, so we can setup our part of the tree.
     SetupLowFreqOctree();
+
+    // Compute extden on leaf nodes using ptidxvec
+    GatherDensities2(den);
+    for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
+        mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        if (HasPoints(curdat) &&
+	    _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank &&
+	    IsLeaf(curdat)) {
+            std::vector<int>& curpis = curdat.ptidxvec();
+            CpxNumVec& extden = curdat.extden();
+            extden.resize(curpis.size());
+            for (int k = 0; k < curpis.size(); ++k) {
+                int poff = curpis[k];
+                extden(k) = den.access(poff);
+            }
+        }
+    }
+#if 0
+    // TODO(arbenson): discard these
+    SAFE_FUNC_EVAL( den.discard(reqpts) );
+#endif
+
     ConstructMaps2(ldmap);
 
     // Main work of the algorithm
@@ -341,6 +359,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     LowFreqDownwardPass(ldmap);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
+    ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
+    std::vector<int> all(1, 1);
     //set val from extval
     std::vector<int> wrtpts;
     for(std::map<int, Point3>::iterator mi = pos.lclmap().begin();
