@@ -62,13 +62,15 @@ int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
     return 0;
 }
 
-int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
-                         level_hdkeys_map_t& level_hdmap_inc) {
+int Wave3d::HighFreqPass() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
 #endif
     time_t t0, t1;
     int mpirank = getMPIRank();
+
+    level_hdkeys_map_t& level_hdmap_out = _level_prtns._level_hdmap_out;
+    level_hdkeys_map_t& level_hdmap_inc = _level_prtns._level_hdmap_inc;
     
     if(mpirank == 0) {
         std::cout << "Beginning high frequency pass..." << std::endl;
@@ -79,12 +81,15 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
 
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
+	if (mpirank == 0) {
+	  std::cout << "Box width for M2M: " << W << std::endl;
+	}
         std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
 
-        // Handle communication for this level.  We need request the directional
-        // upward equivalent densities from the children needed on this level.
-        // We assume that boxes on the unit level are partitioned by process,
-        // so we do not need to do any communication for that level.
+        // Handle communication for this level.  We need to request the
+	// directional upward equivalent densities from the children needed on
+	// this level.  We assume that boxes on the unit level are partitioned 
+	// by process, so we do not need to do any communication for that level.
         if (level < UnitLevel()) {
             HighFreqM2MLevelComm(level);
         }
@@ -354,7 +359,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     std::set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    HighFreqPass(_level_prtns._level_hdmap_out, _level_prtns._level_hdmap_inc);
+    HighFreqPass();
     LowFreqDownwardComm(reqboxset);
     LowFreqDownwardPass(ldmap);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
@@ -451,9 +456,10 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
     SAFE_FUNC_EVAL( _mlibptr->UpwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
-        BoxDat& srcdat = _boxvec.access(srckey);
+#if 0
+	BoxDat& srcdat = _boxvec.access(srckey);
         CHECK_TRUE(HasPoints(srcdat));  // Should have points
-
+#endif
         Point3 srcctr = BoxCenter(srckey);
         BoxAndDirKey bndkey(srckey, dir);
         HighFreqM2M(W, bndkey, uc2ue, ue2uc);

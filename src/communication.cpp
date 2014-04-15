@@ -184,14 +184,22 @@ int Wave3d::HighFreqM2MLevelComm(int level) {
     CallStackEntry entry("Wave3d::HighFreqM2MLevelComm");
 #endif
     LevelBoxAndDirVec& curr_level_vec = _level_prtns._hf_vecs_out[level];
-    LevelBoxAndDirVec& child_level_vec = _level_prtns._hf_vecs_out[level + 1];
     std::vector<BoxAndDirKey> req_keys;
     AllChildrenKeys(curr_level_vec, req_keys);
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirupeqnden] = 1;
-    // Request data that I need.
-    child_level_vec.getBegin(req_keys, mask);
-    child_level_vec.getEnd(mask);
+
+    if (level + 1 == UnitLevel()) {
+      ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn> vec = _level_prtns._unit_vec;
+        // Request data that I need.
+        vec.getBegin(req_keys, mask);
+        vec.getEnd(mask);
+    } else {
+        LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_out[level + 1];
+        // Request data that I need.
+        vec.getBegin(req_keys, mask);
+        vec.getEnd(mask);
+    }
     return 0;
 }
 

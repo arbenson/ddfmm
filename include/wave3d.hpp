@@ -461,6 +461,9 @@ private:
     double BoxWidth(BoxKey& curkey) { return _K / pow2(curkey.first); }
     bool IsCellLevelBox(const BoxKey& curkey) { return curkey.first == CellLevel(); }
 
+    // TODO(arbenson): move this to parvec
+    int CreateIfUnavail(BoxAndDirKey key);
+
     // Return the key of the parent box of the box corresponding to curkey.
     BoxKey ParentKey(BoxKey& curkey) {
         return BoxKey(curkey.first - 1, curkey.second / 2);
@@ -545,8 +548,7 @@ private:
     int LowFreqDownwardComm(std::set<BoxKey>& reqboxset);
     int LowFreqDownwardPass(ldmap_t& ldmap);
 
-    int HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
-                     level_hdkeys_map_t& level_hdmap_inc);
+    int HighFreqPass();
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
