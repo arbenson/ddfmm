@@ -508,10 +508,12 @@ private:
     // Stuff for setup
     int SetupTree();
     static int DistribCellPts_wrapper(int key, Point3& dat, std::vector<int>& pids);
-    static int DistribCellBoxes_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids);
+    static int DistribBoxes_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids);
+    static int DistribLowFreqBoxes_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids);
     static int DistribUnitPts_wrapper(int key, Point3& dat, std::vector<int>& pids);
     int DistribCellPts(int key, Point3& dat, std::vector<int>& pids);
-    int DistribCellBoxes(BoxKey key, BoxDat& dat, std::vector<int>& pids);
+    int DistribBoxes(BoxKey key, BoxDat& dat, std::vector<int>& pids);
+    int DistribLowFreqBoxes(BoxKey key, BoxDat& dat, std::vector<int>& pids);
     int DistribUnitPts(int key, Point3& dat, std::vector<int>& pids);
     int SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat);
     int SetupTreeHighFreqLists(BoxKey curkey, BoxDat& curdat);
@@ -524,6 +526,7 @@ private:
     int GetExtPos();
     int GetHighFreqDirs();
     int SetupLowFreqOctree();
+    int SetupLowFreqCallLists(); 
 
     // Functions for evaluation
 
