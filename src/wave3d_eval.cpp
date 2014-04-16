@@ -329,8 +329,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         }
     }
     val.expand(wrtpts);
-    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
+    for (std::map<BoxKey, BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
+        mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsLeaf(curdat)) {
