@@ -196,7 +196,7 @@ int main(int argc, char** argv)
 	}
 	SAFE_FUNC_EVAL( SeparateWrite(opt, oss) );
 
-	//4. check
+	// 4. check
 	IntNumVec chkkeyvec;
 	opt = findOption(opts, "-chkfile");
 	if (opt.empty()) {
@@ -215,7 +215,7 @@ int main(int argc, char** argv)
                       << "secs " << std::endl;
 	}
 
-	//5. output results
+	// 5. output results
 	double time_drct = CLOCK_DIFF_SECS(ck1, ck0) * numpts / double(numchk);
 	if (mpirank == 0) {
 	    printf("----------------------\n");

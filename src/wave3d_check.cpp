@@ -41,14 +41,14 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     std::vector<Point3> tmpsrcpos;
     for (std::map<int,Point3>::iterator mi = pos.lclmap().begin();
         mi != pos.lclmap().end(); ++mi) {
-        if(pos.prtn().owner(mi->first) == mpirank) {
+        if (pos.prtn().owner(mi->first) == mpirank) {
             tmpsrcpos.push_back(mi->second);
         }
     }
     std::vector<cpx> tmpsrcden;
     for (std::map<int,cpx>::iterator mi = den.lclmap().begin();
         mi != den.lclmap().end(); ++mi) {
-        if(den.prtn().owner(mi->first) == mpirank) {
+        if (den.prtn().owner(mi->first) == mpirank) {
             tmpsrcden.push_back(mi->second);
         }
     }
@@ -81,18 +81,23 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     SAFE_FUNC_EVAL( MPI_Allreduce(trgval.data(), allval.data(), trgval.m() * 2, MPI_DOUBLE,
                                   MPI_SUM, MPI_COMM_WORLD) );
   
-    //2. get val
-    val.getBegin(chkkeyvec, all);  val.getEnd(all);
+    // 2. get val
+    val.getBegin(chkkeyvec, all);
+    val.getEnd(all);
     CpxNumVec truval(chkkeyvec.size());
-    for(int i = 0; i < chkkeyvec.size(); ++i)
+    for (int i = 0; i < chkkeyvec.size(); ++i) {
         truval(i) = val.access(chkkeyvec[i]);
+    }
   
     CpxNumVec errval(chkkeyvec.size());
-    for(int i = 0; i < chkkeyvec.size(); ++i)
+    for (int i = 0; i < chkkeyvec.size(); ++i) {
         errval(i) = allval(i) - truval(i);
-  
+    }
+
     double tn = sqrt( energy(truval) );
     double en = sqrt( energy(errval) );
+    std::cout << "true value: " << tn
+              << ", computed value: " << en << std::endl;
     relerr = en / tn;
   
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );

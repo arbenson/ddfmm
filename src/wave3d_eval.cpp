@@ -254,27 +254,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     time_t t0, t1, t2, t3;
     int mpirank = getMPIRank();
 
-#if 0
-    GatherDensities(reqpts, den);
-
-    // Compute extden on leaf nodes using ptidxvec
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsLeaf(curdat)) {
-            std::vector<int>& curpis = curdat.ptidxvec();
-            CpxNumVec& extden = curdat.extden();
-            extden.resize(curpis.size());
-            for (int k = 0; k < curpis.size(); ++k) {
-                int poff = curpis[k];
-                extden(k) = den.access(poff);
-            }
-        }
-    }
-    SAFE_FUNC_EVAL( den.discard(reqpts) );
-#endif
-
     // Delete of empty boxes
     std::list<BoxKey> to_delete;
     for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
@@ -324,27 +303,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     CleanBoxvec();
 
     // Compute extden on leaf nodes using ptidxvec
-    GatherDensities2(den);
-    for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
-        mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) &&
-            _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank &&
-            IsLeaf(curdat)) {
-            std::vector<int>& curpis = curdat.ptidxvec();
-            CpxNumVec& extden = curdat.extden();
-            extden.resize(curpis.size());
-            for (int k = 0; k < curpis.size(); ++k) {
-                int poff = curpis[k];
-                extden(k) = den.access(poff);
-            }
-        }
-    }
-#if 0
-    // TODO(arbenson): discard these
-    SAFE_FUNC_EVAL( den.discard(reqpts) );
-#endif
+    GatherDensities(den);
 
     // Form data maps needed.
     _level_prtns.FormMaps();

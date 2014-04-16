@@ -535,8 +535,7 @@ private:
 
     int GatherLocalKeys();
     int ConstructLowFreqMap(ldmap_t& ldmap);
-    int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
-    int GatherDensities2(ParVec<int,cpx,PtPrtn>& den);
+    int GatherDensities(ParVec<int,cpx,PtPrtn>& den);
     
     int UListCompute(BoxDat& trgdat);
     int XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
