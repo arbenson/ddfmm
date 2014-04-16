@@ -184,8 +184,9 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
 #endif
     int childlevel = level + 1;
     // If the child level is at or above the starting level, then there is
-    // no communication to do.
-    if (childlevel <= _starting_level) {
+    // no communication to do.  Also, if the child level is in the
+    // low-frequency regime, there is no work to do.
+    if (childlevel <= _starting_level || childlevel > UnitLevel()) {
         return 0;
     }
 
@@ -236,9 +237,10 @@ int Wave3d::HighFreqL2LLevelCommPost(int level,
     CallStackEntry entry("Wave3d::HighFreqL2LLevelCommPost");
 #endif
     // If the child level is at or above the starting level, then there is
-    // no communication to do.
+    // no communication to do.  Also, if the child level is in the
+    // low-frequency regime, there is no work to do.
     int childlevel = level + 1;
-    if (childlevel <= _starting_level) {
+    if (childlevel <= _starting_level || childlevel > UnitLevel()) {
         return 0;
     }
     CHECK_TRUE(level <= UnitLevel());

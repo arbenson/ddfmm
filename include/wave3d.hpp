@@ -358,36 +358,8 @@ public:
   LevelPartitions() {;}
   ~LevelPartitions() {;}
 
-  void init(int max_level) {
-    _hf_vecs_out.resize(max_level);
-    _hf_vecs_inc.resize(max_level);
-    _hdkeys_out.resize(max_level);
-    _hdkeys_inc.resize(max_level);
-    _level_hdmap_out.resize(max_level);
-    _level_hdmap_inc.resize(max_level);
-  }
-
-  void FormMaps() {
-    for (int i = 0; i < _hdkeys_out.size(); ++i) {
-      std::vector<BoxAndDirKey>& keys = _hdkeys_out[i];
-      std::map<Index3, std::vector<BoxKey> >& key_map = _level_hdmap_out[i];
-      for (int j = 0; j < keys.size(); ++j) {
-        Index3 dir = keys[j]._dir;
-        BoxKey boxkey = keys[j]._boxkey;
-	key_map[dir].push_back(boxkey);
-      }
-    }
-    // TODO(arbenson): abstract away these loops
-    for (int i = 0; i < _hdkeys_inc.size(); ++i) {
-      std::vector<BoxAndDirKey>& keys = _hdkeys_inc[i];
-      std::map<Index3, std::vector<BoxKey> >& key_map = _level_hdmap_inc[i];
-      for (int j = 0; j < keys.size(); ++j) {
-        Index3 dir = keys[j]._dir;
-        BoxKey boxkey = keys[j]._boxkey;
-	key_map[dir].push_back(boxkey);
-      }
-    }
-  }
+  void init(int max_level, int unit_level);
+  void FormMaps();
   
   std::vector<LevelBoxAndDirVec> _hf_vecs_out;  // outgoing partition for M2M
   std::vector<LevelBoxAndDirVec> _hf_vecs_inc;  // outgoing partition for M2L + L2L
@@ -400,6 +372,9 @@ public:
 
   level_hdkeys_map_t _level_hdmap_out;
   level_hdkeys_map_t _level_hdmap_inc;
+
+private:
+  int unit_level_;
 };
 
 
@@ -558,10 +533,8 @@ private:
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
                          std::vector<BoxAndDirKey>& keys_affected);
 
-    int ConstructMaps(ldmap_t& ldmap,
-                      level_hdkeys_map_t& level_hdmap_out,
-                      level_hdkeys_map_t& level_hdmap_inc);
-    int ConstructMaps2(ldmap_t& ldmap);
+    int GatherLocalKeys();
+    int ConstructLowFreqMap(ldmap_t& ldmap);
     int GatherDensities(std::vector<int>& reqpts, ParVec<int,cpx,PtPrtn>& den);
     int GatherDensities2(ParVec<int,cpx,PtPrtn>& den);
     
@@ -636,6 +609,9 @@ private:
      static int TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
 					      std::vector<int>& pids);
      int TransferDataToLevels();
+
+     int CleanLevel(int level);
+     int CleanBoxvec();
 };
 
 //-------------------

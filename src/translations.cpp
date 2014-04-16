@@ -86,30 +86,6 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
     return 0;
 }
 
-int Wave3d::CreateIfUnavail(BoxAndDirKey bndkey) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::CreateIfUnavail");
-#endif
-  int level = bndkey._boxkey.first;
-  if (level == UnitLevel()) {
-      std::pair<bool, BoxAndDirDat&> data = _level_prtns._unit_vec.contains(bndkey);
-      if (!data.first) {
-        // Interaction list was empty, so we need to put data back in it here.
-        // TODO(arbenson): make this cleaner
-        BoxAndDirDat dummy;
-        _level_prtns._unit_vec.lclmap()[bndkey] = dummy;
-      }
-  } else {
-      std::pair<bool, BoxAndDirDat&> data = _level_prtns._hf_vecs_out[level].contains(bndkey);
-      if (!data.first) {
-        // Interaction list was empty, so we need to put data back in it here.
-        // TODO(arbenson): make this cleaner
-        BoxAndDirDat dummy;
-        _level_prtns._hf_vecs_out[level].lclmap()[bndkey] = dummy;
-      }
-  }
-  return 0;
-}
 
 int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
                         NumTns<CpxNumMat>& ue2uc) {
@@ -119,7 +95,6 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
     double eps = 1e-12;
     BoxKey srckey = bndkey._boxkey;
     Index3 dir = bndkey._dir;
-    CreateIfUnavail(bndkey);
     int level = bndkey._boxkey.first;
     BoxAndDirDat& bnddat = (level == UnitLevel()) ? _level_prtns._unit_vec.access(bndkey)
                                                   : _level_prtns._hf_vecs_out[level].access(bndkey);
@@ -208,8 +183,15 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     CpxNumVec tmp0(E3.m(), false, dat0);
     CpxNumVec tmp1(E2.m(), false, dat1);
     CpxNumVec dneqnden(E1.m(), false, dat2);
+    // TODO(arbenson): FIX THIS
+    if (dnchkval.m() == 0) {
+      return 0;
+    }
+    CHECK_TRUE_MSG(E3.n() == dnchkval.m(), "E3 mismatch");
     SAFE_FUNC_EVAL( zgemv(1.0, E3, dnchkval, 0.0, tmp0) );
+    CHECK_TRUE_MSG(E2.n() == tmp0.m(), "E2 mismatch");
     SAFE_FUNC_EVAL( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
+    CHECK_TRUE_MSG(E1.n() == tmp1.m(), "E1 mismatch");
     SAFE_FUNC_EVAL( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
     dnchkval.resize(0); //LEXING: SAVE SPACE
 
@@ -230,6 +212,7 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                 chddcv.resize(de2dc(a,b,c).m());
                 setvalue(chddcv,cpx(0, 0));
             }
+	    CHECK_TRUE_MSG(de2dc(a, b, c).n() == dneqnden.m(), "Translation mismatch");
             SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
         }
     } else {
@@ -240,8 +223,9 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
             int c = CHILD_IND3(ind);             
             BoxKey chdkey = ChildKey(trgkey, Index3(a, b, c));
             BoxAndDirKey bndkey(chdkey, pdir);
-	    std::pair<bool, BoxAndDirDat&> dat = (chdkey.first == UnitLevel()) ? _level_prtns._unit_vec.contains(bndkey)
-	                                                                       : _level_prtns._hf_vecs_inc[chdkey.first].contains(bndkey);
+	    std::pair<bool, BoxAndDirDat&> dat =
+	      (chdkey.first == UnitLevel()) ? _level_prtns._unit_vec.contains(bndkey)
+	                                    : _level_prtns._hf_vecs_inc[chdkey.first].contains(bndkey);
             // If we have the data, then we updat the directional check values.
             if (dat.first) {
                 BoxAndDirDat& bnddat = dat.second;

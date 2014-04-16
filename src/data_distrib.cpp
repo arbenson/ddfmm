@@ -201,7 +201,7 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
     // Sort keys amongst processes.
     for (int level = global_start_level; level < UnitLevel(); ++level) {
         if (mpirank == 0) {
-            std::cerr << "Prtning level: " << level << std::endl;
+            std::cerr << "Partitioning level: " << level << std::endl;
         }
         std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys[level];
         int s1 = curr_level_keys.size();
@@ -332,9 +332,11 @@ int Wave3d::PrtnUnitLevel() {
     FormUnitPrtnMap(_level_prtns._unit_vec.prtn(), start_recv_buf, end_recv_buf);
     // Copy to low-frequency boxvec partition.
     
-    _level_prtns._lf_boxvec.prtn().partition_ = _level_prtns._unit_vec.prtn().partition_;
-    _level_prtns._lf_boxvec.prtn().end_partition_ = _level_prtns._unit_vec.prtn().end_partition_;
-    _level_prtns._lf_boxvec.prtn().unit_level_ = UnitLevel();
+    BoxPrtn2& prtn = _level_prtns._lf_boxvec.prtn();
+    UnitLevelBoxPrtn& unit_prtn = _level_prtns._unit_vec.prtn();
+    prtn.partition_ = unit_prtn.partition_;
+    prtn.end_partition_ = unit_prtn.end_partition_;
+    prtn.unit_level_ = UnitLevel();
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
     // Note: parvec gets filled in later with call to TransferDataToLevels()
@@ -423,4 +425,120 @@ int Wave3d::TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
     CallStackEntry entry("Wave3d::TransferUnitLevelData_wrapper");
 #endif
     return (Wave3d::_self)->TransferUnitLevelData(key, dat, pids);
+}
+
+void LevelPartitions::init(int max_level, int unit_level) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::init");
+#endif
+    unit_level_ = unit_level;
+    _hf_vecs_out.resize(max_level);
+    _hf_vecs_inc.resize(max_level);
+    _hdkeys_out.resize(max_level);
+    _hdkeys_inc.resize(max_level);
+    _level_hdmap_out.resize(max_level);
+    _level_hdmap_inc.resize(max_level);
+}
+
+void InsertIntoDirMap(std::map<Index3, std::vector<BoxKey> >& dir_map,
+		      std::map<BoxAndDirKey, BoxAndDirDat>& curr_map) {
+#ifndef RELEASE
+    CallStackEntry entry("InsertIntoDirMap");
+#endif
+    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_map.begin();
+         mi != curr_map.end(); ++mi) {
+        BoxAndDirKey key = mi->first;
+	Index3 dir = key._dir;
+	BoxKey boxkey = key._boxkey;
+	// TODO(arbenson): check to make sure I own this data
+	dir_map[dir].push_back(boxkey);
+    }
+}
+	      
+
+void LevelPartitions::FormMaps() {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::FormMaps");
+#endif
+    // Outgoing (upwards pass)
+    for (int i = 0; i < _hf_vecs_out.size(); ++i) {
+        InsertIntoDirMap(_level_hdmap_out[i], _hf_vecs_out[i].lclmap());
+    }
+    InsertIntoDirMap(_level_hdmap_out[unit_level_], _unit_vec.lclmap());
+    // Incoming (downwards pass)
+    for (int i = 0; i < _hf_vecs_inc.size(); ++i) {
+        InsertIntoDirMap(_level_hdmap_inc[i], _hf_vecs_inc[i].lclmap());
+    }
+    InsertIntoDirMap(_level_hdmap_inc[unit_level_], _unit_vec.lclmap());
+    // Remove old data.
+    for (int i = 0; i < _hdkeys_out.size(); ++i) {
+        std::vector<BoxAndDirKey>& old_keys = _hdkeys_out[i];
+	std::vector<BoxAndDirKey>().swap(old_keys);
+    }
+    for (int i = 0; i < _hdkeys_inc.size(); ++i) {
+        std::vector<BoxAndDirKey>& old_keys = _hdkeys_inc[i];
+	std::vector<BoxAndDirKey>().swap(old_keys);
+    }
+
+}
+
+void CleanDirVecMap(std::map<Index3, std::vector<BoxKey> >& curr_map) {
+#ifndef RELEASE
+    CallStackEntry entry("CleanDirVecMap");
+#endif
+    for (std::map<Index3, std::vector<BoxKey> >::iterator mi = curr_map.begin();
+         mi != curr_map.end(); ++mi) {
+        std::vector<BoxKey>().swap(mi->second);
+    }
+    curr_map.clear();
+}
+
+void CleanBoxAndDirMap(std::map<BoxAndDirKey, BoxAndDirDat>& curr_map) {
+#ifndef RELEASE
+    CallStackEntry entry("CleanBoxAndDirMap");
+#endif
+    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_map.begin();
+	 mi != curr_map.end(); ++mi) {
+        mi->second._dirupeqnden.resize(0);
+        mi->second._dirdnchkval.resize(0);
+        std::vector<BoxAndDirKey>().swap(mi->second.interactionlist());
+    }
+    curr_map.clear();
+}
+
+int Wave3d::CleanLevel(int level) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::CleanLevel");
+#endif
+    CleanDirVecMap(_level_prtns._level_hdmap_inc[level]);
+    CleanDirVecMap(_level_prtns._level_hdmap_out[level]);
+    if (level == UnitLevel()) {
+        CleanBoxAndDirMap(_level_prtns._unit_vec.lclmap());
+    } else {
+        CleanBoxAndDirMap(_level_prtns._hf_vecs_out[level].lclmap());
+        CleanBoxAndDirMap(_level_prtns._hf_vecs_inc[level].lclmap());
+    }
+    return 0;
+}
+
+int Wave3d::CleanBoxvec() {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::CleanBoxvec");
+#endif
+    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
+	 mi != _boxvec.lclmap().end(); ++mi) {
+        BoxDat& dat = mi->second;
+	std::vector<BoxKey>().swap(dat._undeidxvec);
+	std::vector<BoxKey>().swap(dat._vndeidxvec);
+	std::vector<BoxKey>().swap(dat._wndeidxvec);
+	std::vector<BoxKey>().swap(dat._xndeidxvec);
+	std::vector<BoxKey>().swap(dat._endeidxvec);
+	for (std::map<Index3, std::vector<BoxKey> >::iterator mi2 = dat._fndeidxvec.begin();
+	   mi2 != dat._fndeidxvec.end(); ++mi2) {
+            std::vector<BoxKey>().swap(mi2->second);
+	}
+	dat._fndeidxvec.clear();
+    }
+    _boxvec.lclmap().clear();
+    return 0;
 }
