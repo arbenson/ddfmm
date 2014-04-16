@@ -193,6 +193,10 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
     int global_start_level = 0;
     MPI_Allreduce(&local_start_level, &global_start_level, 1, MPI_INT, MPI_MIN,
                   MPI_COMM_WORLD);
+    // If we haven't determined the starting level yet, set it.
+    if (_starting_level == 0) {
+        _starting_level = global_start_level;
+    }
 
     // Sort keys amongst processes.
     for (int level = global_start_level; level < UnitLevel(); ++level) {
@@ -420,5 +424,3 @@ int Wave3d::TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
 #endif
     return (Wave3d::_self)->TransferUnitLevelData(key, dat, pids);
 }
-
-

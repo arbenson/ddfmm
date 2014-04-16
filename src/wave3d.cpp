@@ -23,7 +23,8 @@ Wave3d* Wave3d::_self = NULL;
 //-----------------------------------
 Wave3d::Wave3d(const std::string& p): ComObject(p), _posptr(NULL), _mlibptr(NULL),
                                       _fplan(NULL), _bplan(NULL), _ACCU(1), _NPQ(4),
-			              _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100) {
+			              _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100),
+                                      _starting_level(0) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::Wave3d");
 #endif

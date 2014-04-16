@@ -98,6 +98,10 @@ int Wave3d::HighFreqPass() {
 	// parents on the next level. We assume that boxes on the unit level
 	// are partitioned  by process, so we do not need to do any
 	// communication for that level.
+	SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+	if (mpirank == 0) {
+	  std::cout << "About to communicate..." << std::endl;
+	}
 	HighFreqM2MLevelComm(level);
 
         // TODO(arbenson): remove data from parvec to save memory
@@ -120,6 +124,7 @@ int Wave3d::HighFreqPass() {
     t0 = time(0);
     for (int level = 0; level < level_hdmap_inc.size(); ++level) {
         double W = _K / pow2(level);
+	SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
 	if (mpirank == 0) {
 	  std::cout << "Box width for downwards pass: " << W << std::endl;
 	}
@@ -130,9 +135,7 @@ int Wave3d::HighFreqPass() {
         // downward check values for the children.  We assume that boxes on the
 	// unit level are partitioned by process, so we do not need to do any
 	// communication for that level.
-        if (level < UnitLevel()) {
-            HighFreqL2LLevelCommPre(level);
-        }
+	HighFreqL2LLevelCommPre(level);
 
         // Maintain set of keys that get updated by L2L
 	std::vector<BoxAndDirKey> keys_affected;
@@ -140,17 +143,14 @@ int Wave3d::HighFreqPass() {
             mi != level_inc.end(); ++mi) {
             Index3 dir = mi->first;
             std::vector<BoxKey>& keys_inc = mi->second;
-            std::vector<BoxKey>& keys_out = level_out[dir];
-            SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_out, keys_affected) );
+            SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_affected) );
         }
 
         // Handle post-communication for this level.  We send back the
         // downward check values for the children. Again, we assume that the
         // boxes on the unit level are partitioned by process, so we do not
 	// need to do any communication for that level.
-        if (level < UnitLevel()) {
-            HighFreqL2LLevelCommPost(level, keys_affected);
-        }
+	HighFreqL2LLevelCommPost(level, keys_affected);
 
         // TODO(arbenson): remove data from parvec to save memory
     }
@@ -474,7 +474,6 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 
 //---------------------------------------------------------------------
 int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
-                             std::vector<BoxKey>& srcvec,
 			     std::vector<BoxAndDirKey>& keys_affected) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardHigh");
@@ -490,31 +489,11 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
     //LEXING: IMPORTANT
     for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
-        BoxDat& trgdat = _boxvec.access(trgkey);
-        SAFE_FUNC_EVAL( HighFreqM2L(W, dir, trgkey, trgdat, dcp, uep) );
+        SAFE_FUNC_EVAL( HighFreqM2L(W, dir, trgkey, dcp, uep) );
         SAFE_FUNC_EVAL( HighFreqL2L(W, dir, trgkey, dc2de, de2dc, keys_affected) );
      }
 
     // Now that we are done at this level, clear data to save on memory.
-    for (int k = 0; k < srcvec.size(); ++k) {
-        BoxKey srckey = srcvec[k];
-        BoxDat& srcdat = _boxvec.access(srckey);
-        CHECK_TRUE(HasPoints(srcdat));  // should have points
-        BoxAndDirKey bndkey(srckey, dir);
-        BoxAndDirDat& bnddat = _bndvec.access( bndkey );
-        bnddat.dirupeqnden().resize(0);
-    }
-    for (int k = 0; k < trgvec.size(); ++k) {
-        BoxKey trgkey = trgvec[k];
-        BoxDat& trgdat = _boxvec.access(trgkey);
-        CHECK_TRUE(HasPoints(trgdat));  // should have points
-        std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-        for (int i = 0; i < tmpvec.size(); ++i) {
-            BoxKey srckey = tmpvec[i];
-            BoxAndDirKey bndkey(srckey, dir);
-            BoxAndDirDat& bnddat = _bndvec.access(bndkey);
-            bnddat.dirupeqnden().resize(0);
-        }
-    }
+    // TODO(arbenson): remove outgoing data from the level!
     return 0;
 }

@@ -23,12 +23,12 @@
 // TODO(arbenson): this is a bit of hack.
 #define DVMAX 400
 
-int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
+int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
                         DblNumMat& dcp, DblNumMat& uep) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqM2L");
 #endif
-    CHECK_TRUE(HasPoints(trgdat));  // should have points
+    //    CHECK_TRUE(HasPoints(trgdat));  // should have points
     Point3 trgctr = BoxCenter(trgkey);
     // get target
     DblNumMat tmpdcp(dcp.m(), dcp.n());
@@ -39,8 +39,11 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
     }
     BoxAndDirKey bndkey(trgkey, dir);
     int level = trgkey.first;
-    BoxAndDirDat& bnddat = (level == UnitLevel()) ? _level_prtns._unit_vec.access(bndkey)
-                                                  : _level_prtns._hf_vecs_inc[level].access(bndkey);
+    std::pair<bool, BoxAndDirDat&> data =
+      (level == UnitLevel()) ? _level_prtns._unit_vec.contains(bndkey)
+                             : _level_prtns._hf_vecs_inc[level].contains(bndkey);
+    CHECK_TRUE_MSG(data.first, "Missing incoming data");
+    BoxAndDirDat& bnddat = data.second;
     CpxNumVec& dcv = bnddat.dirdnchkval();
     std::vector<BoxAndDirKey>& interactionlist = bnddat.interactionlist();
     for (int i = 0; i < interactionlist.size(); ++i) {
@@ -59,9 +62,11 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
             }
         }
         int level = srckey.first;
-        BoxAndDirDat& bnddat = (level == UnitLevel()) ? _level_prtns._unit_vec.access(key)
-                                                      : _level_prtns._hf_vecs_out[level].access(key);
-        CpxNumVec& ued = bnddat.dirupeqnden();
+	std::pair<bool, BoxAndDirDat&> data =
+	  (level == UnitLevel()) ? _level_prtns._unit_vec.contains(key)
+	                         : _level_prtns._hf_vecs_out[level].contains(key);
+	CHECK_TRUE_MSG(data.first, "Missing outgoing data");
+        CpxNumVec& ued = data.second.dirupeqnden();
         CpxNumMat Mts;
         SAFE_FUNC_EVAL( _kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
         // allocate space if necessary
@@ -73,6 +78,9 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
             ued.resize(Mts.n());
             setvalue(ued, cpx(0, 0));
         }
+	if (Mts.n() != ued.m()) {
+	  std::cout << Mts.n() << " " << ued.m() << std::endl;
+	}
         SAFE_FUNC_EVAL( zgemv(1.0, Mts, ued, 1.0, dcv) );
     }
     return 0;
@@ -220,9 +228,9 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
             CpxNumVec& chddcv = chddat.dnchkval();
             if (chddcv.m() == 0) {
                 chddcv.resize(de2dc(a,b,c).m());
-                setvalue(chddcv,cpx(0,0));
+                setvalue(chddcv,cpx(0, 0));
             }
-            SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
+            SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
         }
     } else {
         Index3 pdir = ParentDir(dir);

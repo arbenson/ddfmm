@@ -229,6 +229,7 @@ public:
 #ifndef RELEASE
         CallStackEntry entry("BoxAndDirLevelPrtn::owner");
 #endif
+	CHECK_TRUE_MSG(partition_.size() != 0, "Missing partition!");
         int ind = std::lower_bound(partition_.begin(),
                                    partition_.end(), key) - partition_.begin();
         --ind;
@@ -394,8 +395,8 @@ public:
   ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn> _unit_vec;
   ParVec<BoxKey, BoxDat, BoxPrtn2> _lf_boxvec;  // boxes in low frequency regime
 
-  level_hdkeys_t _hdkeys_out;  // which keys I am responsible for
-  level_hdkeys_t _hdkeys_inc;  // which keys I am responsible for
+  level_hdkeys_t _hdkeys_out;  // which keys I am responsible for (outgoing)
+  level_hdkeys_t _hdkeys_inc;  // which keys I am responsible for (incoming)
 
   level_hdkeys_map_t _level_hdmap_out;
   level_hdkeys_map_t _level_hdmap_inc;
@@ -456,6 +457,7 @@ public:
 
 private:
     LevelPartitions _level_prtns;
+    int _starting_level;
 
     double width() { return _K; }
     //access information from BoxKey
@@ -554,8 +556,7 @@ private:
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
-                         std::vector<BoxKey>& srcvec,
-			 std::vector<BoxAndDirKey>& keys_affected);
+                         std::vector<BoxAndDirKey>& keys_affected);
 
     int ConstructMaps(ldmap_t& ldmap,
                       level_hdkeys_map_t& level_hdmap_out,
@@ -583,7 +584,7 @@ private:
 
     int HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
                     NumTns<CpxNumMat>& ue2uc);
-    int HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
+    int HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
                     DblNumMat& dcp, DblNumMat& uep);
     int HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                     NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,

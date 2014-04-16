@@ -183,7 +183,12 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
     CallStackEntry entry("Wave3d::HighFreqL2LLevelCommPre");
 #endif
     int childlevel = level + 1;
-    CHECK_TRUE(childlevel >= UnitLevel());
+    // If the child level is at or above the starting level, then there is
+    // no communication to do.
+    if (childlevel <= _starting_level) {
+        return 0;
+    }
+
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirupeqnden] = 1;
     if (childlevel == UnitLevel()) {
@@ -201,7 +206,7 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
 int Wave3d::HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
                               std::vector<int>& pids) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFreqM2MDataUp");
+    CallStackEntry entry("Wave3d::HighFreqL2LDataUp");
 #endif
     BoxKey parkey = ParentKey(key._boxkey);
     int parlevel = parkey.first;
@@ -220,7 +225,7 @@ int Wave3d::HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
 int Wave3d::HighFreqL2LDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
                                       std::vector<int>& pids) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFreqM2MDataUp_wrapper");
+    CallStackEntry entry("Wave3d::HighFreqL2LDataUp_wrapper");
 #endif
     return (Wave3d::_self)->HighFreqL2LDataUp(key, dat, pids);
 }
@@ -230,18 +235,22 @@ int Wave3d::HighFreqL2LLevelCommPost(int level,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqL2LLevelCommPost");
 #endif
-    CHECK_TRUE(level > UnitLevel());
-    LevelBoxAndDirVec& curr_level_vec = _level_prtns._hf_vecs_inc[level];
+    // If the child level is at or above the starting level, then there is
+    // no communication to do.
+    int childlevel = level + 1;
+    if (childlevel <= _starting_level) {
+        return 0;
+    }
+    CHECK_TRUE(level <= UnitLevel());
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirdnchkval] = 1;
-
-    if (level + 1 == UnitLevel()) {
+    if (childlevel == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
 	// Send data that I have
 	vec.putBegin(keys_affected, mask);
 	vec.putEnd(mask);
     } else {
-        LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level + 1];
+        LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[childlevel];
 	// Send data that I have
 	vec.putBegin(keys_affected, mask);
 	vec.putEnd(mask);
@@ -287,6 +296,11 @@ int Wave3d::HighFreqM2MLevelComm(int level) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqM2MLevelComm");
 #endif
+    // If we are at or above the starting level, there is no communication to
+    // do.  (There is no computation at the level above).
+    if (level >= _starting_level) {
+        return 0;
+    }
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirupeqnden] = 1;
     if (level == UnitLevel()) {
