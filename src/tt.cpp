@@ -47,8 +47,7 @@ std::string findOption(std::map<std::string, std::string>& opts,
     return mi->second;
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
 #ifndef RELEASE
     // When not in release mode, we catch all errors so that we can print the
     // manual call stack.
@@ -81,7 +80,7 @@ int main(int argc, char** argv)
         SAFE_FUNC_EVAL( deserialize(pos, piss, all) );
 	std::vector<int>& tmpinfo = pos.prtn().ownerinfo();
 	// LEXING: numpts CONTAINS THE TOTAL NUMBER OF POINTS
-        int numpts = tmpinfo[tmpinfo.size()-1];
+        int numpts = tmpinfo[tmpinfo.size() - 1];
         if (mpirank == 0) {
 	    std::cerr << "Total number of points: " << numpts << std::endl;
 	    std::cerr << "Done reading pos " << pos.lclmap().size() << " "
@@ -101,7 +100,7 @@ int main(int argc, char** argv)
             std::cerr << "Done reading den " << den.lclmap().size() << " "
 		 << den.prtn().ownerinfo().size() << std::endl;
         }
-        ParVec<int, cpx, PtPrtn> val; //preset val to be the same as den
+        ParVec<int, cpx, PtPrtn> val; // preset val to be the same as den
         val = den;
         if (mpirank==0) {
             std::cerr << "Done setting val " << val.lclmap().size() << " "
@@ -173,7 +172,7 @@ int main(int argc, char** argv)
         SAFE_FUNC_EVAL( wave.setup(opts) );
         t1 = time(0);
         if (mpirank == 0) {
-	    std::cout << "wave setup used " << difftime(t1,t0) << "secs " << std::endl;
+	    std::cout << "wave setup used " << difftime(t1, t0) << "secs " << std::endl;
         }
 
         //3. eval
@@ -183,9 +182,9 @@ int main(int argc, char** argv)
 
 	t1 = time(0);
 	if (mpirank == 0) {
-	    std::cout << "wave eval used " << difftime(t1,t0) << "secs " << std::endl;
+	    std::cout << "wave eval used " << difftime(t1, t0) << "secs " << std::endl;
 	}
-	time_eval = difftime(t1,t0);
+	time_eval = difftime(t1, t0);
 
         std::ostringstream oss;
 	SAFE_FUNC_EVAL( serialize(val, oss, all) );
