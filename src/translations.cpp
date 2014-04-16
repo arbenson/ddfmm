@@ -60,7 +60,7 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
         }
         int level = srckey.first;
         BoxAndDirDat& bnddat = (level == UnitLevel()) ? _level_prtns._unit_vec.access(key)
-	                                              : _level_prtns._hf_vecs_out[level].access(key);
+                                                      : _level_prtns._hf_vecs_out[level].access(key);
         CpxNumVec& ued = bnddat.dirupeqnden();
         CpxNumMat Mts;
         SAFE_FUNC_EVAL( _kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
@@ -86,18 +86,18 @@ int Wave3d::CreateIfUnavail(BoxAndDirKey bndkey) {
   if (level == UnitLevel()) {
       std::pair<bool, BoxAndDirDat&> data = _level_prtns._unit_vec.contains(bndkey);
       if (!data.first) {
-	// Interaction list was empty, so we need to put data back in it here.
-	// TODO(arbenson): make this cleaner
-	BoxAndDirDat dummy;
-	_level_prtns._unit_vec.lclmap()[bndkey] = dummy;
+        // Interaction list was empty, so we need to put data back in it here.
+        // TODO(arbenson): make this cleaner
+        BoxAndDirDat dummy;
+        _level_prtns._unit_vec.lclmap()[bndkey] = dummy;
       }
   } else {
       std::pair<bool, BoxAndDirDat&> data = _level_prtns._hf_vecs_out[level].contains(bndkey);
       if (!data.first) {
-	// Interaction list was empty, so we need to put data back in it here.
-	// TODO(arbenson): make this cleaner
-	BoxAndDirDat dummy;
-	_level_prtns._hf_vecs_out[level].lclmap()[bndkey] = dummy;
+        // Interaction list was empty, so we need to put data back in it here.
+        // TODO(arbenson): make this cleaner
+        BoxAndDirDat dummy;
+        _level_prtns._hf_vecs_out[level].lclmap()[bndkey] = dummy;
       }
   }
   return 0;
@@ -130,9 +130,9 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
             if (data.first && HasPoints(data.second)) {
                 BoxDat& chddat = data.second;
-		// TODO(arbenson): we should only have boxes with points here. 
-		// But for now, we are leaving them in.
-		// CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
+                // TODO(arbenson): we should only have boxes with points here. 
+                // But for now, we are leaving them in.
+                // CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
                 CpxNumVec& chdued = chddat.upeqnden();
                 SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
             }
@@ -146,29 +146,19 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             int b = CHILD_IND2(ind);
             int c = CHILD_IND3(ind);
             BoxKey chdkey = ChildKey(srckey, Index3(a, b, c));
-	    BoxAndDirKey bndkey(chdkey, pdir);
-	    int chd_level = chdkey.first;
-	    std::pair<bool, BoxAndDirDat&> data = (chd_level == UnitLevel()) ?
-	      _level_prtns._unit_vec.contains(bndkey) :
-	      _level_prtns._hf_vecs_out[chd_level].contains(bndkey);
+            BoxAndDirKey bndkey(chdkey, pdir);
+            int chd_level = chdkey.first;
+            std::pair<bool, BoxAndDirDat&> data = (chd_level == UnitLevel()) ?
+              _level_prtns._unit_vec.contains(bndkey) :
+              _level_prtns._hf_vecs_out[chd_level].contains(bndkey);
             if (data.first) {
                 BoxAndDirDat& bnddat = data.second;
                 CpxNumVec& chdued = bnddat.dirupeqnden();
-		if (chdued.m() == 0) {
-		  // TODO(arbenson): fix this
-#if 0
-		if (chdued.m() == 0 && getMPIRank() == 0) {
-		  std::cout << bndkey._boxkey.first
-			    << " "
-			    << bndkey._boxkey.second
-			    << " "
-			    << bndkey._dir
-			    << std::endl;
-		}
-#endif
-		} else {
-		  SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
-		}
+                // TODO(arbenson): fix this
+                if (chdued.m() != 0) {
+                    SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
+                }
+
             }
         }
     }
@@ -192,7 +182,8 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
 }
 
 int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
-                        NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc) {
+                        NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+			std::vector<BoxAndDirKey>& keys_affected) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqL2L");
 #endif
@@ -241,18 +232,20 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
             int c = CHILD_IND3(ind);             
             BoxKey chdkey = ChildKey(trgkey, Index3(a, b, c));
             BoxAndDirKey bndkey(chdkey, pdir);
-	    if (getMPIRank() == 0) {
-	      std::cout << trgkey << " " << dir << std::endl;
-	      std::cout << bndkey._boxkey << " " << bndkey._dir << std::endl;
+	    std::pair<bool, BoxAndDirDat&> dat = (chdkey.first == UnitLevel()) ? _level_prtns._unit_vec.contains(bndkey)
+	                                                                       : _level_prtns._hf_vecs_inc[chdkey.first].contains(bndkey);
+            // If we have the data, then we updat the directional check values.
+            if (dat.first) {
+                BoxAndDirDat& bnddat = dat.second;
+                CpxNumVec& chddcv = bnddat.dirdnchkval();
+                if (chddcv.m() == 0) {
+                    chddcv.resize(de2dc(a, b, c).m());
+                    setvalue(chddcv, cpx(0, 0));
+                }
+	        SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
+		// We updated the data, so we need to send it back to the children.
+	        keys_affected.push_back(bndkey);
 	    }
-	    BoxAndDirDat& bnddat = (chdkey.first == UnitLevel()) ? _level_prtns._unit_vec.access(bndkey)
-	                                                         : _level_prtns._hf_vecs_inc[chdkey.first].access(bndkey);
-            CpxNumVec& chddcv = bnddat.dirdnchkval();
-            if (chddcv.m() == 0) {
-                chddcv.resize(de2dc(a, b, c).m());
-                setvalue(chddcv, cpx(0, 0));
-            }
-            SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
         }
     }
     return 0;

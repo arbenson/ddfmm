@@ -236,7 +236,9 @@ public:
             key == partition_[ind + 1]) {
             ++ind;
         }
-        CHECK_TRUE(key <= end_partition_[ind]);
+	if (key > end_partition_[ind]) {
+	  return -1;
+	}
         return ind;
     }
 };
@@ -552,7 +554,8 @@ private:
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
-                         std::vector<BoxKey>& srcvec);
+                         std::vector<BoxKey>& srcvec,
+			 std::vector<BoxAndDirKey>& keys_affected);
 
     int ConstructMaps(ldmap_t& ldmap,
                       level_hdkeys_map_t& level_hdmap_out,
@@ -583,7 +586,8 @@ private:
     int HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
                     DblNumMat& dcp, DblNumMat& uep);
     int HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
-                    NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc);
+                    NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+		    std::vector<BoxAndDirKey>& keys_affected);
 
 
     // Routines for communication
@@ -602,10 +606,18 @@ private:
                         std::vector<BoxAndDirKey>& req_keys);
     int HighFreqM2MLevelComm(int level);
     int HighFreqL2LLevelCommPre(int level);
-    int HighFreqL2LLevelCommPost(int level);
+    int HighFreqL2LLevelCommPost(int level, std::vector<BoxAndDirKey>& keys_affected);
     int HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset);
     int HighFreqM2LComm(int level,
                         std::set<BoxAndDirKey>& request_keys);
+    int HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
+	                  std::vector<int>& pids);
+    static int HighFreqL2LDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
+					 std::vector<int>& pids);
+    int HighFreqM2MDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
+	                  std::vector<int>& pids);
+    static int HighFreqM2MDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
+					 std::vector<int>& pids);
 
      // Tools for data distribution.
      void PrtnDirections(level_hdkeys_t& level_hdkeys,
