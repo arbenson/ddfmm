@@ -142,16 +142,14 @@ int Wave3d::HighFreqPass() {
             SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_affected) );
         }
 
-        // Remove un-needed data from memory
-        CleanLevel(level);
-
         // Handle post-communication for this level.  We send back the
         // downward check values for the children. Again, we assume that the
         // boxes on the unit level are partitioned by process, so we do not
         // need to do any communication for that level.
         HighFreqL2LLevelCommPost(level, keys_affected);
 
-        // TODO(arbenson): remove data from parvec to save memory
+        // Remove old data from memory.
+        CleanLevel(level);
     }
     t1 = time(0);
 

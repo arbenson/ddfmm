@@ -43,27 +43,14 @@ int Wave3d::HighFreqInteractionListKeys(int level,
 #ifndef RELEASE
   CallStackEntry entry("Wave3d::HighFreqInteractionListKeys");
 #endif
-    if (level == UnitLevel()) {
-        // Loop over all boxes.  Only incoming computations have a non-empty
-        // interaction list.
-        std::map<BoxAndDirKey, BoxAndDirDat>& lclmap = _level_prtns._unit_vec.lclmap();
-        for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = lclmap.begin();
-             mi != lclmap.end(); ++mi) {
-            std::vector<BoxAndDirKey>& interaction_list = mi->second.interactionlist();
-            for (int j = 0; j < interaction_list.size(); ++j) {
-                request_keys.insert(interaction_list[j]);
-            }
-        }
-    } else {
-        LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
-        std::vector<BoxAndDirKey>& keys_inc = _level_prtns._hdkeys_inc[level];
-        for (int i = 0; i < keys_inc.size(); ++i) {
-            BoxAndDirKey key = keys_inc[i];
-            BoxAndDirDat dat = vec.access(key);
-            std::vector<BoxAndDirKey>& interaction_list = dat.interactionlist();
-            for (int j = 0; j < interaction_list.size(); ++j) {
-                request_keys.insert(interaction_list[j]);
-            }
+    std::map<BoxAndDirKey, BoxAndDirDat>& lclmap =
+      (level == UnitLevel()) ? _level_prtns._unit_vec.lclmap()
+                             : _level_prtns._hf_vecs_inc[level].lclmap();
+    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = lclmap.begin();
+         mi != lclmap.end(); ++mi) {
+        std::vector<BoxAndDirKey>& interaction_list = mi->second.interactionlist();
+        for (int j = 0; j < interaction_list.size(); ++j) {
+            request_keys.insert(interaction_list[j]);
         }
     }
     return 0;
@@ -79,14 +66,14 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
     std::vector<int> mask(BoxDat_Number,0);
     mask[BoxDat_extden] = 1;
     mask[BoxDat_upeqnden] = 1;
-    _boxvec.initialize_data();
-    SAFE_FUNC_EVAL( _boxvec.getBegin(reqbox, mask) );
-    SAFE_FUNC_EVAL( _boxvec.getEnd(mask) );
+    _level_prtns._lf_boxvec.initialize_data();
+    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(reqbox, mask) );
+    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
     time_t t1 = time(0);
     PrintParData(GatherParData(t0, t1), "Low frequency downward communication");
-    PrintCommData(GatherCommData(_boxvec.kbytes_received()),
+    PrintCommData(GatherCommData(_level_prtns._lf_boxvec.kbytes_received()),
                   "kbytes received");
-    PrintCommData(GatherCommData(_boxvec.kbytes_sent()),
+    PrintCommData(GatherCommData( _level_prtns._lf_boxvec.kbytes_sent()),
                   "kbytes sent");
     return 0;
 }
@@ -232,7 +219,7 @@ int Wave3d::HighFreqL2LDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
 }
 
 int Wave3d::HighFreqL2LLevelCommPost(int level,
-				     std::vector<BoxAndDirKey>& keys_affected) {
+                                     std::vector<BoxAndDirKey>& keys_affected) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqL2LLevelCommPost");
 #endif
@@ -248,14 +235,14 @@ int Wave3d::HighFreqL2LLevelCommPost(int level,
     mask[BoxAndDirDat_dirdnchkval] = 1;
     if (childlevel == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
-	// Send data that I have
-	vec.putBegin(keys_affected, mask);
-	vec.putEnd(mask);
+        // Send data that I have
+        vec.putBegin(keys_affected, mask);
+        vec.putEnd(mask);
     } else {
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[childlevel];
-	// Send data that I have
-	vec.putBegin(keys_affected, mask);
-	vec.putEnd(mask);
+        // Send data that I have
+        vec.putBegin(keys_affected, mask);
+        vec.putEnd(mask);
     }
     return 0;
 }
