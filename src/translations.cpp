@@ -38,7 +38,9 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
         }
     }
     BoxAndDirKey bndkey(trgkey, dir);
-    BoxAndDirDat& bnddat = _bndvec.access(bndkey);
+    int level = trgkey.first;
+    BoxAndDirDat& bnddat = (level == UnitLevel()) ? _level_prtns._unit_vec.access(bndkey)
+                                                  : _level_prtns._hf_vecs_inc[level].access(bndkey);
     CpxNumVec& dcv = bnddat.dirdnchkval();
     std::vector<BoxAndDirKey>& interactionlist = bnddat.interactionlist();
     for (int i = 0; i < interactionlist.size(); ++i) {
@@ -57,7 +59,8 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey, BoxDat& trgdat,
             }
         }
         int level = srckey.first;
-        BoxAndDirDat& bnddat = _level_prtns._hf_vecs_out[level].access(bndkey);
+        BoxAndDirDat& bnddat = (level == UnitLevel()) ? _level_prtns._unit_vec.access(key)
+	                                              : _level_prtns._hf_vecs_out[level].access(key);
         CpxNumVec& ued = bnddat.dirupeqnden();
         CpxNumMat Mts;
         SAFE_FUNC_EVAL( _kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
@@ -151,7 +154,21 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             if (data.first) {
                 BoxAndDirDat& bnddat = data.second;
                 CpxNumVec& chdued = bnddat.dirupeqnden();
-                SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
+		if (chdued.m() == 0) {
+		  // TODO(arbenson): fix this
+#if 0
+		if (chdued.m() == 0 && getMPIRank() == 0) {
+		  std::cout << bndkey._boxkey.first
+			    << " "
+			    << bndkey._boxkey.second
+			    << " "
+			    << bndkey._dir
+			    << std::endl;
+		}
+#endif
+		} else {
+		  SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
+		}
             }
         }
     }
@@ -181,7 +198,9 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
 #endif
     double eps = 1e-12;
     BoxAndDirKey bndkey(trgkey, dir);
-    BoxAndDirDat& bnddat = _bndvec.access(bndkey);
+    int level = trgkey.first;
+    BoxAndDirDat& bnddat = (level == UnitLevel()) ? _level_prtns._unit_vec.access(bndkey)
+                                                  : _level_prtns._hf_vecs_inc[level].access(bndkey);
     CpxNumVec& dnchkval = bnddat.dirdnchkval();
     CpxNumMat& E1 = dc2de(0);
     CpxNumMat& E2 = dc2de(1);
@@ -215,14 +234,19 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
             SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a,b,c), dneqnden, 1.0, chddcv) );
         }
     } else {
-        Index3 pdir = ParentDir(dir); //LEXING: CHECK
+        Index3 pdir = ParentDir(dir);
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
             int a = CHILD_IND1(ind);
             int b = CHILD_IND2(ind);
             int c = CHILD_IND3(ind);             
             BoxKey chdkey = ChildKey(trgkey, Index3(a, b, c));
             BoxAndDirKey bndkey(chdkey, pdir);
-            BoxAndDirDat& bnddat = _level_prtns._hf_vecs_inc[chdkey.first].access(bndkey);
+	    if (getMPIRank() == 0) {
+	      std::cout << trgkey << " " << dir << std::endl;
+	      std::cout << bndkey._boxkey << " " << bndkey._dir << std::endl;
+	    }
+	    BoxAndDirDat& bnddat = (chdkey.first == UnitLevel()) ? _level_prtns._unit_vec.access(bndkey)
+	                                                         : _level_prtns._hf_vecs_inc[chdkey.first].access(bndkey);
             CpxNumVec& chddcv = bnddat.dirdnchkval();
             if (chddcv.m() == 0) {
                 chddcv.resize(de2dc(a, b, c).m());

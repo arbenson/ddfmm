@@ -121,8 +121,11 @@ int Wave3d::HighFreqPass() {
     t0 = time(0);
     for (int level = 0; level < level_hdmap_inc.size(); ++level) {
         double W = _K / pow2(level);
-        std::map<Index3, std::vector<BoxKey> > level_inc = level_hdmap_inc[level];
-        std::map<Index3, std::vector<BoxKey> > level_out = level_hdmap_out[level];
+	if (mpirank == 0) {
+	  std::cout << "Box width for M2L: " << W << std::endl;
+	}
+        std::map<Index3, std::vector<BoxKey> >& level_inc = level_hdmap_inc[level];
+        std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
 
         // Handle pre-communication for this level.  We request the directional
         // downward check values for the children.

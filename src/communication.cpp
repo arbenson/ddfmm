@@ -159,7 +159,7 @@ int Wave3d::AllChildrenKeys(LevelBoxAndDirVec& vec,
 #endif
     int mpirank = getMPIRank();
     for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = vec.lclmap().begin();
-        mi != vec.lclmap().begin(); ++mi) {
+        mi != vec.lclmap().end(); ++mi) {
         BoxAndDirKey key = mi->first;
         if (vec.prtn().owner(key) == mpirank) {
             Index3 dir = key._dir;
@@ -179,7 +179,6 @@ int Wave3d::AllChildrenKeys(LevelBoxAndDirVec& vec,
 }
 
 int Wave3d::HighFreqM2MLevelComm(int level) {
-
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqM2MLevelComm");
 #endif
@@ -207,8 +206,8 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqL2LLevelCommPre");
 #endif
-    LevelBoxAndDirVec& curr_level_vec = _level_prtns._hf_vecs_out[level];
-    LevelBoxAndDirVec& child_level_vec = _level_prtns._hf_vecs_out[level + 1];
+    LevelBoxAndDirVec& curr_level_vec = _level_prtns._hf_vecs_inc[level];
+    LevelBoxAndDirVec& child_level_vec = _level_prtns._hf_vecs_inc[level + 1];
     std::vector<BoxAndDirKey> req_keys;
     AllChildrenKeys(curr_level_vec, req_keys);
     std::vector<int> mask(BoxAndDirDat_Number, 0);

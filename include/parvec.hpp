@@ -95,11 +95,11 @@ int ParVec<Key,Data,Partition>::resetVecs()
 #endif
     int mpisize = getMPISize();
     _snbvec.resize(mpisize, 0);
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         _snbvec[k] = 0;
     }
     _rnbvec.resize(mpisize, 0);
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         _rnbvec[k] = 0;
     }
     return 0;
@@ -114,11 +114,11 @@ int ParVec<Key,Data,Partition>::getSizes(std::vector<int>& rszvec, std::vector<i
 #endif
     int mpisize = getMPISize();
     sszvec.resize(mpisize, 0);
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         sszvec[k] = _sbufvec[k].size();
     }
     std::vector<int> sifvec(2 * mpisize, 0);
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         sifvec[2 * k] = _snbvec[k];
         sifvec[2 * k + 1] = sszvec[k];
     }
@@ -126,7 +126,7 @@ int ParVec<Key,Data,Partition>::getSizes(std::vector<int>& rszvec, std::vector<i
     SAFE_FUNC_EVAL( MPI_Alltoall( (void*)&(sifvec[0]), 2, MPI_INT, (void*)&(rifvec[0]), 2,
                       MPI_INT, MPI_COMM_WORLD ) );
     rszvec.resize(mpisize,0);
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         _rnbvec[k] = rifvec[2 * k];
         rszvec[k] = rifvec[2 * k + 1];
     }
@@ -168,7 +168,7 @@ int ParVec<Key,Data,Partition>::strs2vec(std::vector<std::ostringstream *>& ossv
         _sbufvec[k].clear();
         _sbufvec[k].insert(_sbufvec[k].end(), tmp.begin(), tmp.end());
     }
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         delete ossvec[k];
         ossvec[k] = NULL;
     }
@@ -231,7 +231,7 @@ int ParVec<Key,Data,Partition>::getBegin(int (*e2ps)(Key, Data&, std::vector<int
     _stats = new MPI_Status[2 * mpisize];
     //---------
     std::vector<std::ostringstream*> ossvec(mpisize);
-    for(int k = 0; k < mpisize; k++)        {
+    for (int k = 0; k < mpisize; k++)        {
         ossvec[k] = new std::ostringstream();
     }
 
@@ -241,7 +241,6 @@ int ParVec<Key,Data,Partition>::getBegin(int (*e2ps)(Key, Data&, std::vector<int
         Key key = mi->first;
         const Data& dat = mi->second;
         if (_prtn.owner(key) == mpirank) {
-            //ASK QUESTIONS
             std::vector<int> pids;
             int res = (*e2ps)(mi->first, mi->second, pids);
             for (int i = 0; i < pids.size(); i++) {
@@ -287,7 +286,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
 
     // 1. go through the keyvec to partition them among other procs
     std::vector< std::vector<Key> > skeyvec(mpisize);
-    for(int i = 0; i < keyvec.size(); i++) {
+    for (int i = 0; i < keyvec.size(); i++) {
         Key key = keyvec[i];
         int owner = _prtn.owner(key);
         if(owner != mpirank) {
@@ -298,7 +297,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
     // 2. setdn receive size of keyvec
     std::vector<int> sszvec(mpisize);
     std::vector<int> rszvec(mpisize);
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         sszvec[k] = skeyvec[k].size();
     }
     SAFE_FUNC_EVAL( MPI_Alltoall( (void*)&(sszvec[0]), 1, MPI_INT, (void*)&(rszvec[0]), 1,
@@ -312,7 +311,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
 
     MPI_Request *reqs = new MPI_Request[2 * mpisize];
     MPI_Status  *stats = new MPI_Status[2 * mpisize];
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         SAFE_FUNC_EVAL( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k] * sizeof(Key), MPI_BYTE,
                         k, 0, MPI_COMM_WORLD, &reqs[2 * k] ) );
         SAFE_FUNC_EVAL( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k] * sizeof(Key), MPI_BYTE,
@@ -326,14 +325,14 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
 
     // 4. prepare the streams
     std::vector<std::ostringstream*> ossvec(mpisize);
-    for(int k = 0; k < mpisize; k++) {
+    for (int k = 0; k < mpisize; k++) {
         ossvec[k] = new std::ostringstream();
     }
-    for(int k = 0; k < mpisize; k++) {
-        for(int g = 0; g < rkeyvec[k].size(); g++) {
+    for (int k = 0; k < mpisize; k++) {
+        for (int g = 0; g < rkeyvec[k].size(); g++) {
             Key curkey = rkeyvec[k][g];
             typename std::map<Key, Data>::iterator mi = _lclmap.find(curkey);
-            CHECK_TRUE( mi!=_lclmap.end() );
+            CHECK_TRUE( mi != _lclmap.end() );
             CHECK_TRUE( _prtn.owner(curkey) == mpirank );
             Key key = mi->first;
             const Data& dat = mi->second;
@@ -498,7 +497,7 @@ int ParVec<Key,Data,Partition>::expand(std::vector<Key>& keyvec) {
     CallStackEntry entry("ParVec::expand");
 #endif
     Data dummy;
-    for(int i=0; i<keyvec.size(); i++) {
+    for (int i = 0; i<keyvec.size(); i++) {
         Key key = keyvec[i];
         typename std::map<Key, Data>::iterator mi = _lclmap.find(key);
         if (mi == _lclmap.end()) {
