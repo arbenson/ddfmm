@@ -30,8 +30,8 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     int mpirank = getMPIRank();
     ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
   
-    //1. get pos
-    std::vector<int> all(1,1);
+    // 1. get pos
+    std::vector<int> all(1, 1);
     std::vector<int> chkkeyvec;
     for (int i = 0; i < chkkeys.m(); ++i) {
         chkkeyvec.push_back( chkkeys(i) );
@@ -97,7 +97,7 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     double tn = sqrt( energy(truval) );
     double en = sqrt( energy(errval) );
     std::cout << "true value: " << tn
-              << ", computed value: " << en << std::endl;
+              << ", error value: " << en << std::endl;
     relerr = en / tn;
   
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
