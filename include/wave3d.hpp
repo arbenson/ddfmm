@@ -504,7 +504,7 @@ private:
     int RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
                            bool first_pass);
     int P();
-    int SetupCallLists();
+    int SetupHighFreqCallLists();
     int GetExtPos();
     int GetHighFreqDirs();
     int SetupLowFreqOctree();

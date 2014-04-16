@@ -333,7 +333,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsLeaf(curdat)) {
+        if (HasPoints(curdat) && 
+	    _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank &&
+	    IsLeaf(curdat)) {
             CpxNumVec& extval = curdat.extval();
             std::vector<int>& curpis = curdat.ptidxvec();
             for (int k = 0; k < curpis.size(); ++k) {
@@ -410,10 +412,6 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
     SAFE_FUNC_EVAL( _mlibptr->UpwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
-#if 0
-        BoxDat& srcdat = _boxvec.access(srckey);
-        CHECK_TRUE(HasPoints(srcdat));  // Should have points
-#endif
         Point3 srcctr = BoxCenter(srckey);
         BoxAndDirKey bndkey(srckey, dir);
         HighFreqM2M(W, bndkey, uc2ue, ue2uc);

@@ -222,7 +222,7 @@ int Wave3d::SetupTree() {
 
     // Construct the tree.
     RecursiveBoxInsert(tmpq, true);
-    SetupCallLists();
+    SetupHighFreqCallLists();
 
     // Delete endeidxvec since it was only used to build the interaction lists
     // in the high-frequency regime.
@@ -236,11 +236,7 @@ int Wave3d::SetupTree() {
         }
     }
 
-#if 0
-    GetExtPos();
-#endif
     GetHighFreqDirs();
-
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }
@@ -547,7 +543,7 @@ int Wave3d::DistribLowFreqBoxes(BoxKey boxkey, BoxDat& boxdat, std::vector<int>&
     return 0;
 }
 
-int Wave3d::SetupCallLists() {
+int Wave3d::SetupHighFreqCallLists() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::SetupCallLists");
 #endif
@@ -561,18 +557,12 @@ int Wave3d::SetupCallLists() {
     SAFE_FUNC_EVAL( _boxvec.getEnd( mask1 ) );
     // Compute lists, low list and high list
     for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); mi++) {
+        mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         // For all of my boxes with points, setup the call list.
         if (OwnBox(curkey, mpirank) && HasPoints(curdat)) {
-            if (BoxWidth(curkey) < 1 - eps) { // strictly < 1
-                // Low frequency regime
-#if 0
-	      SAFE_FUNC_EVAL(SetupTreeLowFreqLists(curkey, curdat));
-#endif
-            } else {
-                // High frequency regime
+            if (BoxWidth(curkey) >= 1 - eps) { // High frequency regime
                 SAFE_FUNC_EVAL(SetupTreeHighFreqLists(curkey, curdat));
             }
         }

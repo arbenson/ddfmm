@@ -437,30 +437,29 @@ int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNu
             neidat.upeqnden_fft() = _denfft; //COPY to the right place
         }
         CpxNumTns& neidenfft = neidat.upeqnden_fft();
-        //TODO: LEXING GET THE INTERACTION TENSOR
-        CpxNumTns& inttns = ue2dc(idx[0]+3,idx[1]+3,idx[2]+3);
+        CpxNumTns& interaction_tensor = ue2dc(idx[0] + 3, idx[1] + 3, idx[2] + 3);
         for (int a = 0; a < 2 * _P; ++a) {
             for (int b = 0; b < 2 * _P; ++b) {
                 for (int c = 0; c < 2 * _P; ++c) {
-                    _valfft(a, b, c) += (neidenfft(a, b, c) * inttns(a, b, c));
+                    _valfft(a, b, c) += (neidenfft(a, b, c) * interaction_tensor(a, b, c));
                 }
             }
         }
-        //clean if necessary
+        // Clean if necessary
         neidat.fftcnt()++;
         if (neidat.fftcnt() == neidat.fftnum()) {
-            neidat.upeqnden_fft().resize(0,0,0);
-            neidat.fftcnt() = 0;//reset, LEXING
+            neidat.upeqnden_fft().resize(0, 0, 0);
+            neidat.fftcnt() = 0;
         }
     }
     fftw_execute(_bplan);
-    //add back
+    // add back
     double coef = 1.0 / (2 * _P * 2 * _P * 2 * _P);
     for (int k = 0; k < dcp.n(); ++k) {
         int a = int( round((dcp(0, k) + W / 2) / step) ) + _P;
         int b = int( round((dcp(1, k) + W / 2) / step) ) + _P;
         int c = int( round((dcp(2, k) + W / 2) / step) ) + _P;
-        dnchkval(k) += (_valfft(a, b, c) * coef); //LEXING: VERY IMPORTANT
+        dnchkval(k) += (_valfft(a, b, c) * coef);
     }
     return 0;
 }
