@@ -358,6 +358,8 @@ public:
   LevelPartitions() {;}
   ~LevelPartitions() {;}
 
+  BoxAndDirDat& Access(BoxAndDirKey key);
+  std::pair<bool, BoxAndDirDat&> SafeAccess(BoxAndDirKey key);
   void init(int max_level, int unit_level);
   void FormMaps();
   
@@ -372,6 +374,8 @@ public:
 
   level_hdkeys_map_t _level_hdmap_out;
   level_hdkeys_map_t _level_hdmap_inc;
+
+
 
 private:
   int unit_level_;

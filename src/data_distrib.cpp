@@ -479,7 +479,28 @@ void LevelPartitions::FormMaps() {
         std::vector<BoxAndDirKey>& old_keys = _hdkeys_inc[i];
 	std::vector<BoxAndDirKey>().swap(old_keys);
     }
+}
 
+BoxAndDirDat& LevelPartitions::Access(BoxAndDirKey key) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::Access");
+#endif
+    int level = key._boxkey.first;
+    if (level == unit_level_) {
+        return _unit_vec.access(key);
+    }
+    return _hf_vecs_out[level].access(key);
+}
+
+std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::Access");
+#endif
+    int level = key._boxkey.first;
+    if (level == unit_level_) {
+        return _unit_vec.contains(key);
+    }
+    return _hf_vecs_out[level].contains(key);
 }
 
 void CleanDirVecMap(std::map<Index3, std::vector<BoxKey> >& curr_map) {
