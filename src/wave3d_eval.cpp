@@ -291,17 +291,17 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     SAFE_FUNC_EVAL(_boxvec.getBegin(&Wave3d::TransferUnitLevelData_wrapper, mask1));
     SAFE_FUNC_EVAL(_boxvec.getEnd(mask1));
 
+    // Now we have the unit level information, so we can setup our part of the tree.
+    SetupLowFreqOctree();
+    // Remove old boxvec data.
+    CleanBoxvec();
+
     // Gather the interaction lists.
     std::vector<int> mask2(BoxAndDirDat_Number, 0);
     mask2[BoxAndDirDat_interactionlist] = 1;
     SAFE_FUNC_EVAL(_bndvec.getBegin(&Wave3d::TransferBoxAndDirData_wrapper, mask2));
     SAFE_FUNC_EVAL(_bndvec.getEnd(mask2));
     TransferDataToLevels();
-
-    // Now we have the unit level information, so we can setup our part of the tree.
-    SetupLowFreqOctree();
-    // Remove old boxvec data.
-    CleanBoxvec();
 
     // Compute extden on leaf nodes using ptidxvec
     GatherDensities(den);
