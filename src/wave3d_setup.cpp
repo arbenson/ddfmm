@@ -526,8 +526,9 @@ int Wave3d::DistribLowFreqBoxes(BoxKey boxkey, BoxDat& boxdat, std::vector<int>&
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::DistribLowFreqBoxes");
 #endif
-    int mpisize = getMPISize();
-    int numC = _geomprtn.m();
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
+    int numC = pow2(UnitLevel());
     double widC = _K / numC;
     double W = BoxWidth(boxkey);
     std::set<int> idset;
@@ -544,7 +545,7 @@ int Wave3d::DistribLowFreqBoxes(BoxKey boxkey, BoxDat& boxdat, std::vector<int>&
     for (int i = il; i < iu; ++i) {
         for (int j = jl; j < ju; ++j) {
             for (int k = kl; k < ku; ++k) {
-                BoxKey key(boxkey.first, Index3(i, j, k));
+                BoxKey key(UnitLevel(), Index3(i, j, k));
                 int pid = _level_prtns.Owner(key);
                 // The box may not be owned, in which case we just skip it.
                 if (pid >= 0 && pid < mpisize) {
@@ -720,6 +721,7 @@ int Wave3d::SetupLowFreqOctree() {
     std::vector<int> all(1, 1);
     SAFE_FUNC_EVAL( pos.getBegin(&(Wave3d::DistribUnitPts_wrapper), all) );
     SAFE_FUNC_EVAL( pos.getEnd(all) );
+    std::cout << "size of lf_q: " << lf_q.size() << std::endl;
     RecursiveBoxInsert(lf_q, false);
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_tag] = 1;

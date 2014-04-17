@@ -650,6 +650,10 @@ int LowFreqBoxPrtn::owner(BoxKey& key) {
 	    return -1;
 	}
 	if (new_key > end_partition_[ind]) {
+	  // Key is not owned by any processor
+	  return -1;
+	}
+	if (new_key > end_partition_[ind]) {
 	  std::cout << "ind: " << ind << std::endl;
 	  std::cout << "new_key: " << new_key << std::endl;;
 	  std::cout << "start: " << partition_[ind] << std::endl;

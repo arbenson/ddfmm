@@ -44,10 +44,15 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqDownwardComm");
 #endif
+    int mpirank = getMPIRank();
     time_t t0 = time(0);
     std::vector<BoxKey> reqbox;
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
     std::cout << "Requesting " << reqbox.size() << " keys" << std::endl;
+    for (int i = 0; i < reqbox.size(); ++i) {
+	BoxKey key = reqbox[i];
+	int owner = _level_prtns.Owner(key);
+    }
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_extden] = 1;
     mask[BoxDat_upeqnden] = 1;
