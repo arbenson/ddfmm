@@ -269,10 +269,10 @@ public:
     }
 };
 
-class BoxPrtn2 {
+class LowFreqBoxPrtn {
 public:
-    BoxPrtn2() {;}
-    ~BoxPrtn2() {;}
+    LowFreqBoxPrtn() {;}
+    ~LowFreqBoxPrtn() {;}
     std::vector<BoxKey> partition_;
     std::vector<BoxKey> end_partition_;  // for debugging
     int unit_level_;
@@ -280,7 +280,7 @@ public:
     // Return process that owns the key.
     int owner(BoxKey& key) {
 #ifndef RELEASE
-        CallStackEntry entry("BoxPrtn2::owner");
+        CallStackEntry entry("LowFreqBoxPrtn::owner");
 #endif
         int level = key.first;
         Index3 idx = key.second;
@@ -358,8 +358,11 @@ public:
   LevelPartitions() {;}
   ~LevelPartitions() {;}
 
+  // out specifies outgoing / incoming
   BoxAndDirDat& Access(BoxAndDirKey key, bool out);
   std::pair<bool, BoxAndDirDat&> SafeAccess(BoxAndDirKey key, bool out);
+  int Owner(BoxAndDirKey key, bool out);
+  int Owner(BoxKey key);
   void Init(int max_level, int unit_level);
   void FormMaps();
   
@@ -367,7 +370,7 @@ public:
   std::vector<LevelBoxAndDirVec> _hf_vecs_inc;  // outgoing partition for M2L + L2L
 
   ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn> _unit_vec;
-  ParVec<BoxKey, BoxDat, BoxPrtn2> _lf_boxvec;  // boxes in low frequency regime
+  ParVec<BoxKey, BoxDat, LowFreqBoxPrtn> _lf_boxvec;  // boxes in low frequency regime
 
   level_hdkeys_t _hdkeys_out;  // which keys I am responsible for (outgoing)
   level_hdkeys_t _hdkeys_inc;  // which keys I am responsible for (incoming)

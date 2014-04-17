@@ -90,7 +90,7 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (HasPoints(curdat) &&
-            _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank &&
+            _level_prtns.Owner(curkey) == mpirank &&
             IsLeaf(curdat)) {
             std::vector<int>& curpis = curdat.ptidxvec();
             for (int k = 0; k < curpis.size(); ++k) {
@@ -119,7 +119,7 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (HasPoints(curdat) &&
-            _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank &&
+            _level_prtns.Owner(curkey) == mpirank &&
             IsLeaf(curdat)) {
             std::vector<int>& curpis = curdat.ptidxvec();
             CpxNumVec& extden = curdat.extden();
@@ -200,7 +200,7 @@ int Wave3d::HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
     std::vector<Index3> dirs = ChildDir(key._dir);
     for (int i = 0; i < dirs.size(); ++i) {
         BoxAndDirKey new_key(parkey, dirs[i]);
-        int pid = _level_prtns._hf_vecs_inc[parlevel].prtn().owner(new_key);
+        int pid = _level_prtns.Owner(new_key, false);
         if (0 <= pid && pid < getMPISize()) {
             pids.push_back(pid);
         }
@@ -313,7 +313,7 @@ int Wave3d::HighFreqM2MDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
     std::vector<Index3> dirs = ChildDir(key._dir);
     for (int i = 0; i < dirs.size(); ++i) {
         BoxAndDirKey new_key(parkey, dirs[i]);
-        int pid = _level_prtns._hf_vecs_out[parlevel].prtn().owner(new_key);
+        int pid = _level_prtns.Owner(new_key, true);
         if (0 <= pid && pid < getMPISize()) {
             pids.push_back(pid);
         }

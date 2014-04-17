@@ -332,7 +332,7 @@ int Wave3d::PrtnUnitLevel() {
     FormUnitPrtnMap(_level_prtns._unit_vec.prtn(), start_recv_buf, end_recv_buf);
     // Copy to low-frequency boxvec partition.
     
-    BoxPrtn2& prtn = _level_prtns._lf_boxvec.prtn();
+    LowFreqBoxPrtn& prtn = _level_prtns._lf_boxvec.prtn();
     UnitLevelBoxPrtn& unit_prtn = _level_prtns._unit_vec.prtn();
     prtn.partition_ = unit_prtn.partition_;
     prtn.end_partition_ = unit_prtn.end_partition_;
@@ -507,6 +507,27 @@ std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key, boo
         return _hf_vecs_out[level].contains(key);
     }
     return _hf_vecs_inc[level].contains(key);
+}
+
+int LevelPartitions::Owner(BoxAndDirKey key, bool out) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::Owner");
+#endif
+    int level = key._boxkey.first;
+    if (level == unit_level_) {
+        return _unit_vec.prtn().owner(key);
+    }
+    if (out) {
+        return _hf_vecs_out[level].prtn().owner(key);
+    }
+    return _hf_vecs_inc[level].prtn().owner(key);
+}
+
+int LevelPartitions::Owner(BoxKey key) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::Owner");
+#endif
+    return _lf_boxvec.prtn().owner(key);
 }
 
 void CleanDirVecMap(std::map<Index3, std::vector<BoxKey> >& curr_map) {

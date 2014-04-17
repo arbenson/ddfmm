@@ -236,7 +236,7 @@ int Wave3d::ConstructLowFreqMap(ldmap_t& ldmap) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = BoxWidth(curkey);
-        if (HasPoints(curdat) && _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank) {
+        if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
             CHECK_TRUE(W < 1 - eps);
             ldmap[W].push_back(curkey);
         }
@@ -334,7 +334,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (HasPoints(curdat) && 
-	    _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank &&
+	    _level_prtns.Owner(curkey) == mpirank &&
 	    IsLeaf(curdat)) {
             CpxNumVec& extval = curdat.extval();
             std::vector<int>& curpis = curdat.ptidxvec();
