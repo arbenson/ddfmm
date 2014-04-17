@@ -273,7 +273,7 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     
     // uc2ue
     CpxNumMat& v  = uc2ue(0);
-    CpxNumMat& is = uc2ue(1); //LEXING: it is stored as a matrix
+    CpxNumMat& is = uc2ue(1); // LEXING: it is stored as a matrix
     CpxNumMat& up = uc2ue(2);
     CpxNumVec mid(up.m());
     setvalue(mid,cpx(0,0));
