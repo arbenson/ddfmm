@@ -463,7 +463,7 @@ int Wave3d::DistribUnitPts(int key, Point3& pos, std::vector<int>& pids) {
     Index3 dummy_dir(1, 1, 1);
     BoxAndDirKey bndkey(BoxKey(level, idx), dummy_dir);
     // just one processor needs the data
-    pids.push_back( _level_prtns._unit_vec.prtn().owner(bndkey) );
+    pids.push_back( _level_prtns.Owner(bndkey, false) );
     return 0;
 }
 
@@ -530,7 +530,7 @@ int Wave3d::DistribLowFreqBoxes(BoxKey boxkey, BoxDat& boxdat, std::vector<int>&
         for (int j = jl; j < ju; ++j) {
             for (int k = kl; k < ku; ++k) {
                 BoxKey key(boxkey.first, Index3(i, j, k));
-		int pid = _level_prtns._lf_boxvec.prtn().owner(key);
+		int pid = _level_prtns.Owner(key);
                 // The box may not be owned, in which case we just skip it.
                 if (pid >= 0 && pid < mpisize) {
                     idset.insert(pid);
@@ -581,7 +581,7 @@ int Wave3d::SetupLowFreqCallLists() {
          mi != local_map.end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (_level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank &&
+        if (_level_prtns.Owner(curkey) == mpirank &&
             HasPoints(curdat)) {
             CHECK_TRUE(BoxWidth(curkey) < 1 - eps);
             SAFE_FUNC_EVAL(SetupTreeLowFreqLists(curkey, curdat));
@@ -600,7 +600,7 @@ int Wave3d::GetExtPos() {
         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank) {
+        if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
             reqboxset.insert(curdat.undeidxvec().begin(), curdat.undeidxvec().end());
             reqboxset.insert(curdat.vndeidxvec().begin(), curdat.vndeidxvec().end());
             reqboxset.insert(curdat.wndeidxvec().begin(), curdat.wndeidxvec().end());
@@ -617,7 +617,7 @@ int Wave3d::GetExtPos() {
 	 mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && _level_prtns._lf_boxvec.prtn().owner(curkey) == mpirank) {
+        if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
            for (std::vector<BoxKey>::iterator vi = curdat.vndeidxvec().begin();
                 vi != curdat.vndeidxvec().end(); ++vi) {
                 BoxKey neikey = (*vi);
