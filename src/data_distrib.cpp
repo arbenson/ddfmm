@@ -353,15 +353,13 @@ int Wave3d::TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
     CallStackEntry entry("Wave3d::TransferBoxAndDirData");
 #endif
     pids.clear();
+    int owner = _level_prtns.Owner(key, false);
     int level = key._boxkey.first;
     if (level == UnitLevel()) {
-        pids.push_back(_level_prtns._unit_vec.prtn().owner(key));
-    } else {
-        LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
+        pids.push_back(owner);
+    } else if (dat.interactionlist().size() > 0) {
         // It is an incoming direction iff the interaction list is nonempty
-        if (dat.interactionlist().size() > 0) {
-	    pids.push_back(vec.prtn().owner(key));
-	}
+        pids.push_back(owner);
     }
     return 0;
 }
@@ -382,21 +380,21 @@ int Wave3d::TransferDataToLevels() {
     for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = _bndvec.lclmap().begin();
        mi != _bndvec.lclmap().end(); ++mi) {
         BoxAndDirKey key = mi->first;
+	int owner = _level_prtns.Owner(key, false);
+	if (owner != mpirank) {
+            continue;
+	}
         BoxAndDirDat dat = mi->second;
         int level = key._boxkey.first;
         if (level == UnitLevel()) {
             // Put unit-level directions into the appropriate vector
-            if (_level_prtns._unit_vec.prtn().owner(key) == mpirank) {
-                _level_prtns._unit_vec.lclmap()[key] = dat;
-            }
-        } else {
-            CHECK_TRUE(level < _level_prtns._hf_vecs_inc.size());
-            // Put high-frequency directions into the appropriate vector
+            _level_prtns._unit_vec.lclmap()[key] = dat;
+
+        } else if (dat.interactionlist().size() > 0) {
+            // Put high-frequency directions into the appropriate vector.
+	    // It is an incoming direction iff the interaction list is nonempty.
             LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
-	    // It is an incoming direction iff the interaction list is nonempty
-	    if (dat.interactionlist().size() > 0 && vec.prtn().owner(key) == mpirank) {
-	        vec.lclmap()[key] = dat;
-            }
+	    vec.lclmap()[key] = dat;
         }
     }
     return 0;
@@ -413,8 +411,8 @@ int Wave3d::TransferUnitLevelData(BoxKey key, BoxDat& dat,
     int level = key.first;
     if (level == UnitLevel()) {
         Index3 dummy_dir(1, 1, 1);
-        BoxAndDirKey box_and_dir_key(key, dummy_dir);
-        pids.push_back(_level_prtns._unit_vec.prtn().owner(box_and_dir_key));
+        BoxAndDirKey new_key(key, dummy_dir);
+        pids.push_back(_level_prtns.Owner(new_key, false));
     }
     return 0;
 }
@@ -454,7 +452,6 @@ void InsertIntoDirMap(std::map<Index3, std::vector<BoxKey> >& dir_map,
 	dir_map[dir].push_back(boxkey);
     }
 }
-	      
 
 void LevelPartitions::FormMaps() {
 #ifndef RELEASE
