@@ -109,7 +109,7 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
     while (!tmpq.empty()) {
         std::pair<BoxKey, BoxDat> curent = tmpq.front();
         tmpq.pop();
-        BoxKey& curkey = curent.first;
+        BoxKey curkey = curent.first;
         BoxDat& curdat = curent.second;
         //LEXING: VERY IMPORTANT
         if (curdat.ptidxvec().size() > 0) {
@@ -165,6 +165,21 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
         if (first_pass) {
             _boxvec.insert(curkey, curdat);
         } else if (BoxWidth(curkey) < 1 - eps) {
+	  int mpirank = getMPIRank();
+	  int owner = _level_prtns.Owner(curkey);
+	  if (mpirank != owner) {
+	    std::cout << "Problem with key: " << curkey << std::endl;
+	    std::cout << "My rank: " << mpirank << std::endl;
+	    std::cout << "owner: " << owner << std::endl;
+	    BoxKey parkey = ParentKey(curkey);
+	    std::cout << "Parent key: " << parkey << std::endl;
+	    int parowner1 = _level_prtns.Owner(parkey);
+	    Index3 dummy_dir(1, 1, 1);
+	    BoxAndDirKey bndkey(parkey, dummy_dir);
+	    int parowner2 = _level_prtns.Owner(bndkey, false);
+	    std::cout << "Parent key owner1: " << parowner1 << std::endl;
+	    std::cout << "Parent key owner2: " << parowner2 << std::endl;
+	  }
             _level_prtns._lf_boxvec.insert(curkey, curdat);
         }
     }
@@ -685,21 +700,21 @@ int Wave3d::SetupLowFreqOctree() {
     CallStackEntry entry("Wave3d::SetupLowFreqOctree");
 #endif
     int mpirank = getMPIRank();
-    ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& unit_vec = _level_prtns._unit_vec;
-    std::map<BoxKey, BoxDat> new_map;
-    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = unit_vec.lclmap().begin();
-         mi != unit_vec.lclmap().end(); ++mi) {
-        BoxKey boxkey = mi->first._boxkey;
-        BoxDat curr_data = _boxvec.lclmap()[boxkey];
-        new_map[boxkey] = curr_data;
-    }
-
+    // Put all of the unit level boxes on a queue.
     std::queue< std::pair<BoxKey, BoxDat> > lf_q;
-    for (std::map<BoxKey, BoxDat>::iterator mi = new_map.begin();
-         mi != new_map.end(); ++mi) {
-        lf_q.push(std::pair<BoxKey, BoxDat>(mi->first, mi->second));
+    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
+         mi != _boxvec.lclmap().end(); ++mi) {
+        int level = mi->first.first;
+	BoxKey key = mi->first;
+	BoxDat dat = mi->second;
+	Index3 dummy_dir(1, 1, 1);
+	BoxAndDirKey bndkey(key, dummy_dir);
+	if (level == UnitLevel() &&
+	    _level_prtns.Owner(bndkey, false) == mpirank) {
+            lf_q.push(std::pair<BoxKey, BoxDat>(key, dat));
+	}
     }
-
+    
     // Get all of the point information needed.
     ParVec<int, Point3, PtPrtn>& pos = *_posptr;
     std::vector<int> all(1, 1);
@@ -708,7 +723,8 @@ int Wave3d::SetupLowFreqOctree() {
     RecursiveBoxInsert(lf_q, false);
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_tag] = 1;
-    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(&(Wave3d::DistribLowFreqBoxes_wrapper), mask) );
+    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(&(Wave3d::DistribLowFreqBoxes_wrapper),
+						     mask) );
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
     SetupLowFreqCallLists();
     GetExtPos();

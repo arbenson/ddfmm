@@ -225,23 +225,7 @@ public:
     std::vector<BoxAndDirKey> end_partition_;  // for debugging
 
     // Return process that owns the key.
-    int owner(BoxAndDirKey& key) {
-#ifndef RELEASE
-        CallStackEntry entry("BoxAndDirLevelPrtn::owner");
-#endif
-	CHECK_TRUE_MSG(partition_.size() != 0, "Missing partition!");
-        int ind = std::lower_bound(partition_.begin(),
-                                   partition_.end(), key) - partition_.begin();
-        --ind;
-        if (ind < static_cast<int>(partition_.size()) - 1 &&
-            key == partition_[ind + 1]) {
-            ++ind;
-        }
-	if (key > end_partition_[ind]) {
-	  return -1;
-	}
-        return ind;
-    }
+    int owner(BoxAndDirKey& key);
 };
 
 class UnitLevelBoxPrtn {
@@ -252,21 +236,7 @@ public:
     std::vector<BoxKey> end_partition_;  // for debugging
 
     // Return process that owns the key.
-    int owner(BoxAndDirKey& key) {
-#ifndef RELEASE
-        CallStackEntry entry("BoxAndDirLevelPrtn::owner");
-#endif
-        BoxKey boxkey = key._boxkey;
-        int ind = std::lower_bound(partition_.begin(),
-                                   partition_.end(), boxkey) - partition_.begin();
-        --ind;
-        if (ind < static_cast<int>(partition_.size()) - 1 &&
-            boxkey == partition_[ind + 1]) {
-            ++ind;
-        }
-        CHECK_TRUE(boxkey <= end_partition_[ind]);
-        return ind;
-    }
+  int owner(BoxAndDirKey& key);
 };
 
 class LowFreqBoxPrtn {
@@ -278,26 +248,7 @@ public:
     int unit_level_;
 
     // Return process that owns the key.
-    int owner(BoxKey& key) {
-#ifndef RELEASE
-        CallStackEntry entry("LowFreqBoxPrtn::owner");
-#endif
-        int level = key.first;
-        Index3 idx = key.second;
-        int num_unit_boxes = pow2(unit_level_);
-        int COEF = pow2(level) / num_unit_boxes;
-        idx = idx / COEF;
-        BoxKey new_key(unit_level_, idx);
-        
-        int ind = std::lower_bound(partition_.begin(),
-                                   partition_.end(), new_key) - partition_.begin();
-        --ind;
-        if (ind < static_cast<int>(partition_.size()) - 1 &&
-            new_key == partition_[ind + 1]) {
-            ++ind;
-        }
-        return ind;
-    }
+    int owner(BoxKey& key);
 };
 
 
