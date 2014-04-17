@@ -276,7 +276,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     // Setup of low and high frequency maps
     ldmap_t ldmap;
     int max_level = 10;
-    _level_prtns.init(max_level, UnitLevel());
+    _level_prtns.Init(max_level, UnitLevel());
     GatherLocalKeys();
     PrtnDirections(_level_prtns._hdkeys_out,
                    _level_prtns._hf_vecs_out);

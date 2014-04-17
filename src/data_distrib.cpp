@@ -427,7 +427,7 @@ int Wave3d::TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
     return (Wave3d::_self)->TransferUnitLevelData(key, dat, pids);
 }
 
-void LevelPartitions::init(int max_level, int unit_level) {
+void LevelPartitions::Init(int max_level, int unit_level) {
 #ifndef RELEASE
     CallStackEntry entry("LevelPartitions::init");
 #endif
@@ -481,7 +481,7 @@ void LevelPartitions::FormMaps() {
     }
 }
 
-BoxAndDirDat& LevelPartitions::Access(BoxAndDirKey key) {
+BoxAndDirDat& LevelPartitions::Access(BoxAndDirKey key, bool out) {
 #ifndef RELEASE
     CallStackEntry entry("LevelPartitions::Access");
 #endif
@@ -489,18 +489,24 @@ BoxAndDirDat& LevelPartitions::Access(BoxAndDirKey key) {
     if (level == unit_level_) {
         return _unit_vec.access(key);
     }
-    return _hf_vecs_out[level].access(key);
+    if (out) {
+        return _hf_vecs_out[level].access(key);
+    }
+    return _hf_vecs_inc[level].access(key);
 }
 
-std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key) {
+std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key, bool out) {
 #ifndef RELEASE
-    CallStackEntry entry("LevelPartitions::Access");
+    CallStackEntry entry("LevelPartitions::SafeAccess");
 #endif
     int level = key._boxkey.first;
     if (level == unit_level_) {
         return _unit_vec.contains(key);
     }
-    return _hf_vecs_out[level].contains(key);
+    if (out) {
+        return _hf_vecs_out[level].contains(key);
+    }
+    return _hf_vecs_inc[level].contains(key);
 }
 
 void CleanDirVecMap(std::map<Index3, std::vector<BoxKey> >& curr_map) {

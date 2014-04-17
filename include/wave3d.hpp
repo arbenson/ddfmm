@@ -358,9 +358,9 @@ public:
   LevelPartitions() {;}
   ~LevelPartitions() {;}
 
-  BoxAndDirDat& Access(BoxAndDirKey key);
-  std::pair<bool, BoxAndDirDat&> SafeAccess(BoxAndDirKey key);
-  void init(int max_level, int unit_level);
+  BoxAndDirDat& Access(BoxAndDirKey key, bool out);
+  std::pair<bool, BoxAndDirDat&> SafeAccess(BoxAndDirKey key, bool out);
+  void Init(int max_level, int unit_level);
   void FormMaps();
   
   std::vector<LevelBoxAndDirVec> _hf_vecs_out;  // outgoing partition for M2M
