@@ -165,21 +165,21 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
         if (first_pass) {
             _boxvec.insert(curkey, curdat);
         } else if (BoxWidth(curkey) < 1 - eps) {
-	  int mpirank = getMPIRank();
-	  int owner = _level_prtns.Owner(curkey);
-	  if (mpirank != owner) {
-	    std::cout << "Problem with key: " << curkey << std::endl;
-	    std::cout << "My rank: " << mpirank << std::endl;
-	    std::cout << "owner: " << owner << std::endl;
-	    BoxKey parkey = ParentKey(curkey);
-	    std::cout << "Parent key: " << parkey << std::endl;
-	    int parowner1 = _level_prtns.Owner(parkey);
-	    Index3 dummy_dir(1, 1, 1);
-	    BoxAndDirKey bndkey(parkey, dummy_dir);
-	    int parowner2 = _level_prtns.Owner(bndkey, false);
-	    std::cout << "Parent key owner1: " << parowner1 << std::endl;
-	    std::cout << "Parent key owner2: " << parowner2 << std::endl;
-	  }
+          int mpirank = getMPIRank();
+          int owner = _level_prtns.Owner(curkey);
+          if (mpirank != owner) {
+            std::cout << "Problem with key: " << curkey << std::endl;
+            std::cout << "My rank: " << mpirank << std::endl;
+            std::cout << "owner: " << owner << std::endl;
+            BoxKey parkey = ParentKey(curkey);
+            std::cout << "Parent key: " << parkey << std::endl;
+            int parowner1 = _level_prtns.Owner(parkey);
+            Index3 dummy_dir(1, 1, 1);
+            BoxAndDirKey bndkey(parkey, dummy_dir);
+            int parowner2 = _level_prtns.Owner(bndkey, false);
+            std::cout << "Parent key owner1: " << parowner1 << std::endl;
+            std::cout << "Parent key owner2: " << parowner2 << std::endl;
+          }
             _level_prtns._lf_boxvec.insert(curkey, curdat);
         }
     }
@@ -284,17 +284,17 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                 }
                 BoxKey wntkey(curkey.first, trypth);
                 // Look for the box.  If it does not exist, no cell box covers it.
-		// In this case, we can ignore it.
+                // In this case, we can ignore it.
                 BoxKey reskey;
                 bool found = SetupTreeFind(wntkey, reskey);
                 if (!found) {
                     continue;
                 }
-		std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(reskey);
+                std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(reskey);
                 BoxDat& resdat = data.second;
-		if (!data.first) {
+                if (!data.first) {
                     continue;
-		}
+                }
                 bool adj = SetupTreeAdjacent(reskey, curkey);
 
                 if (reskey.first < curkey.first && HasPoints(resdat)) {
@@ -545,11 +545,11 @@ int Wave3d::DistribLowFreqBoxes(BoxKey boxkey, BoxDat& boxdat, std::vector<int>&
         for (int j = jl; j < ju; ++j) {
             for (int k = kl; k < ku; ++k) {
                 BoxKey key(boxkey.first, Index3(i, j, k));
-		int pid = _level_prtns.Owner(key);
+                int pid = _level_prtns.Owner(key);
                 // The box may not be owned, in which case we just skip it.
                 if (pid >= 0 && pid < mpisize) {
                     idset.insert(pid);
-		}
+                }
             }
         }
     }
@@ -624,12 +624,12 @@ int Wave3d::GetExtPos() {
     }
     std::vector<BoxKey> reqbox;
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
-    std::vector<int> mask2(BoxDat_Number, 0);
-    mask2[BoxDat_extpos] = 1;
-    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(reqbox, mask2) );
-    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask2) );
+    std::vector<int> mask(BoxDat_Number, 0);
+    mask[BoxDat_extpos] = 1;
+    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(reqbox, mask) );
+    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
     for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
-	 mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
+         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
@@ -652,7 +652,7 @@ int Wave3d::GetHighFreqDirs() {
     double eps = 1e-12;
 
     for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-       mi != _boxvec.lclmap().end(); mi++) {
+       mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = BoxWidth(curkey);
@@ -705,14 +705,14 @@ int Wave3d::SetupLowFreqOctree() {
     for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
          mi != _boxvec.lclmap().end(); ++mi) {
         int level = mi->first.first;
-	BoxKey key = mi->first;
-	BoxDat dat = mi->second;
-	Index3 dummy_dir(1, 1, 1);
-	BoxAndDirKey bndkey(key, dummy_dir);
-	if (level == UnitLevel() &&
-	    _level_prtns.Owner(bndkey, false) == mpirank) {
+        BoxKey key = mi->first;
+        BoxDat dat = mi->second;
+        Index3 dummy_dir(1, 1, 1);
+        BoxAndDirKey bndkey(key, dummy_dir);
+        if (level == UnitLevel() &&
+            _level_prtns.Owner(bndkey, false) == mpirank) {
             lf_q.push(std::pair<BoxKey, BoxDat>(key, dat));
-	}
+        }
     }
     
     // Get all of the point information needed.
@@ -724,9 +724,13 @@ int Wave3d::SetupLowFreqOctree() {
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_tag] = 1;
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(&(Wave3d::DistribLowFreqBoxes_wrapper),
-						     mask) );
+                                                     mask) );
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
+
+    // Setup the call lists.
     SetupLowFreqCallLists();
+
+    // Get data needed.
     GetExtPos();
     return 0;
 }

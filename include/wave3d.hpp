@@ -522,14 +522,6 @@ private:
 
 
     // Routines for communication
-
-    // Add keys to reqbndset for high-frequency M2L computations
-    // For every target box, add all the keys corresponding to
-    // directional boundaries in the high-frequency interaction lists
-    // of the target boxes.  dir specifies the direction of the boundaries.
-    int HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
-                                     std::set<BoxAndDirKey>& reqbndset);
-
     int HighFreqInteractionListKeys(int level,
                                     std::set<BoxAndDirKey>& request_keys);
 
@@ -538,7 +530,6 @@ private:
     int HighFreqM2MLevelComm(int level);
     int HighFreqL2LLevelCommPre(int level);
     int HighFreqL2LLevelCommPost(int level, std::vector<BoxAndDirKey>& keys_affected);
-    int HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset);
     int HighFreqM2LComm(int level,
                         std::set<BoxAndDirKey>& request_keys);
     int HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,

@@ -22,22 +22,6 @@
 #include <set>
 #include <vector>
 
-int Wave3d::HighFreqInteractionListKeys(Index3 dir, std::vector<BoxKey>& target_boxes,
-                                        std::set<BoxAndDirKey>& reqbndset) {
-#ifndef RELEASE
-  CallStackEntry entry("Wave3d::HighFreqInteractionListKeys");
-#endif
-    for (int k = 0; k < target_boxes.size(); ++k) {
-        BoxAndDirKey trgkey = BoxAndDirKey(target_boxes[k], dir);
-        BoxAndDirDat& trgdat = _bndvec.access(trgkey);
-        std::vector<BoxAndDirKey>& interaction_list = trgdat.interactionlist();
-        for (int i = 0; i < interaction_list.size(); ++i) {
-            reqbndset.insert(interaction_list[i]);
-        }
-    }
-    return 0;
-}
-
 int Wave3d::HighFreqInteractionListKeys(int level,
                                         std::set<BoxAndDirKey>& request_keys) {
 #ifndef RELEASE
@@ -176,7 +160,7 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
     }
 
     std::vector<int> mask(BoxAndDirDat_Number, 0);
-    mask[BoxAndDirDat_dirupeqnden] = 1;
+    mask[BoxAndDirDat_dirdnchkval] = 1;
     if (childlevel == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
         SAFE_FUNC_EVAL(vec.getBegin(&Wave3d::HighFreqL2LDataUp_wrapper, mask));
@@ -187,33 +171,6 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
         SAFE_FUNC_EVAL(vec.getEnd(mask));
     }
     return 0;
-}
-
-int Wave3d::HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
-                              std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFreqL2LDataUp");
-#endif
-    BoxKey parkey = ParentKey(key._boxkey);
-    int parlevel = parkey.first;
-    // Child directions are directions associated with the parent box.
-    std::vector<Index3> dirs = ChildDir(key._dir);
-    for (int i = 0; i < dirs.size(); ++i) {
-        BoxAndDirKey new_key(parkey, dirs[i]);
-        int pid = _level_prtns.Owner(new_key, false);
-        if (0 <= pid && pid < getMPISize()) {
-            pids.push_back(pid);
-        }
-    }
-    return 0;
-}
-
-int Wave3d::HighFreqL2LDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-                                      std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFreqL2LDataUp_wrapper");
-#endif
-    return (Wave3d::_self)->HighFreqL2LDataUp(key, dat, pids);
 }
 
 int Wave3d::HighFreqL2LLevelCommPost(int level,
@@ -245,17 +202,31 @@ int Wave3d::HighFreqL2LLevelCommPost(int level,
     return 0;
 }
 
-int Wave3d::HighFreqM2LComm(std::set<BoxAndDirKey>& reqbndset) {
+int Wave3d::HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
+                              std::vector<int>& pids) {
 #ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFreqM2LComm");
+    CallStackEntry entry("Wave3d::HighFreqL2LDataUp");
 #endif
-    std::vector<int> mask(BoxAndDirDat_Number, 0);
-    mask[BoxAndDirDat_dirupeqnden] = 1;
-    std::vector<BoxAndDirKey> reqbnd;
-    reqbnd.insert(reqbnd.begin(), reqbndset.begin(), reqbndset.end());
-    SAFE_FUNC_EVAL( _bndvec.getBegin(reqbnd, mask) );
-    SAFE_FUNC_EVAL( _bndvec.getEnd(mask) );
+    BoxKey parkey = ParentKey(key._boxkey);
+    int parlevel = parkey.first;
+    // Child directions are directions associated with the parent box.
+    std::vector<Index3> dirs = ChildDir(key._dir);
+    for (int i = 0; i < dirs.size(); ++i) {
+        BoxAndDirKey new_key(parkey, dirs[i]);
+        int pid = _level_prtns.Owner(new_key, false);
+        if (0 <= pid && pid < getMPISize()) {
+            pids.push_back(pid);
+        }
+    }
     return 0;
+}
+
+int Wave3d::HighFreqL2LDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
+                                      std::vector<int>& pids) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::HighFreqL2LDataUp_wrapper");
+#endif
+    return (Wave3d::_self)->HighFreqL2LDataUp(key, dat, pids);
 }
 
 int Wave3d::HighFreqM2LComm(int level,
