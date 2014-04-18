@@ -77,17 +77,15 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     BoxAndDirPrtn tp;
     tp.ownerinfo() = _geomprtn;
     _bndvec.prtn() = tp;
-    //generate octree
+    // Generate octree
     SAFE_FUNC_EVAL(SetupTree());
-    //plans
     int _P = P();
     _denfft.resize(2 * _P, 2 * _P, 2 * _P);
     _fplan = fftw_plan_dft_3d(2 * _P, 2 * _P, 2 * _P, (fftw_complex*) (_denfft.data()),
                               (fftw_complex*)(_denfft.data()), FFTW_FORWARD,
                               FFTW_MEASURE);
     CHECK_TRUE(_fplan != NULL);
-    setvalue(_denfft,cpx(0,0));
-    //
+    setvalue(_denfft,cpx(0, 0));
     _valfft.resize(2 * _P, 2 * _P, 2 * _P);
     _bplan = fftw_plan_dft_3d(2 * _P, 2 * _P, 2 * _P,
                               (fftw_complex*) (_valfft.data()),
@@ -358,7 +356,7 @@ int Wave3d::SetupTreeHighFreqLists(BoxKey curkey, BoxDat& curdat) {
     Point3 curctr = BoxCenter(curkey);
     double W = BoxWidth(curkey);
     double eps = 1e-12;
-    double D = W * W + W; // Far field distance
+    double D = W * W + W;  // Far field distance
     double threshold = D - eps;
     if (IsCellLevelBox(curkey)) {
         // LEXING: CHECK THE FOLLOWING
@@ -676,7 +674,7 @@ int Wave3d::GetHighFreqDirs() {
             for (std::map< Index3, std::vector<BoxKey> >::iterator mi = curdat.fndeidxvec().begin();
                 mi != curdat.fndeidxvec().end(); mi++) {
                 std::vector<BoxKey>& tmplist = mi->second;
-                for (int k = 0; k < tmplist.size(); k++) {
+                for (int k = 0; k < tmplist.size(); ++k) {
                     BoxKey othkey = tmplist[k];
                     Point3 othctr = BoxCenter(othkey);
                     Point3 tmp = othctr - curctr;
@@ -721,7 +719,6 @@ int Wave3d::SetupLowFreqOctree() {
     std::vector<int> all(1, 1);
     SAFE_FUNC_EVAL( pos.getBegin(&(Wave3d::DistribUnitPts_wrapper), all) );
     SAFE_FUNC_EVAL( pos.getEnd(all) );
-    std::cout << "size of lf_q: " << lf_q.size() << std::endl;
     RecursiveBoxInsert(lf_q, false);
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_tag] = 1;
@@ -766,4 +763,3 @@ int Wave3d::DistribUnitPts_wrapper(int key, Point3& dat, std::vector<int>& pids)
 #endif
     return (Wave3d::_self)->DistribUnitPts(key, dat, pids);
 }
-

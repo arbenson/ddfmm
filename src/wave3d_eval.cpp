@@ -82,6 +82,7 @@ int Wave3d::HighFreqPass() {
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
         if (mpirank == 0) {
+          std::cout << "---------------------------------" << std::endl;
           std::cout << "Box width for upwards pass: " << W << std::endl;
         }
         std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
@@ -108,6 +109,10 @@ int Wave3d::HighFreqPass() {
     // Communication for M2L
     t0 = time(0);
     for (int level = 0; level < _level_prtns._hdkeys_inc.size(); ++level) {
+        if (mpirank == 0) {
+            std::cout << "----------------------" << std::endl;
+            std::cout << "Level: " << level << std::endl;
+	}
         std::set<BoxAndDirKey> request_keys;
         HighFreqInteractionListKeys(level, request_keys);
         HighFreqM2LComm(level, request_keys);
@@ -122,7 +127,8 @@ int Wave3d::HighFreqPass() {
         double W = _K / pow2(level);
         SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
         if (mpirank == 0) {
-          std::cout << "Box width for downwards pass: " << W << std::endl;
+            std::cout << "---------------------------------" << std::endl;
+            std::cout << "Box width for downwards pass: " << W << std::endl;
         }
         std::map<Index3, std::vector<BoxKey> >& level_inc = level_hdmap_inc[level];
         std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
@@ -264,9 +270,11 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
             to_delete.push_back(curkey);
         }
     }
+#if 0
     std::cerr << "Deleting " << to_delete.size()
               << " out of " << _boxvec.lclmap().size()
               << " total boxes." << std::endl;
+#endif
     for (std::list<BoxKey>::iterator mi = to_delete.begin();
          mi != to_delete.end(); ++mi) {
         BoxKey curkey = *mi;

@@ -61,8 +61,6 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
     time_t t1 = time(0);
     PrintParData(GatherParData(t0, t1), "Low frequency downward communication");
-    PrintCommData(GatherCommData(_level_prtns._lf_boxvec.kbytes_received()),
-                  "kbytes received");
     PrintCommData(GatherCommData( _level_prtns._lf_boxvec.kbytes_sent()),
                   "kbytes sent");
     return 0;
@@ -169,12 +167,18 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
     mask[BoxAndDirDat_dirdnchkval] = 1;
     if (childlevel == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
+	vec.initialize_data();
         SAFE_FUNC_EVAL(vec.getBegin(&Wave3d::HighFreqL2LDataUp_wrapper, mask));
         SAFE_FUNC_EVAL(vec.getEnd(mask));
+	PrintCommData(GatherCommData(vec.kbytes_sent()),
+		      "L2L Pre: kbytes sent");
     } else {
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[childlevel];
+	vec.initialize_data();
         SAFE_FUNC_EVAL(vec.getBegin(&Wave3d::HighFreqL2LDataUp_wrapper, mask));
         SAFE_FUNC_EVAL(vec.getEnd(mask));
+	PrintCommData(GatherCommData(vec.kbytes_sent()),
+		      "L2L Pre: kbytes sent");
     }
     return 0;
 }
@@ -197,13 +201,19 @@ int Wave3d::HighFreqL2LLevelCommPost(int level,
     if (childlevel == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
         // Send data that I have
+	vec.initialize_data();
         vec.putBegin(keys_affected, mask);
         vec.putEnd(mask);
+	PrintCommData(GatherCommData(vec.kbytes_sent()),
+		      "L2L Post: kbytes sent");
     } else {
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[childlevel];
         // Send data that I have
+	vec.initialize_data();
         vec.putBegin(keys_affected, mask);
         vec.putEnd(mask);
+	PrintCommData(GatherCommData(vec.kbytes_sent()),
+		      "L2L Post: kbytes sent");
     }
     return 0;
 }
@@ -240,18 +250,28 @@ int Wave3d::HighFreqM2LComm(int level,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqM2LComm");
 #endif
+    if (level < _starting_level || level > UnitLevel()) {
+        // No communication to do.
+        return 0;
+    }
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirupeqnden] = 1;
     std::vector<BoxAndDirKey> req;
     req.insert(req.begin(), request_keys.begin(), request_keys.end());
     if (level == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
+	vec.initialize_data();
         SAFE_FUNC_EVAL( vec.getBegin(req, mask) );
         SAFE_FUNC_EVAL( vec.getEnd(mask) );
+	PrintCommData(GatherCommData(vec.kbytes_sent()),
+		      "M2L: kbytes sent");
     } else {
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_out[level];
+	vec.initialize_data();
         SAFE_FUNC_EVAL( vec.getBegin(req, mask) );
         SAFE_FUNC_EVAL( vec.getEnd(mask) );
+	PrintCommData(GatherCommData(vec.kbytes_sent()),
+		      "M2L: kbytes sent");
     }
     return 0;
 }
@@ -262,19 +282,25 @@ int Wave3d::HighFreqM2MLevelComm(int level) {
 #endif
     // If we are at or above the starting level, there is no communication to
     // do.  (There is no computation at the level above).
-    if (level >= _starting_level) {
+    if (level <= _starting_level || level > UnitLevel()) {
         return 0;
     }
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirupeqnden] = 1;
     if (level == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
+	vec.initialize_data();	
         SAFE_FUNC_EVAL(vec.getBegin(&Wave3d::HighFreqM2MDataUp_wrapper, mask));
         SAFE_FUNC_EVAL(vec.getEnd(mask));
+	PrintCommData(GatherCommData(vec.kbytes_sent()),
+		      "M2M: kbytes sent");
     } else {
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_out[level];
+	vec.initialize_data();
         SAFE_FUNC_EVAL(vec.getBegin(&Wave3d::HighFreqM2MDataUp_wrapper, mask));
         SAFE_FUNC_EVAL(vec.getEnd(mask));
+	PrintCommData(GatherCommData(vec.kbytes_sent()),
+		      "M2M: kbytes sent");
     }
     return 0;
 }

@@ -110,6 +110,13 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
 		// CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
 		if (HasPoints(chddat)) {
 		    CpxNumVec& chdued = chddat.upeqnden();
+#if 0
+		    int mpirank = getMPIRank();
+		    if (mpirank == 0) {
+		      std::cout << "Child is: " << key << std::endl;
+		      std::cout << "density: " << std::endl << chdued << std::endl;
+		    }
+#endif
 		    SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
 		}
             }
@@ -130,6 +137,12 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
                 CpxNumVec& chdued = bnddat.dirupeqnden();
                 // TODO(arbenson): fix this
                 if (chdued.m() != 0) {
+		    int mpirank = getMPIRank();
+		    if (mpirank == 0 && srckey.first == 4) {
+		      std::cout << "Child is: " << bndkey._boxkey << " "
+				<< bndkey._dir << std::endl;
+		      std::cout << "density: " << std::endl << chdued << std::endl;
+		    }
                     SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
                 }
 
@@ -183,14 +196,14 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     SAFE_FUNC_EVAL( zgemv(1.0, E2, tmp0, 0.0, tmp1) );
     CHECK_TRUE_MSG(E1.n() == tmp1.m(), "E1 mismatch");
     SAFE_FUNC_EVAL( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
-    dnchkval.resize(0); //LEXING: SAVE SPACE
+    dnchkval.resize(0);  // save space
 
     if (abs(W - 1) < eps) {
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
             int a = CHILD_IND1(ind);
             int b = CHILD_IND2(ind);
             int c = CHILD_IND3(ind);
-            BoxKey key = ChildKey(trgkey, Index3(a,b,c));
+            BoxKey key = ChildKey(trgkey, Index3(a, b, c));
             std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
             // If the box was empty, it will not be stored
             if (!data.first) {
@@ -273,7 +286,7 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     
     // uc2ue
     CpxNumMat& v  = uc2ue(0);
-    CpxNumMat& is = uc2ue(1); // LEXING: it is stored as a matrix
+    CpxNumMat& is = uc2ue(1);
     CpxNumMat& up = uc2ue(2);
     CpxNumVec mid(up.m());
     setvalue(mid,cpx(0,0));
