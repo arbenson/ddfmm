@@ -138,11 +138,13 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
                 // TODO(arbenson): fix this
                 if (chdued.m() != 0) {
 		    int mpirank = getMPIRank();
+#if 0
 		    if (mpirank == 0 && srckey.first == 4) {
 		      std::cout << "Child is: " << bndkey._boxkey << " "
 				<< bndkey._dir << std::endl;
 		      std::cout << "density: " << std::endl << chdued << std::endl;
 		    }
+#endif
                     SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
                 }
 
@@ -190,6 +192,15 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     if (dnchkval.m() == 0) {
       return 0;
     }
+
+#if 0
+    int mpirank = getMPIRank();
+    if (mpirank == 0) {
+      std::cout << "Key: " << trgkey << ", dir: " << dir << std::endl;
+      std::cout << "dnchkval: " << std::endl << dnchkval << std::endl;
+    }
+#endif
+
     CHECK_TRUE_MSG(E3.n() == dnchkval.m(), "E3 mismatch");
     SAFE_FUNC_EVAL( zgemv(1.0, E3, dnchkval, 0.0, tmp0) );
     CHECK_TRUE_MSG(E2.n() == tmp0.m(), "E2 mismatch");
