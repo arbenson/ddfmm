@@ -120,7 +120,7 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
         bool action = (curkey.first <= UnitLevel() && curdat.ptidxvec().size() > 0) ||
             (curdat.ptidxvec().size() > ptsmax() && curkey.first < maxlevel() - 1);
         if (action) {
-            // Subdivide to get new children
+	    // Subdivide to get new children
             NumTns<BoxDat> chdboxtns(2, 2, 2);
             Point3 curctr = BoxCenter(curkey); //LEXING: VERY IMPORTANT
             for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
@@ -133,19 +133,19 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
                 // put points to children
                 chdboxtns(idx(0), idx(1), idx(2)).ptidxvec().push_back(tmpidx);
             }
-            // Put non-empty ones into queue
-            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);
-                BoxKey key = ChildKey(curkey, Index3(a,b,c));
-                tmpq.push( std::pair<BoxKey, BoxDat>(key, chdboxtns(a, b, c)) );
-            }
-            // Destory ptidxvec to save memory.  Leave the unit level ones
-            // in for later partitioning.
-            if (curkey.first != UnitLevel() || !first_pass) {
+	    if ((curkey.first != UnitLevel() && first_pass) || !first_pass) {
+                // Put non-empty ones into queue
+	        for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
+                    int a = CHILD_IND1(ind);
+		    int b = CHILD_IND2(ind);
+		    int c = CHILD_IND3(ind);
+		    BoxKey key = ChildKey(curkey, Index3(a,b,c));
+		    tmpq.push( std::pair<BoxKey, BoxDat>(key, chdboxtns(a, b, c)) );
+		}
+		// Destory ptidxvec to save memory.  Leave the unit level ones
+		// in for later partitioning.
                 std::vector<int>().swap(curdat.ptidxvec());
-            }
+	    }
         } else {
             // Copy data into _extpos
             curdat.extpos().resize(3, curdat.ptidxvec().size());
@@ -158,6 +158,14 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
             }
             //LEXING: VERY IMPORTANT
             curdat.tag() |= WAVE3D_LEAF;
+            for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
+	      if (curdat.ptidxvec()[g] == 118540) {
+		std::cout << "Found the magic key in setup!" << std::endl;
+		std::cout << "Key is: " << curkey << std::endl;
+		std::cout << "Owner is: " << _level_prtns.Owner(curkey) << std::endl;
+		std::cout << "pass is: " << first_pass << std::endl;
+	      }
+	    }
         }
         // Add my self into the tree
         if (first_pass) {

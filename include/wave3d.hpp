@@ -314,7 +314,7 @@ public:
   std::pair<bool, BoxAndDirDat&> SafeAccess(BoxAndDirKey key, bool out);
   int Owner(BoxAndDirKey key, bool out);
   int Owner(BoxKey key);
-  void Init(int max_level, int unit_level);
+  void Init(int K);
   void FormMaps();
   
   std::vector<LevelBoxAndDirVec> _hf_vecs_out;  // outgoing partition for M2M
@@ -429,10 +429,10 @@ private:
     int dim() { return 3; }
 
     // The level such that the box has width 1
-    int UnitLevel() { return int(round(log(_K) / log(2))); } 
+    int UnitLevel() { return static_cast<int>(round(log(_K) / log(2))); } 
 
     // The level where the geometry is partitioned.
-    int CellLevel() { return int(round(log(_geomprtn.m()) / log(2))); }
+    int CellLevel() { return static_cast<int>(round(log(_geomprtn.m()) / log(2))); }
 
     Index3 nml2dir(Point3 nml, double W);
 

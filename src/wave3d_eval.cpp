@@ -198,12 +198,18 @@ int Wave3d::GatherLocalKeys() {
                     // into bndvec
                     _bndvec.insert(BoxAndDirKey(curkey, *si), dummy);
                     int level = curkey.first;
+		    if (curkey.first == 6 && curkey.second == Index3(38, 32, 20) ) {
+		      std::cout << "Magic key outgoing!" << std::endl;
+		    }
                     level_hdkeys_out[level].push_back(BoxAndDirKey(curkey, *si));
                 }
                 
                 // For each incoming direction of this box, add to the second list
                 for (std::set<Index3>::iterator si = curdat.incdirset().begin();
                     si != curdat.incdirset().end(); ++si) {
+		    if (curkey.first == 6 && curkey.second == Index3(38, 32, 20) ) {
+		      std::cout << "Magic key incoming!" << std::endl;
+		    }
                     BoxAndDirDat dat;
                     Index3 dir = *si;
                     std::vector<BoxKey>& tmpvec = curdat.fndeidxvec()[dir];
@@ -284,7 +290,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     // Setup of low and high frequency maps
     ldmap_t ldmap;
     int max_level = 10;
-    _level_prtns.Init(max_level, UnitLevel());
+    _level_prtns.Init(_K);
     GatherLocalKeys();
     PrtnDirections(_level_prtns._hdkeys_out,
                    _level_prtns._hf_vecs_out);
@@ -327,17 +333,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     LowFreqDownwardPass(ldmap);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
-    ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
-    std::vector<int> all(1, 1);
-    //set val from extval
+    // For all points that I have but don't own, add to the list.
     std::vector<int> wrtpts;
-    for(std::map<int, Point3>::iterator mi = pos.lclmap().begin();
-        mi != pos.lclmap().end(); ++mi) {
-        if (pos.prtn().owner(mi->first) != mpirank) {
-            wrtpts.push_back(mi->first);
-        }
-    }
-    val.expand(wrtpts);
     for (std::map<BoxKey, BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
@@ -349,11 +346,22 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
             std::vector<int>& curpis = curdat.ptidxvec();
             for (int k = 0; k < curpis.size(); ++k) {
                 int poff = curpis[k];
-                val.access(poff) = extval(k);
+		if (poff == 118540) {
+		  std::cout << "val read-through" << std::endl;
+		  std::cout << "my rank is: " << getMPIRank() << std::endl;
+		  std::cout << "extval is: " << extval(k) << std::endl;
+		  std::cout << "owner is: " << val.prtn().owner(poff) << std::endl;
+		}
+                val.lclmap()[poff] = extval(k);
+		if (val.prtn().owner(poff) != mpirank) {
+                    wrtpts.push_back(poff);
+		}
             }
         }
     }
-    val.putBegin(wrtpts, all);  val.putEnd(all);
+    std::vector<int> all(1, 1);
+    val.putBegin(wrtpts, all);
+    val.putEnd(all);
     val.discard(wrtpts);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;

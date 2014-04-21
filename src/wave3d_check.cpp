@@ -78,12 +78,14 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     CpxNumVec allval(trgval.m());
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     // Note: 2 doubles per complex number
-    SAFE_FUNC_EVAL( MPI_Allreduce(trgval.data(), allval.data(), trgval.m() * 2, MPI_DOUBLE,
+    SAFE_FUNC_EVAL( MPI_Allreduce(trgval.data(), allval.data(), trgval.m() * 2,
+				  MPI_DOUBLE,
                                   MPI_SUM, MPI_COMM_WORLD) );
   
     // 2. get val
     val.getBegin(chkkeyvec, all);
     val.getEnd(all);
+    std::cout << "chkkeyvec[0]: " << chkkeyvec[0] << std::endl;
     CpxNumVec truval(chkkeyvec.size());
     for (int i = 0; i < chkkeyvec.size(); ++i) {
         truval(i) = val.access(chkkeyvec[i]);

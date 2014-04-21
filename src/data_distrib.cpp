@@ -425,17 +425,17 @@ int Wave3d::TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
     return (Wave3d::_self)->TransferUnitLevelData(key, dat, pids);
 }
 
-void LevelPartitions::Init(int max_level, int unit_level) {
+void LevelPartitions::Init(int K) {
 #ifndef RELEASE
     CallStackEntry entry("LevelPartitions::init");
 #endif
-    unit_level_ = unit_level;
-    _hf_vecs_out.resize(max_level);
-    _hf_vecs_inc.resize(max_level);
-    _hdkeys_out.resize(max_level);
-    _hdkeys_inc.resize(max_level);
-    _level_hdmap_out.resize(max_level);
-    _level_hdmap_inc.resize(max_level);
+    unit_level_ = static_cast<int>(round(log(K) / log(2)));
+    _hf_vecs_out.resize(unit_level_ + 1);
+    _hf_vecs_inc.resize(unit_level_ + 1);
+    _hdkeys_out.resize(unit_level_ + 1);
+    _hdkeys_inc.resize(unit_level_ + 1);
+    _level_hdmap_out.resize(unit_level_ + 1);
+    _level_hdmap_inc.resize(unit_level_ + 1);
 }
 
 void InsertIntoDirMap(std::map<Index3, std::vector<BoxKey> >& dir_map,
