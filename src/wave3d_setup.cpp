@@ -158,14 +158,6 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
             }
             //LEXING: VERY IMPORTANT
             curdat.tag() |= WAVE3D_LEAF;
-            for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
-	      if (curdat.ptidxvec()[g] == 118540) {
-		std::cout << "Found the magic key in setup!" << std::endl;
-		std::cout << "Key is: " << curkey << std::endl;
-		std::cout << "Owner is: " << _level_prtns.Owner(curkey) << std::endl;
-		std::cout << "pass is: " << first_pass << std::endl;
-	      }
-	    }
         }
         // Add my self into the tree
         if (first_pass) {

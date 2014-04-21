@@ -110,17 +110,6 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
 		// CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
 		if (HasPoints(chddat)) {
 		    CpxNumVec& chdued = chddat.upeqnden();
-#if 0
-		    if (key.first == 7 && key.second == Index3(77, 65, 50)) {
-		      std::cout << "Found the magic key in HighFreqM2M!" << std::endl;
-		      std::cout << chdued << std::endl;
-		    }
-		    int mpirank = getMPIRank();
-		    if (mpirank == 0) {
-		      std::cout << "Child is: " << key << std::endl;
-		      std::cout << "density: " << std::endl << chdued << std::endl;
-		    }
-#endif
 		    SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
 		}
             }
@@ -142,13 +131,6 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
                 // TODO(arbenson): fix this
                 if (chdued.m() != 0) {
 		    int mpirank = getMPIRank();
-#if 0
-		    if (mpirank == 0 && srckey.first == 4) {
-		      std::cout << "Child is: " << bndkey._boxkey << " "
-				<< bndkey._dir << std::endl;
-		      std::cout << "density: " << std::endl << chdued << std::endl;
-		    }
-#endif
                     SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
                 }
 
@@ -197,14 +179,6 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
       return 0;
     }
 
-#if 0
-    int mpirank = getMPIRank();
-    if (mpirank == 0) {
-      std::cout << "Key: " << trgkey << ", dir: " << dir << std::endl;
-      std::cout << "dnchkval: " << std::endl << dnchkval << std::endl;
-    }
-#endif
-
     CHECK_TRUE_MSG(E3.n() == dnchkval.m(), "E3 mismatch");
     SAFE_FUNC_EVAL( zgemv(1.0, E3, dnchkval, 0.0, tmp0) );
     CHECK_TRUE_MSG(E2.n() == tmp0.m(), "E2 mismatch");
@@ -231,14 +205,6 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                 setvalue(chddcv,cpx(0, 0));
             }
 	    CHECK_TRUE_MSG(de2dc(a, b, c).n() == dneqnden.m(), "Translation mismatch");
-
-	    if (key.first == 7 && key.second == Index3(77, 65, 50)) {
-	      std::cout << "Found the magic key in HighFreqL2L!" << std::endl;
-	      int mpirank = getMPIRank();
-	      std::cout << "My rank is: " << mpirank << std::endl;
-	      //      std::cout << "dneqnden: " << std::endl << dneqnden << std::endl;
-	    }
-	    
             SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
         }
     } else {
@@ -388,13 +354,6 @@ int Wave3d::LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
         CpxNumMat mat;
         SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
         SAFE_FUNC_EVAL( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
-	if (trgkey.first == 7 && trgkey.second == Index3(77, 65, 50)) {
-	  std::cout << "Found the magic key in LowFreqL2L (leaf)!" << std::endl;
-	  int mpirank = getMPIRank();
-	  std::cout << "My rank is: " << mpirank << std::endl;
-	  std:: cout << "extval" << std::endl << trgdat.extval() << std::endl;
-	}
-	
     } else {
         // put stuff to children
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {

@@ -96,16 +96,8 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
         errval(i) = allval(i) - truval(i);
     }
 
-    if (mpirank == 0) {
-      std::cout << "truval: " << std::endl << truval << std::endl;
-      std::cout << "allval: " << std::endl << allval << std::endl;
-    }
-
-
     double tn = sqrt( energy(truval) );
     double en = sqrt( energy(errval) );
-    std::cout << "true value: " << tn
-              << ", error value: " << en << std::endl;
     relerr = en / tn;
   
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );

@@ -276,11 +276,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
             to_delete.push_back(curkey);
         }
     }
-#if 0
-    std::cerr << "Deleting " << to_delete.size()
-              << " out of " << _boxvec.lclmap().size()
-              << " total boxes." << std::endl;
-#endif
     for (std::list<BoxKey>::iterator mi = to_delete.begin();
          mi != to_delete.end(); ++mi) {
         BoxKey curkey = *mi;
@@ -346,12 +341,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
             std::vector<int>& curpis = curdat.ptidxvec();
             for (int k = 0; k < curpis.size(); ++k) {
                 int poff = curpis[k];
-		if (poff == 118540) {
-		  std::cout << "val read-through" << std::endl;
-		  std::cout << "my rank is: " << getMPIRank() << std::endl;
-		  std::cout << "extval is: " << extval(k) << std::endl;
-		  std::cout << "owner is: " << val.prtn().owner(poff) << std::endl;
-		}
                 val.lclmap()[poff] = extval(k);
 		if (val.prtn().owner(poff) != mpirank) {
                     wrtpts.push_back(poff);
