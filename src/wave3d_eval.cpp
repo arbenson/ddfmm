@@ -328,7 +328,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     LowFreqDownwardPass(ldmap);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
-    // For all points that I have but don't own, add to the list.
+    // For all values that I have but don't own, add to the list.
     std::vector<int> wrtpts;
     for (std::map<BoxKey, BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {

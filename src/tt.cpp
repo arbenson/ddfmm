@@ -140,9 +140,6 @@ int main(int argc, char** argv) {
 	std::istringstream ss2(opt);
 	ss2 >> NPW;
 
-	// TODO(arbenson): Make this an argument
-	int NC = 8;
-
 	std::string geomfile;
 	opt = findOption(opts, "-geomfile");
         if (opt.empty()) {
@@ -151,7 +148,7 @@ int main(int argc, char** argv) {
 	geomfile = opt;
 
         IntNumTns geomprtn;
-	NewData(geomfile, K, NPW, mpisize, NC, geomprtn);
+	NewData(geomfile, K, NPW, mpisize, geomprtn);
 
         if (mpirank == 0) {
             std::cerr << "Done reading geomprtn "
@@ -175,7 +172,7 @@ int main(int argc, char** argv) {
 	    std::cout << "wave setup used " << difftime(t1, t0) << "secs " << std::endl;
         }
 
-        //3. eval
+        // 3. eval
         double time_eval;
         t0 = time(0);
 	SAFE_FUNC_EVAL( wave.eval(den, val) );

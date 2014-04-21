@@ -85,7 +85,6 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     // 2. get val
     val.getBegin(chkkeyvec, all);
     val.getEnd(all);
-    std::cout << "chkkeyvec[0]: " << chkkeyvec[0] << std::endl;
     CpxNumVec truval(chkkeyvec.size());
     for (int i = 0; i < chkkeyvec.size(); ++i) {
         truval(i) = val.access(chkkeyvec[i]);

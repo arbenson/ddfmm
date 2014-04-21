@@ -297,13 +297,14 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
     return 0;
 }
 
-int NewData(std::string fname, double K, double NPW, int NCPU, int NC,
-	    IntNumTns& geom) {
+int NewData(std::string fname, double K, double NPW, int NCPU,
+            IntNumTns& geom) {
+    int NC = static_cast<int>(sqrt(K));
     std::cout << "K: "    << K    << std::endl
 	      << "NPW: "  << NPW  << std::endl
 	      << "NCPU: " << NCPU << std::endl
 	      << "NC: "   << NC   << std::endl;
-    CHECK_TRUE(NCPU > 0 && NPW > 0 && NC > 0 && K >= 1);
+    CHECK_TRUE(NCPU > 0 && NPW > 0 && K >= 1);
 
     std::vector<Point3> points;
     std::vector<Point3> coords;
