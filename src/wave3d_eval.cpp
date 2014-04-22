@@ -62,13 +62,15 @@ int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
     return 0;
 }
 
-int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
-                         level_hdkeys_map_t& level_hdmap_inc) {
-# ifndef RELEASE
+int Wave3d::HighFreqPass() {
+#ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
-# endif
+#endif
     time_t t0, t1;
     int mpirank = getMPIRank();
+
+    level_hdkeys_map_t& level_hdmap_out = _level_prtns._level_hdmap_out;
+    level_hdkeys_map_t& level_hdmap_inc = _level_prtns._level_hdmap_inc;
     
     if(mpirank == 0) {
         std::cout << "Beginning high frequency pass..." << std::endl;
@@ -79,15 +81,11 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
 
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
-        std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
-
-        // Handle communication for this level.  We need request the directional
-        // upward equivalent densities from the children needed on this level.
-        // We assume that boxes on the unit level are partitioned by process,
-        // so we do not need to do any communication for that level.
-        if (level < UnitLevel()) {
-            HighFreqM2MLevelComm(level);
+        if (mpirank == 0) {
+          std::cout << "---------------------------------" << std::endl;
+          std::cout << "Box width for upwards pass: " << W << std::endl;
         }
+        std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
 
         for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_out.begin();
             mi != level_out.end(); ++mi) {
@@ -95,33 +93,31 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
             std::vector<BoxKey>& keys_out = mi->second;
             SAFE_FUNC_EVAL( EvalUpwardHigh(W, dir, keys_out) );
         }
-        // TODO(arbenson): remove data from parvec to save memory
-    }
 
-    // Collect all keys needed for M2L
-    std::set<BoxAndDirKey> reqbndset;
-    for (int level = level_hdmap_inc.size() - 1; level >= 0; --level) {
-        double W = _K / pow2(level);
-        std::map<Index3, std::vector<BoxKey> >& level_inc = level_hdmap_inc[level];
-        for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
-            mi != level_inc.end(); ++mi) {
-            SAFE_FUNC_EVAL( HighFreqInteractionListKeys(mi->first, mi->second, reqbndset) );
-        }
+        // Handle communication for this level.  We need to pass
+        // directional upward equivalent densities from the children to the
+        // parents on the next level. We assume that boxes on the unit level
+        // are partitioned  by process, so we do not need to do any
+        // communication for that level.
+        HighFreqM2MLevelComm(level);
+
+        // TODO(arbenson): remove data from parvec to save memory
     }
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
-    // Improved parallelism M2L communication
-    for (int level = 0; level < _level_prtns._hdkeys_inc.size(); ++level) {
-        std::set<BoxAndDirKey> request_keys;
-        HighFreqInteractionListKeys(level, request_keys);
-	HighFreqM2LComm(level, request_keys);
-        SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
-    }
-
     // Communication for M2L
     t0 = time(0);
-    SAFE_FUNC_EVAL(HighFreqM2LComm(reqbndset));
+    for (int level = 0; level < _level_prtns._hdkeys_inc.size(); ++level) {
+        if (mpirank == 0) {
+            std::cout << "----------------------" << std::endl;
+            std::cout << "Level: " << level << std::endl;
+	}
+        std::set<BoxAndDirKey> request_keys;
+        HighFreqInteractionListKeys(level, request_keys);
+        HighFreqM2LComm(level, request_keys);
+        SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
+    }
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency communication");
 
@@ -129,34 +125,37 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
     t0 = time(0);
     for (int level = 0; level < level_hdmap_inc.size(); ++level) {
         double W = _K / pow2(level);
-        std::map<Index3, std::vector<BoxKey> > level_inc = level_hdmap_inc[level];
-        std::map<Index3, std::vector<BoxKey> > level_out = level_hdmap_out[level];
-
-        // Handle pre-communication for this level.  We request the directional
-        // downward check values for the children.
-        // We assume that boxes on the unit level are partitioned by process,
-        // so we do not need to do any communication for that level.
-        if (level < UnitLevel()) {
-            HighFreqL2LLevelCommPre(level);
+        SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
+        if (mpirank == 0) {
+            std::cout << "---------------------------------" << std::endl;
+            std::cout << "Box width for downwards pass: " << W << std::endl;
         }
+        std::map<Index3, std::vector<BoxKey> >& level_inc = level_hdmap_inc[level];
+        std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
 
+        // Handle pre-communication for this level.  We send up the directional
+        // downward check values for the children.  We assume that boxes on the
+        // unit level are partitioned by process, so we do not need to do any
+        // communication for that level.
+        HighFreqL2LLevelCommPre(level);
+
+        // Maintain set of keys that get updated by L2L
+        std::set<BoxAndDirKey> affected_keys;
         for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
             mi != level_inc.end(); ++mi) {
             Index3 dir = mi->first;
             std::vector<BoxKey>& keys_inc = mi->second;
-            std::vector<BoxKey>& keys_out = level_out[dir];
-            SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_out) );
+            SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, affected_keys) );
         }
 
         // Handle post-communication for this level.  We send back the
-        // downward check values for the children.
-        // We assume that boxes on the unit level are partitioned by process,
-        // so we do not need to do any communication for that level.
-        if (level < UnitLevel()) {
-            HighFreqL2LLevelCommPost(level);
-        }
+        // downward check values for the children. Again, we assume that the
+        // boxes on the unit level are partitioned by process, so we do not
+        // need to do any communication for that level.
+        HighFreqL2LLevelCommPost(level, affected_keys);
 
-        // TODO(arbenson): remove data from parvec to save memory
+        // Remove old data from memory.
+        CleanLevel(level);
     }
     t1 = time(0);
 
@@ -164,9 +163,10 @@ int Wave3d::HighFreqPass(level_hdkeys_map_t& level_hdmap_out,
     return 0;
 }
 
-int Wave3d::ConstructMaps(ldmap_t& ldmap,
-                          level_hdkeys_map_t& level_hdmap_out,
-                          level_hdkeys_map_t& level_hdmap_inc) {
+int Wave3d::GatherLocalKeys() {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::GatherLocalKeys");
+#endif
     int mpirank = getMPIRank();
     double eps = 1e-12;
     level_hdkeys_t& level_hdkeys_out = _level_prtns._hdkeys_out;
@@ -181,7 +181,7 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
     //     1. BoxKeys that have the direction in its outgoing direction list
     //     2. BoxKeys that have the direction in its incoming direction list
     //
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
+    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
         mi != _boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
@@ -189,9 +189,7 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
         if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
             // Boxes of width less than one that are nonempty and are owned
             // by this processor get put in the low-frequency map.
-            if (W < 1 - eps) {
-                ldmap[W].push_back(curkey);
-            } else {
+          if (W > 1 - eps) {
                 // High frequency regime
                 BoxAndDirDat dummy;
                 // For each outgoing direction of this box, add to the first list
@@ -200,13 +198,18 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
                     // into bndvec
                     _bndvec.insert(BoxAndDirKey(curkey, *si), dummy);
                     int level = curkey.first;
+		    if (curkey.first == 6 && curkey.second == Index3(38, 32, 20) ) {
+		      std::cout << "Magic key outgoing!" << std::endl;
+		    }
                     level_hdkeys_out[level].push_back(BoxAndDirKey(curkey, *si));
-                    level_hdmap_out[level][*si].push_back(curkey);
                 }
                 
                 // For each incoming direction of this box, add to the second list
                 for (std::set<Index3>::iterator si = curdat.incdirset().begin();
                     si != curdat.incdirset().end(); ++si) {
+		    if (curkey.first == 6 && curkey.second == Index3(38, 32, 20) ) {
+		      std::cout << "Magic key incoming!" << std::endl;
+		    }
                     BoxAndDirDat dat;
                     Index3 dir = *si;
                     std::vector<BoxKey>& tmpvec = curdat.fndeidxvec()[dir];
@@ -219,7 +222,6 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
                     _bndvec.insert(BoxAndDirKey(curkey, dir), dat);
                     int level = curkey.first;
                     level_hdkeys_inc[level].push_back(BoxAndDirKey(curkey, *si));
-                    level_hdmap_inc[level][dir].push_back(curkey);
                 }
 
                 // Save memory by clearing interaction lists stored in curdat.
@@ -234,6 +236,25 @@ int Wave3d::ConstructMaps(ldmap_t& ldmap,
     return 0;
 }
 
+int Wave3d::ConstructLowFreqMap(ldmap_t& ldmap) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::ConstructLowFreqMap");
+#endif
+    ldmap.clear();
+    int mpirank = getMPIRank();
+    double eps = 1e-12;
+    for (std::map<BoxKey, BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
+         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        double W = BoxWidth(curkey);
+        if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
+            CHECK_TRUE(W < 1 - eps);
+            ldmap[W].push_back(curkey);
+        }
+    }
+}
+
 
 //---------------------------------------------------------------------
 int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
@@ -244,33 +265,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     _self = this;
     time_t t0, t1, t2, t3;
     int mpirank = getMPIRank();
-    std::vector<int> all(1, 1);
-    ParVec<int, Point3, PtPrtn>& pos = (*_posptr);
-    // Go through posptr to get nonlocal points
-    std::vector<int> reqpts;
-    for(std::map<int,Point3>::iterator mi = pos.lclmap().begin();
-        mi != pos.lclmap().end(); ++mi) {
-        reqpts.push_back( mi->first );
-    }
-
-    GatherDensities(reqpts, den);
-
-    // Compute extden on leaf nodes using ptidxvec
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsLeaf(curdat)) {
-            std::vector<int>& curpis = curdat.ptidxvec();
-            CpxNumVec& extden = curdat.extden();
-            extden.resize(curpis.size());
-            for (int k = 0; k < curpis.size(); ++k) {
-                int poff = curpis[k];
-                extden(k) = den.access(poff);
-            }
-        }
-    }
-    SAFE_FUNC_EVAL( den.discard(reqpts) );
 
     // Delete of empty boxes
     std::list<BoxKey> to_delete;
@@ -282,9 +276,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
             to_delete.push_back(curkey);
         }
     }
-    std::cerr << "Deleting " << to_delete.size()
-              << " out of " << _boxvec.lclmap().size()
-              << " total boxes." << std::endl;
     for (std::list<BoxKey>::iterator mi = to_delete.begin();
          mi != to_delete.end(); ++mi) {
         BoxKey curkey = *mi;
@@ -294,11 +285,8 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     // Setup of low and high frequency maps
     ldmap_t ldmap;
     int max_level = 10;
-    _level_prtns.init(max_level);
-    level_hdkeys_map_t level_hdmap_out(max_level);
-    level_hdkeys_map_t level_hdmap_inc(max_level);
-    ConstructMaps(ldmap, level_hdmap_out, level_hdmap_inc);
-
+    _level_prtns.Init(_K);
+    GatherLocalKeys();
     PrtnDirections(_level_prtns._hdkeys_out,
                    _level_prtns._hf_vecs_out);
     PrtnDirections(_level_prtns._hdkeys_inc,
@@ -312,44 +300,57 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     SAFE_FUNC_EVAL(_boxvec.getBegin(&Wave3d::TransferUnitLevelData_wrapper, mask1));
     SAFE_FUNC_EVAL(_boxvec.getEnd(mask1));
 
+    // Now we have the unit level information, so we can setup our part of the tree.
+    SetupLowFreqOctree();
+    // Remove old boxvec data.
+    CleanBoxvec();
+
+    // Gather the interaction lists.
     std::vector<int> mask2(BoxAndDirDat_Number, 0);
     mask2[BoxAndDirDat_interactionlist] = 1;
     SAFE_FUNC_EVAL(_bndvec.getBegin(&Wave3d::TransferBoxAndDirData_wrapper, mask2));
     SAFE_FUNC_EVAL(_bndvec.getEnd(mask2));
     TransferDataToLevels();
 
+    // Compute extden on leaf nodes using ptidxvec
+    GatherDensities(den);
+
+    // Form data maps needed.
+    _level_prtns.FormMaps();
+    ConstructLowFreqMap(ldmap);
+
     // Main work of the algorithm
     std::set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    HighFreqPass(level_hdmap_out, level_hdmap_inc);
+    HighFreqPass();
     LowFreqDownwardComm(reqboxset);
     LowFreqDownwardPass(ldmap);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
-    //set val from extval
+    // For all values that I have but don't own, add to the list.
     std::vector<int> wrtpts;
-    for(std::map<int, Point3>::iterator mi = pos.lclmap().begin();
-        mi != pos.lclmap().end(); ++mi) {
-        if (pos.prtn().owner(mi->first) != mpirank) {
-            wrtpts.push_back(mi->first);
-        }
-    }
-    val.expand(wrtpts);
-    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
+    for (std::map<BoxKey, BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
+        mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && OwnBox(curkey, mpirank) && IsLeaf(curdat)) {
+        if (HasPoints(curdat) && 
+	    _level_prtns.Owner(curkey) == mpirank &&
+	    IsLeaf(curdat)) {
             CpxNumVec& extval = curdat.extval();
             std::vector<int>& curpis = curdat.ptidxvec();
             for (int k = 0; k < curpis.size(); ++k) {
                 int poff = curpis[k];
-                val.access(poff) = extval(k);
+                val.lclmap()[poff] = extval(k);
+		if (val.prtn().owner(poff) != mpirank) {
+                    wrtpts.push_back(poff);
+		}
             }
         }
     }
-    val.putBegin(wrtpts, all);  val.putEnd(all);
+    std::vector<int> all(1, 1);
+    val.putBegin(wrtpts, all);
+    val.putEnd(all);
     val.discard(wrtpts);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
@@ -368,7 +369,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
     SAFE_FUNC_EVAL( _mlibptr->UpwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
-        BoxDat& srcdat = _boxvec.access(srckey);
+        BoxDat& srcdat = _level_prtns._lf_boxvec.access(srckey);
         LowFreqM2M(srckey, srcdat, uep, ucp, uc2ue, ue2uc);
 
         // Add boxes in U, V, W, and X lists of trgdat to reqboxset.           
@@ -396,7 +397,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
     //------------------
     for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
-        BoxDat& trgdat = _boxvec.access(trgkey);
+        BoxDat& trgdat = _level_prtns._lf_boxvec.access(trgkey);
         CHECK_TRUE(HasPoints(trgdat));  // should have points
         CpxNumVec dneqnden;
         LowFreqM2L(W, trgkey, trgdat, dcp, ue2dc, dneqnden, uep, dc2de);
@@ -417,9 +418,6 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
     SAFE_FUNC_EVAL( _mlibptr->UpwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
     for (int k = 0; k < srcvec.size(); ++k) {
         BoxKey srckey = srcvec[k];
-        BoxDat& srcdat = _boxvec.access(srckey);
-        CHECK_TRUE(HasPoints(srcdat));  // Should have points
-
         Point3 srcctr = BoxCenter(srckey);
         BoxAndDirKey bndkey(srckey, dir);
         HighFreqM2M(W, bndkey, uc2ue, ue2uc);
@@ -430,7 +428,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 
 //---------------------------------------------------------------------
 int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
-                             std::vector<BoxKey>& srcvec) {
+                             std::set<BoxAndDirKey>& affected_keys) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardHigh");
 #endif
@@ -445,31 +443,8 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
     //LEXING: IMPORTANT
     for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
-        BoxDat& trgdat = _boxvec.access(trgkey);
-        SAFE_FUNC_EVAL( HighFreqM2L(W, dir, trgkey, trgdat, dcp, uep) );
-        SAFE_FUNC_EVAL( HighFreqL2L(W, dir, trgkey, dc2de, de2dc) );
-     }
-
-    // Now that we are done at this level, clear data to save on memory.
-    for (int k = 0; k < srcvec.size(); ++k) {
-        BoxKey srckey = srcvec[k];
-        BoxDat& srcdat = _boxvec.access(srckey);
-        CHECK_TRUE(HasPoints(srcdat));  // should have points
-        BoxAndDirKey bndkey(srckey, dir);
-        BoxAndDirDat& bnddat = _bndvec.access( bndkey );
-        bnddat.dirupeqnden().resize(0);
-    }
-    for (int k = 0; k < trgvec.size(); ++k) {
-        BoxKey trgkey = trgvec[k];
-        BoxDat& trgdat = _boxvec.access(trgkey);
-        CHECK_TRUE(HasPoints(trgdat));  // should have points
-        std::vector<BoxKey>& tmpvec = trgdat.fndeidxvec()[dir];
-        for (int i = 0; i < tmpvec.size(); ++i) {
-            BoxKey srckey = tmpvec[i];
-            BoxAndDirKey bndkey(srckey, dir);
-            BoxAndDirDat& bnddat = _bndvec.access(bndkey);
-            bnddat.dirupeqnden().resize(0);
-        }
+        SAFE_FUNC_EVAL( HighFreqM2L(W, dir, trgkey, dcp, uep) );
+        SAFE_FUNC_EVAL( HighFreqL2L(W, dir, trgkey, dc2de, de2dc, affected_keys) );
     }
     return 0;
 }

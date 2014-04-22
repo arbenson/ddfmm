@@ -67,6 +67,17 @@ public:
             deallocate();
     }
 
+    void fill(const NumVec& C)  {
+#ifndef RELEASE
+        CallStackEntry entry("NumVec::fill");
+#endif
+        if (_m > 0) {
+            for (int i = 0; i < _m; ++i) {
+                _data[i] = C._data[i];
+            }
+        }
+    }
+
     NumVec& operator=(const NumVec& C)  {
 #ifndef RELEASE
         CallStackEntry entry("NumVec::operator=");
@@ -79,7 +90,7 @@ public:
             allocate();
             fill(C);
         } else {
-            _data =C._data;
+            _data = C._data;
         }
         return *this;
     }
@@ -139,17 +150,6 @@ private:
         if (_m > 0) {
             delete[] _data;
             _data = NULL;
-        }
-    }
-
-    void fill(const NumVec& C)  {
-#ifndef RELEASE
-        CallStackEntry entry("NumVec::fill");
-#endif
-        if (_m > 0) {
-            for (int i = 0; i < _m; ++i) {
-                _data[i] = C._data[i];
-            }
         }
     }
 };

@@ -23,7 +23,8 @@ Wave3d* Wave3d::_self = NULL;
 //-----------------------------------
 Wave3d::Wave3d(const std::string& p): ComObject(p), _posptr(NULL), _mlibptr(NULL),
                                       _fplan(NULL), _bplan(NULL), _ACCU(1), _NPQ(4),
-			              _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100) {
+			              _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100),
+                                      _starting_level(0) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::Wave3d");
 #endif
@@ -157,8 +158,6 @@ int Wave3d::P() {
     }
 }
 
-//--------------------------------------------------------------------------------------------------------
-
 //-----------------------------------------------------------
 int serialize(const PtPrtn& val, std::ostream& os, const std::vector<int>& mask)
 {
@@ -267,7 +266,22 @@ int deserialize(BoxAndDirDat& val, std::istream& is,
 #endif
     int i = 0;
     if (mask[i] == 1) deserialize(val._dirupeqnden, is, mask);  i++;
-    if (mask[i] == 1) deserialize(val._dirdnchkval, is, mask);  i++;
+    // Handle special case of dirdnchkval
+    // TODO(arbenson): this is a bit of a hack.
+    if (mask[i] == 1) {
+        CpxNumVec tmp;
+        deserialize(tmp, is, mask);
+	if (val._dirdnchkval.m() == tmp.m()) {
+            for (int i = 0; i < val._dirdnchkval.m(); ++i) {
+                val._dirdnchkval(i) += tmp(i);
+	    }
+	} else {
+	    // Copy to dirdnchkval
+            val._dirdnchkval.resize(tmp.m());
+            val._dirdnchkval.fill(tmp);
+	}
+    }
+    i++;
     if (mask[i] == 1) deserialize(val._interactionlist, is, mask);  i++;
     CHECK_TRUE(i == BoxAndDirDat_Number);
     return 0;

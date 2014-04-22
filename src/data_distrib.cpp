@@ -94,7 +94,7 @@ void FillKeyVector(std::vector<BoxAndDirKey>& keys, std::vector<int>& data,
 }
 
 void FormPrtnMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
-                      std::vector<int>& end_data, int level) {
+		 std::vector<int>& end_data, int level) {
 #ifndef RELEASE
     CallStackEntry entry("FormPrtnMap");
 #endif
@@ -122,6 +122,12 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     std::vector<int> sizes(mpisize);
     SAFE_FUNC_EVAL( MPI_Allgather(&my_size, 1, MPI_INT, &sizes[0], 1, MPI_INT,
                                   MPI_COMM_WORLD) );
+    if (mpirank == 0) {
+      std::cout << "sizes: " << std::endl;
+      for (int i = 0; i < sizes.size(); ++i) {
+	std::cout << i << ": " << sizes[i] << std::endl;
+      }
+    }
 
     std::vector<int> counts(mpisize);
     std::vector< std::vector<int> > recv_bufs(mpisize);
@@ -129,7 +135,6 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
         counts[i] = sizes[i] / mpisize;
         recv_bufs[i].resize(counts[i] * BOX_AND_DIR_KEY_MPI_SIZE);
     }
-
     // Create buffer to scatter
     std::vector<int> my_data(keys.size() * BOX_AND_DIR_KEY_MPI_SIZE);
     for (int i = 0; i < keys.size(); ++i) {
@@ -188,24 +193,26 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
             break;
         }
     }
-    //std::cout << "local start level on " << mpirank << ": " << local_start_level << std::endl;
 
-    // Make sure that my starting level agrees with everyone else.
+    // Get the starting level.
     int global_start_level = 0;
     MPI_Allreduce(&local_start_level, &global_start_level, 1, MPI_INT, MPI_MIN,
                   MPI_COMM_WORLD);
+    // If we haven't determined the starting level yet, set it.
+    if (_starting_level == 0) {
+        _starting_level = global_start_level;
+    }
 
     // Sort keys amongst processes.
     for (int level = global_start_level; level < UnitLevel(); ++level) {
         if (mpirank == 0) {
-            std::cerr << "Prtning level: " << level << std::endl;
+            std::cerr << "Partitioning level: " << level << std::endl;
         }
         std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys[level];
         int s1 = curr_level_keys.size();
         ScatterKeys(curr_level_keys, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
         int s2 = curr_level_keys.size();
-	//std::cout << "Key sizes: " << s1 << " " << s2 << std::endl;
         CHECK_TRUE_MSG(curr_level_keys.size() > 0, "Empty keys");
         bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
@@ -327,11 +334,19 @@ int Wave3d::PrtnUnitLevel() {
 
     // Form the parvec
     FormUnitPrtnMap(_level_prtns._unit_vec.prtn(), start_recv_buf, end_recv_buf);
+    // Copy to low-frequency boxvec partition.
+    
+    LowFreqBoxPrtn& prtn = _level_prtns._lf_boxvec.prtn();
+    UnitLevelBoxPrtn& unit_prtn = _level_prtns._unit_vec.prtn();
+    prtn.partition_ = unit_prtn.partition_;
+    prtn.end_partition_ = unit_prtn.end_partition_;
+    prtn.unit_level_ = UnitLevel();
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
     // Note: parvec gets filled in later with call to TransferDataToLevels()
     return 0;  
 }
+
 
 // This transfer holds two purposes:
 //    1. Pass the high-frequency interaction lists to the appropriate processors
@@ -342,15 +357,13 @@ int Wave3d::TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
     CallStackEntry entry("Wave3d::TransferBoxAndDirData");
 #endif
     pids.clear();
+    int owner = _level_prtns.Owner(key, false);
     int level = key._boxkey.first;
     if (level == UnitLevel()) {
-        pids.push_back(_level_prtns._unit_vec.prtn().owner(key));
-    } else {
-        LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
+        pids.push_back(owner);
+    } else if (dat.interactionlist().size() > 0) {
         // It is an incoming direction iff the interaction list is nonempty
-        if (dat.interactionlist().size() > 0) {
-	    pids.push_back(vec.prtn().owner(key));
-	}
+        pids.push_back(owner);
     }
     return 0;
 }
@@ -371,21 +384,21 @@ int Wave3d::TransferDataToLevels() {
     for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = _bndvec.lclmap().begin();
        mi != _bndvec.lclmap().end(); ++mi) {
         BoxAndDirKey key = mi->first;
+	int owner = _level_prtns.Owner(key, false);
+	if (owner != mpirank) {
+            continue;
+	}
         BoxAndDirDat dat = mi->second;
         int level = key._boxkey.first;
         if (level == UnitLevel()) {
             // Put unit-level directions into the appropriate vector
-            if (_level_prtns._unit_vec.prtn().owner(key) == mpirank) {
-                _level_prtns._unit_vec.lclmap()[key] = dat;
-            }
-        } else {
-            CHECK_TRUE(level < _level_prtns._hf_vecs_inc.size());
-            // Put high-frequency directions into the appropriate vector
+            _level_prtns._unit_vec.lclmap()[key] = dat;
+
+        } else if (dat.interactionlist().size() > 0) {
+            // Put high-frequency directions into the appropriate vector.
+	    // It is an incoming direction iff the interaction list is nonempty.
             LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
-	    // It is an incoming direction iff the interaction list is nonempty
-	    if (dat.interactionlist().size() > 0 && vec.prtn().owner(key) == mpirank) {
-	        vec.lclmap()[key] = dat;
-            }
+	    vec.lclmap()[key] = dat;
         }
     }
     return 0;
@@ -402,8 +415,8 @@ int Wave3d::TransferUnitLevelData(BoxKey key, BoxDat& dat,
     int level = key.first;
     if (level == UnitLevel()) {
         Index3 dummy_dir(1, 1, 1);
-        BoxAndDirKey box_and_dir_key(key, dummy_dir);
-        pids.push_back(_level_prtns._unit_vec.prtn().owner(box_and_dir_key));
+        BoxAndDirKey new_key(key, dummy_dir);
+        pids.push_back(_level_prtns.Owner(new_key, false));
     }
     return 0;
 }
@@ -416,4 +429,241 @@ int Wave3d::TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
     return (Wave3d::_self)->TransferUnitLevelData(key, dat, pids);
 }
 
+void LevelPartitions::Init(int K) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::init");
+#endif
+    unit_level_ = static_cast<int>(round(log(K) / log(2)));
+    _hf_vecs_out.resize(unit_level_ + 1);
+    _hf_vecs_inc.resize(unit_level_ + 1);
+    _hdkeys_out.resize(unit_level_ + 1);
+    _hdkeys_inc.resize(unit_level_ + 1);
+    _level_hdmap_out.resize(unit_level_ + 1);
+    _level_hdmap_inc.resize(unit_level_ + 1);
+}
 
+void InsertIntoDirMap(std::map<Index3, std::vector<BoxKey> >& dir_map,
+		      std::map<BoxAndDirKey, BoxAndDirDat>& curr_map) {
+#ifndef RELEASE
+    CallStackEntry entry("InsertIntoDirMap");
+#endif
+    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_map.begin();
+         mi != curr_map.end(); ++mi) {
+        BoxAndDirKey key = mi->first;
+	Index3 dir = key._dir;
+	BoxKey boxkey = key._boxkey;
+	// TODO(arbenson): check to make sure I own this data
+	dir_map[dir].push_back(boxkey);
+    }
+}
+
+void LevelPartitions::FormMaps() {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::FormMaps");
+#endif
+    // Outgoing (upwards pass)
+    for (int i = 0; i < _hf_vecs_out.size(); ++i) {
+        InsertIntoDirMap(_level_hdmap_out[i], _hf_vecs_out[i].lclmap());
+    }
+    InsertIntoDirMap(_level_hdmap_out[unit_level_], _unit_vec.lclmap());
+    // Incoming (downwards pass)
+    for (int i = 0; i < _hf_vecs_inc.size(); ++i) {
+        InsertIntoDirMap(_level_hdmap_inc[i], _hf_vecs_inc[i].lclmap());
+    }
+    InsertIntoDirMap(_level_hdmap_inc[unit_level_], _unit_vec.lclmap());
+    // Remove old data.
+    for (int i = 0; i < _hdkeys_out.size(); ++i) {
+        std::vector<BoxAndDirKey>& old_keys = _hdkeys_out[i];
+	std::vector<BoxAndDirKey>().swap(old_keys);
+    }
+    for (int i = 0; i < _hdkeys_inc.size(); ++i) {
+        std::vector<BoxAndDirKey>& old_keys = _hdkeys_inc[i];
+	std::vector<BoxAndDirKey>().swap(old_keys);
+    }
+}
+
+BoxAndDirDat& LevelPartitions::Access(BoxAndDirKey key, bool out) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::Access");
+#endif
+    int level = key._boxkey.first;
+    if (level == unit_level_) {
+        return _unit_vec.access(key);
+    }
+    if (out) {
+        return _hf_vecs_out[level].access(key);
+    }
+    return _hf_vecs_inc[level].access(key);
+}
+
+std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key, bool out) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::SafeAccess");
+#endif
+    int level = key._boxkey.first;
+    if (level == unit_level_) {
+        return _unit_vec.contains(key);
+    }
+    if (out) {
+        return _hf_vecs_out[level].contains(key);
+    }
+    return _hf_vecs_inc[level].contains(key);
+}
+
+int LevelPartitions::Owner(BoxAndDirKey key, bool out) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::Owner");
+#endif
+    int level = key._boxkey.first;
+    if (level == unit_level_) {
+        return _unit_vec.prtn().owner(key);
+    }
+    if (out) {
+        return _hf_vecs_out[level].prtn().owner(key);
+    }
+    return _hf_vecs_inc[level].prtn().owner(key);
+}
+
+int LevelPartitions::Owner(BoxKey key) {
+#ifndef RELEASE
+    CallStackEntry entry("LevelPartitions::Owner");
+#endif
+    return _lf_boxvec.prtn().owner(key);
+}
+
+void CleanDirVecMap(std::map<Index3, std::vector<BoxKey> >& curr_map) {
+#ifndef RELEASE
+    CallStackEntry entry("CleanDirVecMap");
+#endif
+    for (std::map<Index3, std::vector<BoxKey> >::iterator mi = curr_map.begin();
+         mi != curr_map.end(); ++mi) {
+        std::vector<BoxKey>().swap(mi->second);
+    }
+    curr_map.clear();
+}
+
+void CleanBoxAndDirMap(std::map<BoxAndDirKey, BoxAndDirDat>& curr_map) {
+#ifndef RELEASE
+    CallStackEntry entry("CleanBoxAndDirMap");
+#endif
+    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_map.begin();
+	 mi != curr_map.end(); ++mi) {
+        mi->second._dirupeqnden.resize(0);
+        mi->second._dirdnchkval.resize(0);
+        std::vector<BoxAndDirKey>().swap(mi->second.interactionlist());
+    }
+    curr_map.clear();
+}
+
+int Wave3d::CleanLevel(int level) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::CleanLevel");
+#endif
+    CleanDirVecMap(_level_prtns._level_hdmap_inc[level]);
+    CleanDirVecMap(_level_prtns._level_hdmap_out[level]);
+    if (level == UnitLevel()) {
+        CleanBoxAndDirMap(_level_prtns._unit_vec.lclmap());
+    } else {
+        CleanBoxAndDirMap(_level_prtns._hf_vecs_out[level].lclmap());
+        CleanBoxAndDirMap(_level_prtns._hf_vecs_inc[level].lclmap());
+    }
+    return 0;
+}
+
+int Wave3d::CleanBoxvec() {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::CleanBoxvec");
+#endif
+    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
+	 mi != _boxvec.lclmap().end(); ++mi) {
+        BoxDat& dat = mi->second;
+	std::vector<BoxKey>().swap(dat._undeidxvec);
+	std::vector<BoxKey>().swap(dat._vndeidxvec);
+	std::vector<BoxKey>().swap(dat._wndeidxvec);
+	std::vector<BoxKey>().swap(dat._xndeidxvec);
+	std::vector<BoxKey>().swap(dat._endeidxvec);
+	for (std::map<Index3, std::vector<BoxKey> >::iterator mi2 = dat._fndeidxvec.begin();
+	   mi2 != dat._fndeidxvec.end(); ++mi2) {
+            std::vector<BoxKey>().swap(mi2->second);
+	}
+	dat._fndeidxvec.clear();
+    }
+    _boxvec.lclmap().clear();
+    return 0;
+}
+
+int BoxAndDirLevelPrtn::owner(BoxAndDirKey& key) {
+#ifndef RELEASE
+        CallStackEntry entry("BoxAndDirLevelPrtn::owner");
+#endif
+	CHECK_TRUE_MSG(partition_.size() != 0, "Missing partition!");
+        int ind = std::lower_bound(partition_.begin(),
+                                   partition_.end(), key) - partition_.begin();
+        --ind;
+        if (ind < static_cast<int>(partition_.size()) - 1 &&
+            key == partition_[ind + 1]) {
+            ++ind;
+        }
+	if (ind == partition_.size() || ind == -1) {
+	    return -1;
+	}
+	if (key > end_partition_[ind]) {
+	  return -1;
+	}
+        return ind;
+}
+
+int UnitLevelBoxPrtn::owner(BoxAndDirKey& key) {
+#ifndef RELEASE
+        CallStackEntry entry("UnitLevelBoxPrtn::owner");
+#endif
+        BoxKey boxkey = key._boxkey;
+        int ind = std::lower_bound(partition_.begin(),
+                                   partition_.end(), boxkey) - partition_.begin();
+        --ind;
+        if (ind < static_cast<int>(partition_.size()) - 1 &&
+            boxkey == partition_[ind + 1]) {
+            ++ind;
+        }
+	if (ind == partition_.size() || ind == -1) {
+	    return -1;
+	}
+        CHECK_TRUE_MSG(boxkey <= end_partition_[ind],
+		       "Something wrong with partition");
+        return ind;
+}
+
+int LowFreqBoxPrtn::owner(BoxKey& key) {
+#ifndef RELEASE
+        CallStackEntry entry("LowFreqBoxPrtn::owner");
+#endif
+        int level = key.first;
+	CHECK_TRUE_MSG(level >= unit_level_, "bad level");
+	int factor = pow2(level - unit_level_);
+	Index3 idx = key.second;
+	idx = idx / factor;
+	BoxKey new_key(unit_level_, idx);
+        int ind = std::lower_bound(partition_.begin(),
+                                   partition_.end(), new_key) - partition_.begin();
+        --ind;
+        if (ind < static_cast<int>(partition_.size()) - 1 &&
+            new_key == partition_[ind + 1]) {
+            ++ind;
+        }
+	if (ind == partition_.size() || ind == -1) {
+	    return -1;
+	}
+	if (new_key > end_partition_[ind]) {
+	  // Key is not owned by any processor
+	  return -1;
+	}
+	if (new_key > end_partition_[ind]) {
+	  std::cout << "ind: " << ind << std::endl;
+	  std::cout << "new_key: " << new_key << std::endl;;
+	  std::cout << "start: " << partition_[ind] << std::endl;
+	  std::cout << "end: " << end_partition_[ind] << std::endl;
+	}
+        CHECK_TRUE_MSG(new_key <= end_partition_[ind],
+		       "Something wrong with partition");
+        return ind;
+}

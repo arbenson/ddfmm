@@ -89,15 +89,11 @@ int ReadWrl(std::string fname, std::vector<Point3>& points,
 	    max[j] = std::max(max[j], p[j]);
 	}
     }
-    std::cout << "min: " << min << std::endl;
-    std::cout << "max: " << max << std::endl;
     Point3 mid = max + min;
     mid /= 2;
-    std::cout << "midpoint: " << mid << std::endl;
     Point3 diff = max - min;
     diff /= 2;
     double avg_diff = std::max(std::max(diff[0], diff[1]), diff[2]);
-    std::cout << "avg_diff: " << avg_diff << std::endl;
     for (int i = 0; i < points.size(); ++i) {
 	points[i] -= mid;
 	points[i] /= avg_diff;
@@ -241,7 +237,10 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
 	    ++non_empty;
 	}
     }
-    std::cout << non_empty << " non-empty cells." << std::endl;
+    int mpirank = getMPIRank();
+    if (mpirank == 0) {
+        std::cout << non_empty << " non-empty cells." << std::endl;
+    }
     
     geom.resize(NC, NC, NC);
     setvalue(geom, -1);
@@ -286,7 +285,6 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
 	}
     }
 
-    int mpirank = getMPIRank();
     if (mpirank == 0) {
       for (int i = 0; i < NCPU; ++i) {
 	std::cout << "Process " << i << " has " << curr_weights[i]
@@ -297,13 +295,19 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
     return 0;
 }
 
-int NewData(std::string fname, double K, double NPW, int NCPU, int NC,
-	    IntNumTns& geom) {
-    std::cout << "K: "    << K    << std::endl
-	      << "NPW: "  << NPW  << std::endl
-	      << "NCPU: " << NCPU << std::endl
-	      << "NC: "   << NC   << std::endl;
-    CHECK_TRUE(NCPU > 0 && NPW > 0 && NC > 0 && K >= 1);
+int NewData(std::string fname, double K, double NPW, int NCPU,
+            IntNumTns& geom) {
+    double sqrt_K = sqrt(K);
+    int num_levels = ceil(log(sqrt_K) / log(2));
+    int NC = pow2(num_levels);
+    int mpirank = getMPIRank();
+    if (mpirank == 0) {
+        std::cout << "K: "    << K    << std::endl
+		  << "NPW: "  << NPW  << std::endl
+		  << "NCPU: " << NCPU << std::endl
+		  << "NC: "   << NC   << std::endl;
+    }
+    CHECK_TRUE(NCPU > 0 && NPW > 0 && K >= 1);
 
     std::vector<Point3> points;
     std::vector<Point3> coords;

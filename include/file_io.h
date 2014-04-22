@@ -29,7 +29,6 @@
 int ReadWrl(std::string fname, std::vector<Point3>& points,
             std::vector<Point3>& coords);
 
-int NewData(std::string fname, double K, double NPW, int NCPU, int NC,
-	    IntNumTns& geom);
+int NewData(std::string fname, double K, double NPW, int NCPU, IntNumTns& geom);
 
 #endif  // _FILE_IO_
