@@ -162,7 +162,8 @@ function [prtn, geom] = new_data(fname, datadir, K, NPW, NCPU, NC)
   fclose(fid);
   
   ttl = sum(ws);
-  chk = floor(rand(20,1) * (ttl-20)) + [1:20]';
+  num_check = 200;
+  chk = floor(rand(num_check,1) * (ttl-num_check)) + [1:num_check]';
   binstr = sprintf('%s/chk',outdir);
   string = {'IntNumVec'};
   fid = fopen(binstr, 'w');

@@ -122,6 +122,12 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     std::vector<int> sizes(mpisize);
     SAFE_FUNC_EVAL( MPI_Allgather(&my_size, 1, MPI_INT, &sizes[0], 1, MPI_INT,
                                   MPI_COMM_WORLD) );
+    if (mpirank == 0) {
+      std::cout << "sizes: " << std::endl;
+      for (int i = 0; i < sizes.size(); ++i) {
+	std::cout << i << ": " << sizes[i] << std::endl;
+      }
+    }
 
     std::vector<int> counts(mpisize);
     std::vector< std::vector<int> > recv_bufs(mpisize);
@@ -129,7 +135,6 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
         counts[i] = sizes[i] / mpisize;
         recv_bufs[i].resize(counts[i] * BOX_AND_DIR_KEY_MPI_SIZE);
     }
-
     // Create buffer to scatter
     std::vector<int> my_data(keys.size() * BOX_AND_DIR_KEY_MPI_SIZE);
     for (int i = 0; i < keys.size(); ++i) {
@@ -208,7 +213,6 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         ScatterKeys(curr_level_keys, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
         int s2 = curr_level_keys.size();
-	//std::cout << "Key sizes: " << s1 << " " << s2 << std::endl;
         CHECK_TRUE_MSG(curr_level_keys.size() > 0, "Empty keys");
         bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );

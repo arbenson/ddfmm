@@ -31,7 +31,6 @@ int SeparateRead(std::string name, std::istringstream& is) {
 
     char filename[MAX_FILE_NAME_LENGTH];
     sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);  
-    std::cerr << filename << std::endl;
     std::ifstream fin(filename);
     if (fin.fail()) {
 	std::cerr << "failed to open input file stream: " << filename << std::endl;
@@ -54,7 +53,6 @@ int SeparateWrite(std::string name, std::ostringstream& os) {
 
     char filename[MAX_FILE_NAME_LENGTH];
     sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);
-    std::cerr << filename << std::endl;
     std::ofstream fout(filename);
     if (fout.fail()) {
 	fprintf(stderr, "failed to open output file stream (%s)\n", filename);
