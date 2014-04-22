@@ -40,6 +40,9 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
     int level = trgkey.first;
     std::pair<bool, BoxAndDirDat&> data = _level_prtns.SafeAccess(bndkey, false);
     CHECK_TRUE_MSG(data.first, "Missing incoming data");
+    int mpirank = getMPIRank();
+    CHECK_TRUE_MSG(_level_prtns.Owner(bndkey, false) == mpirank,
+		   "Updating data that I do not own");
     BoxAndDirDat& bnddat = data.second;
     CpxNumVec& dcv = bnddat.dirdnchkval();
     std::vector<BoxAndDirKey>& interactionlist = bnddat.interactionlist();
@@ -91,6 +94,9 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
     BoxKey srckey = bndkey._boxkey;
     Index3 dir = bndkey._dir;
     BoxAndDirDat& bnddat = _level_prtns.Access(bndkey, true);
+    int mpirank = getMPIRank();
+    CHECK_TRUE_MSG(_level_prtns.Owner(bndkey, true) == mpirank,
+		   "Updating data that I do not own");
     CpxNumVec& upeqnden = bnddat.dirupeqnden();
     CpxNumVec upchkval(ue2uc(0, 0, 0).m());
     setvalue(upchkval, cpx(0, 0));

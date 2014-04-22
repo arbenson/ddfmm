@@ -39,14 +39,14 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     pos.getBegin(chkkeyvec, all);
     pos.getEnd(all);
     std::vector<Point3> tmpsrcpos;
-    for (std::map<int,Point3>::iterator mi = pos.lclmap().begin();
+    for (std::map<int, Point3>::iterator mi = pos.lclmap().begin();
         mi != pos.lclmap().end(); ++mi) {
         if (pos.prtn().owner(mi->first) == mpirank) {
             tmpsrcpos.push_back(mi->second);
         }
     }
     std::vector<cpx> tmpsrcden;
-    for (std::map<int,cpx>::iterator mi = den.lclmap().begin();
+    for (std::map<int, cpx>::iterator mi = den.lclmap().begin();
         mi != den.lclmap().end(); ++mi) {
         if (den.prtn().owner(mi->first) == mpirank) {
             tmpsrcden.push_back(mi->second);
@@ -96,9 +96,10 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     }
 
     if (mpirank == 0) {
-      std::cout << "computed: " << std::endl << truval 
-		<< "actual: " << std::endl << allval << std::endl;
-
+      std::cout << "key        |       computed            |          actual" << std::endl;
+      for (int i = 0; i < truval.m(); ++i) {
+	std::cout << chkkeyvec[i] << " | " << truval(i) << " | " << allval(i) << std::endl;
+      }
     }
 
     double tn = sqrt( energy(truval) );
