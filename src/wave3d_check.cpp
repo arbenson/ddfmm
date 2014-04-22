@@ -95,6 +95,12 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
         errval(i) = allval(i) - truval(i);
     }
 
+    if (mpirank == 0) {
+      std::cout << "computed: " << std::endl << truval 
+		<< "actual: " << std::endl << allval << std::endl;
+
+    }
+
     double tn = sqrt( energy(truval) );
     double en = sqrt( energy(errval) );
     relerr = en / tn;

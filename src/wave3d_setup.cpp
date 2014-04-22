@@ -163,22 +163,10 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
         if (first_pass) {
             _boxvec.insert(curkey, curdat);
         } else if (BoxWidth(curkey) < 1 - eps) {
-          int mpirank = getMPIRank();
-          int owner = _level_prtns.Owner(curkey);
-          if (mpirank != owner) {
-            std::cout << "Problem with key: " << curkey << std::endl;
-            std::cout << "My rank: " << mpirank << std::endl;
-            std::cout << "owner: " << owner << std::endl;
-            BoxKey parkey = ParentKey(curkey);
-            std::cout << "Parent key: " << parkey << std::endl;
-            int parowner1 = _level_prtns.Owner(parkey);
-            Index3 dummy_dir(1, 1, 1);
-            BoxAndDirKey bndkey(parkey, dummy_dir);
-            int parowner2 = _level_prtns.Owner(bndkey, false);
-            std::cout << "Parent key owner1: " << parowner1 << std::endl;
-            std::cout << "Parent key owner2: " << parowner2 << std::endl;
-          }
-            _level_prtns._lf_boxvec.insert(curkey, curdat);
+            int mpirank = getMPIRank();
+            int owner = _level_prtns.Owner(curkey);
+            CHECK_TRUE(mpirank == owner);
+	    _level_prtns._lf_boxvec.insert(curkey, curdat);
         }
     }
 }
@@ -212,7 +200,7 @@ int Wave3d::SetupTree() {
         int key = mi->first;
         Point3 pos = mi->second;
         Index3 idx;
-        for(int d = 0; d < 3; d++) {
+        for (int d = 0; d < 3; ++d) {
              idx(d) = (int) floor(numC * ((pos(d) - bctr(d) + K / 2) / K));
              CHECK_TRUE(idx(d) >= 0 && idx(d) < numC);
         }

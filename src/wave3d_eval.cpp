@@ -248,6 +248,13 @@ int Wave3d::ConstructLowFreqMap(ldmap_t& ldmap) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = BoxWidth(curkey);
+	if (curkey == BoxKey(8, Index3(132, 120, 139))) {
+	  std::cout << "Found the magic key while constructing map!" << std::endl;
+	  std::cout << "Width is: " << W << std::endl;
+	  std::cout << "owner is: " << _level_prtns.Owner(curkey) << std::endl;
+	  std::cout << "my rank is: " << mpirank << std::endl;
+	  std::cout << "has points?: " << HasPoints(curdat) << std::endl;
+	}
         if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
             CHECK_TRUE(W < 1 - eps);
             ldmap[W].push_back(curkey);

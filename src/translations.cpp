@@ -59,8 +59,8 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
             }
         }
         int level = srckey.first;
-	std::pair<bool, BoxAndDirDat&> data = _level_prtns.SafeAccess(key, true);
-	CHECK_TRUE_MSG(data.first, "Missing outgoing data");
+        std::pair<bool, BoxAndDirDat&> data = _level_prtns.SafeAccess(key, true);
+        CHECK_TRUE_MSG(data.first, "Missing outgoing data");
         CpxNumVec& ued = data.second.dirupeqnden();
         CpxNumMat Mts;
         SAFE_FUNC_EVAL( _kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
@@ -73,9 +73,9 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
             ued.resize(Mts.n());
             setvalue(ued, cpx(0, 0));
         }
-	if (Mts.n() != ued.m()) {
-	  std::cout << Mts.n() << " " << ued.m() << std::endl;
-	}
+        if (Mts.n() != ued.m()) {
+          std::cout << Mts.n() << " " << ued.m() << std::endl;
+        }
         SAFE_FUNC_EVAL( zgemv(1.0, Mts, ued, 1.0, dcv) );
     }
     return 0;
@@ -106,12 +106,12 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
             if (data.first) {
                 BoxDat& chddat = data.second;
-		// TODO: fix this check
-		// CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
-		if (HasPoints(chddat)) {
-		    CpxNumVec& chdued = chddat.upeqnden();
-		    SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
-		}
+                // TODO: fix this check
+                // CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
+                if (HasPoints(chddat)) {
+                    CpxNumVec& chdued = chddat.upeqnden();
+                    SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
+                }
             }
         }
     } else {
@@ -130,7 +130,7 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
                 CpxNumVec& chdued = bnddat.dirupeqnden();
                 // TODO(arbenson): fix this
                 if (chdued.m() != 0) {
-		    int mpirank = getMPIRank();
+                    int mpirank = getMPIRank();
                     SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
                 }
 
@@ -158,7 +158,7 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
 
 int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                         NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-			std::vector<BoxAndDirKey>& keys_affected) {
+                        std::vector<BoxAndDirKey>& keys_affected) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqL2L");
 #endif
@@ -204,7 +204,7 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                 chddcv.resize(de2dc(a,b,c).m());
                 setvalue(chddcv,cpx(0, 0));
             }
-	    CHECK_TRUE_MSG(de2dc(a, b, c).n() == dneqnden.m(), "Translation mismatch");
+            CHECK_TRUE_MSG(de2dc(a, b, c).n() == dneqnden.m(), "Translation mismatch");
             SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
         }
     } else {
@@ -215,8 +215,8 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
             int c = CHILD_IND3(ind);             
             BoxKey chdkey = ChildKey(trgkey, Index3(a, b, c));
             BoxAndDirKey bndkey(chdkey, pdir);
-	    std::pair<bool, BoxAndDirDat&> dat = _level_prtns.SafeAccess(bndkey, false);
-            // If we have the data, then we updat the directional check values.
+            std::pair<bool, BoxAndDirDat&> dat = _level_prtns.SafeAccess(bndkey, false);
+            // If we have the data, then we update the directional check values.
             if (dat.first) {
                 BoxAndDirDat& bnddat = dat.second;
                 CpxNumVec& chddcv = bnddat.dirdnchkval();
@@ -224,10 +224,10 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                     chddcv.resize(de2dc(a, b, c).m());
                     setvalue(chddcv, cpx(0, 0));
                 }
-	        SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
-		// We updated the data, so we need to send it back to the children.
-	        keys_affected.push_back(bndkey);
-	    }
+                SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
+                // We updated the data, so we need to send it back to the children.
+                keys_affected.push_back(bndkey);
+            }
         }
     }
     return 0;
@@ -261,15 +261,17 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
         SAFE_FUNC_EVAL( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
     } else {
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-          int a = CHILD_IND1(ind);
-          int b = CHILD_IND2(ind);
-          int c = CHILD_IND3(ind);
-          BoxKey key = ChildKey(srckey, Index3(a, b, c));
-          std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
-          if (data.first) {
-              BoxDat& chddat = data.second;
-              SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
-          }
+            int a = CHILD_IND1(ind);
+            int b = CHILD_IND2(ind);
+            int c = CHILD_IND3(ind);
+            BoxKey key = ChildKey(srckey, Index3(a, b, c));
+            std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
+            // TODO(arbenson): remove check on HasPoints by removing those boxes
+            // ahead of time.
+            if (data.first && HasPoints(data.second)) {
+                BoxDat& chddat = data.second;
+                SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
+            }
         }
     }
     
