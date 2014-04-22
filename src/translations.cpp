@@ -79,7 +79,57 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
         if (Mts.n() != ued.m()) {
           std::cout << Mts.n() << " " << ued.m() << std::endl;
         }
+#if 0
+	if (bndkey._boxkey == BoxKey(5, Index3(20, 15, 12)) ||
+	    bndkey._boxkey == BoxKey(6, Index3(41, 31, 24))) {
+	  int mpirank = getMPIRank();
+	  std::cout << "Contributing to the magic box: "
+		    << bndkey._boxkey
+		    << " "
+		    << bndkey._dir
+		    << std::endl;
+	  std::cout << "The source key and direction is: "
+		    << key._boxkey
+		    << " "
+		    << key._dir
+		    << std::endl;
+	  std::cout << "My rank is: " << mpirank << std::endl;
+	  std::cout << "The owner of the source key is: "
+		    << _level_prtns.Owner(key, true)
+		    << std::endl;
+	}
+#endif
+#if 1
+	if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && bndkey._dir == Index3(4, -1, -3)) {
+	  int mpirank = getMPIRank();
+	  std::cout << "Contributing to the magic bnd: "
+		    << bndkey._boxkey
+		    << " "
+		    << bndkey._dir
+		    << std::endl;
+	  std::cout << "The source key and direction is: "
+		    << key._boxkey
+		    << " "
+		    << key._dir
+		    << std::endl;
+	  std::cout << "My rank is: " << mpirank << std::endl;
+	  std::cout << "The owner of the source key is: "
+		    << _level_prtns.Owner(key, true)
+		    << std::endl;
+	  std::cout << "ued: " 
+		    << std::endl
+		    << ued
+		    << std::endl;
+	}
+#endif
+
         SAFE_FUNC_EVAL( zgemv(1.0, Mts, ued, 1.0, dcv) );
+	if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && bndkey._dir == Index3(4, -1, -3)) {
+	  std::cout << "dcv after apply: " 
+		    << std::endl
+		    << dcv
+		    << std::endl;
+	}
     }
     return 0;
 }
@@ -164,7 +214,7 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
 
 int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                         NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-                        std::vector<BoxAndDirKey>& keys_affected) {
+                        std::set<BoxAndDirKey>& keys_affected) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqL2L");
 #endif
@@ -184,6 +234,7 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     if (dnchkval.m() == 0) {
       return 0;
     }
+    int mpirank = getMPIRank();
 
     CHECK_TRUE_MSG(E3.n() == dnchkval.m(), "E3 mismatch");
     SAFE_FUNC_EVAL( zgemv(1.0, E3, dnchkval, 0.0, tmp0) );
@@ -192,6 +243,23 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     CHECK_TRUE_MSG(E1.n() == tmp1.m(), "E1 mismatch");
     SAFE_FUNC_EVAL( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
     dnchkval.resize(0);  // save space
+
+#if 1
+    if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && bndkey._dir == Index3(4, -1, -3)) {
+      int mpirank = getMPIRank();
+      std::cout << "Magic box is contributing to low-freq children: "
+		<< bndkey._boxkey
+		<< " "
+		<< bndkey._dir
+		<< std::endl;
+      std::cout << "My rank is: " << mpirank << std::endl;
+      std::cout << "dneqnden: "
+		<< std::endl
+		<< dneqnden
+		<< std::endl;
+    }
+#endif
+
 
     if (abs(W - 1) < eps) {
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
@@ -227,12 +295,46 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                 BoxAndDirDat& bnddat = dat.second;
                 CpxNumVec& chddcv = bnddat.dirdnchkval();
                 if (chddcv.m() == 0) {
+		  if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && 
+		      pdir == Index3(4, -1, -3)) {
+		    std::cout << "allocating on: "
+			      << trgkey << " " << dir << std::endl;
+		  }
                     chddcv.resize(de2dc(a, b, c).m());
                     setvalue(chddcv, cpx(0, 0));
                 }
+#if 1
+		if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && 
+		    pdir == Index3(4, -1, -3)) {
+		  int mpirank = getMPIRank();
+		  std::cout << "Contributing to the magic bnd: "
+			    << bndkey._boxkey
+			    << " "
+			    << pdir
+			    << std::endl;
+		  std::cout << "The parent key and direction is: "
+			    << trgkey
+			    << " "
+			    << dir
+			    << std::endl;
+		  std::cout << "My rank is: " << mpirank << std::endl;
+		  std::cout << "dneqnden: "
+			    << std::endl
+			    << dneqnden
+			    << std::endl;
+		}
+#endif
                 SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
+#if 1
+		if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && 
+		    pdir == Index3(4, -1, -3)) {
+		  std::cout << "chddcv after apply: " << std::endl
+			    << chddcv << std::endl;
+		}
+#endif
                 // We updated the data, so we need to send it back to the children.
-                keys_affected.push_back(bndkey);
+		// Important: only communicate keys that we do not own!
+		keys_affected.insert(bndkey);
             }
         }
     }

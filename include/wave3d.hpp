@@ -489,7 +489,7 @@ private:
 
     int EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec);
     int EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
-                         std::vector<BoxAndDirKey>& keys_affected);
+                         std::set<BoxAndDirKey>& affected_keys);
 
     int GatherLocalKeys();
     int ConstructLowFreqMap(ldmap_t& ldmap);
@@ -518,7 +518,7 @@ private:
                     DblNumMat& dcp, DblNumMat& uep);
     int HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                     NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-		    std::vector<BoxAndDirKey>& keys_affected);
+		    std::set<BoxAndDirKey>& affected_keys);
 
 
     // Routines for communication
@@ -529,7 +529,7 @@ private:
                         std::vector<BoxAndDirKey>& req_keys);
     int HighFreqM2MLevelComm(int level);
     int HighFreqL2LLevelCommPre(int level);
-    int HighFreqL2LLevelCommPost(int level, std::vector<BoxAndDirKey>& keys_affected);
+    int HighFreqL2LLevelCommPost(int level, std::set<BoxAndDirKey>& affected_keys);
     int HighFreqM2LComm(int level,
                         std::set<BoxAndDirKey>& request_keys);
     int HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,

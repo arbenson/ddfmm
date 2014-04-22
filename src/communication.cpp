@@ -124,32 +124,6 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
     return 0;
 }
 
-int Wave3d::AllChildrenKeys(LevelBoxAndDirVec& vec,
-                            std::vector<BoxAndDirKey>& req_keys) {
-#ifndef RELEASE
-    CallStackEntry entry("AllChildrenKeys");
-#endif
-    int mpirank = getMPIRank();
-    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = vec.lclmap().begin();
-        mi != vec.lclmap().end(); ++mi) {
-        BoxAndDirKey key = mi->first;
-        if (vec.prtn().owner(key) == mpirank) {
-            Index3 dir = key._dir;
-            BoxKey boxkey = key._boxkey;
-            Index3 pdir = ParentDir(dir);
-            for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
-                int a = CHILD_IND1(ind);
-                int b = CHILD_IND2(ind);
-                int c = CHILD_IND3(ind);             
-                BoxKey child_boxkey = ChildKey(boxkey, Index3(a, b, c));
-                // We need the child key.
-                req_keys.push_back(BoxAndDirKey(child_boxkey, pdir));
-            }
-        }
-    }
-    return 0;
-}
-
 int Wave3d::HighFreqL2LLevelCommPre(int level) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqL2LLevelCommPre");
@@ -162,8 +136,8 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
         return 0;
     }
 
+    // The mask is zero because we are just getting the necessary keys
     std::vector<int> mask(BoxAndDirDat_Number, 0);
-    mask[BoxAndDirDat_dirdnchkval] = 1;
     if (childlevel == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
 	vec.initialize_data();
@@ -183,7 +157,7 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
 }
 
 int Wave3d::HighFreqL2LLevelCommPost(int level,
-                                     std::vector<BoxAndDirKey>& keys_affected) {
+                                     std::set<BoxAndDirKey>& affected_keys) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqL2LLevelCommPost");
 #endif
@@ -197,11 +171,13 @@ int Wave3d::HighFreqL2LLevelCommPost(int level,
     CHECK_TRUE(level <= UnitLevel());
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirdnchkval] = 1;
+    std::vector<BoxAndDirKey> send_keys;
+    send_keys.insert(send_keys.begin(), affected_keys.begin(), affected_keys.end());
     if (childlevel == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
         // Send data that I have
 	vec.initialize_data();
-        vec.putBegin(keys_affected, mask);
+        vec.putBegin(send_keys, mask);
         vec.putEnd(mask);
 	PrintCommData(GatherCommData(vec.kbytes_sent()),
 		      "L2L Post: kbytes sent");
@@ -209,7 +185,7 @@ int Wave3d::HighFreqL2LLevelCommPost(int level,
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[childlevel];
         // Send data that I have
 	vec.initialize_data();
-        vec.putBegin(keys_affected, mask);
+        vec.putBegin(send_keys, mask);
         vec.putEnd(mask);
 	PrintCommData(GatherCommData(vec.kbytes_sent()),
 		      "L2L Post: kbytes sent");

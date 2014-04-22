@@ -273,7 +273,6 @@ int deserialize(BoxAndDirDat& val, std::istream& is,
         CpxNumVec tmp;
         deserialize(tmp, is, mask);
 	if (val._dirdnchkval.m() == tmp.m()) {
-	    // Add to dirdnchkval
             for (int i = 0; i < val._dirdnchkval.m(); ++i) {
                 val._dirdnchkval(i) += tmp(i);
 	    }

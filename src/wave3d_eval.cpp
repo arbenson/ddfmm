@@ -140,19 +140,19 @@ int Wave3d::HighFreqPass() {
         HighFreqL2LLevelCommPre(level);
 
         // Maintain set of keys that get updated by L2L
-        std::vector<BoxAndDirKey> keys_affected;
+        std::set<BoxAndDirKey> affected_keys;
         for (std::map<Index3, std::vector<BoxKey> >::iterator mi = level_inc.begin();
             mi != level_inc.end(); ++mi) {
             Index3 dir = mi->first;
             std::vector<BoxKey>& keys_inc = mi->second;
-            SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, keys_affected) );
+            SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, affected_keys) );
         }
 
         // Handle post-communication for this level.  We send back the
         // downward check values for the children. Again, we assume that the
         // boxes on the unit level are partitioned by process, so we do not
         // need to do any communication for that level.
-        HighFreqL2LLevelCommPost(level, keys_affected);
+        HighFreqL2LLevelCommPost(level, affected_keys);
 
         // Remove old data from memory.
         CleanLevel(level);
@@ -428,7 +428,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 
 //---------------------------------------------------------------------
 int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
-                             std::vector<BoxAndDirKey>& keys_affected) {
+                             std::set<BoxAndDirKey>& affected_keys) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardHigh");
 #endif
@@ -444,7 +444,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
     for (int k = 0; k < trgvec.size(); ++k) {
         BoxKey trgkey = trgvec[k];
         SAFE_FUNC_EVAL( HighFreqM2L(W, dir, trgkey, dcp, uep) );
-        SAFE_FUNC_EVAL( HighFreqL2L(W, dir, trgkey, dc2de, de2dc, keys_affected) );
+        SAFE_FUNC_EVAL( HighFreqL2L(W, dir, trgkey, dc2de, de2dc, affected_keys) );
     }
     return 0;
 }
