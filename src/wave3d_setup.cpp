@@ -125,12 +125,6 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
             Point3 curctr = BoxCenter(curkey);
             for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
                 int tmpidx = curdat.ptidxvec()[g];
-#if 0
-		if (tmpidx == 175102) {
-		  std::cout << "found the magic points: " << std::endl;
-		  std::cout << "key: " << curkey << std::endl;
-		}
-#endif
                 Point3 tmp = pos.access(tmpidx); // get position value
                 Index3 idx;
                 for (int d = 0; d < 3; ++d) {
