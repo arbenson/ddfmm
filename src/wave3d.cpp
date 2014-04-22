@@ -266,7 +266,6 @@ int deserialize(BoxAndDirDat& val, std::istream& is,
 #endif
     int i = 0;
     if (mask[i] == 1) deserialize(val._dirupeqnden, is, mask);  i++;
-#if 1
     // Handle special case of dirdnchkval
     // TODO(arbenson): this is a bit of a hack.
     if (mask[i] == 1) {
@@ -283,10 +282,6 @@ int deserialize(BoxAndDirDat& val, std::istream& is,
 	}
     }
     i++;
-#endif
-#if 0
-    if (mask[i] == 1) deserialize(val._dirdnchkval, is, mask);  i++;
-#endif
     if (mask[i] == 1) deserialize(val._interactionlist, is, mask);  i++;
     CHECK_TRUE(i == BoxAndDirDat_Number);
     return 0;

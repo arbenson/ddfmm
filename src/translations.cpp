@@ -99,7 +99,7 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
 		    << std::endl;
 	}
 #endif
-#if 1
+#if 0
 	if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && bndkey._dir == Index3(4, -1, -3)) {
 	  int mpirank = getMPIRank();
 	  std::cout << "Contributing to the magic bnd: "
@@ -124,12 +124,14 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
 #endif
 
         SAFE_FUNC_EVAL( zgemv(1.0, Mts, ued, 1.0, dcv) );
+#if 0
 	if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && bndkey._dir == Index3(4, -1, -3)) {
 	  std::cout << "dcv after apply: " 
 		    << std::endl
 		    << dcv
 		    << std::endl;
 	}
+#endif
     }
     return 0;
 }
@@ -244,7 +246,7 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     SAFE_FUNC_EVAL( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
     dnchkval.resize(0);  // save space
 
-#if 1
+#if 0
     if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && bndkey._dir == Index3(4, -1, -3)) {
       int mpirank = getMPIRank();
       std::cout << "Magic box is contributing to low-freq children: "
@@ -295,15 +297,17 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                 BoxAndDirDat& bnddat = dat.second;
                 CpxNumVec& chddcv = bnddat.dirdnchkval();
                 if (chddcv.m() == 0) {
+#if 0
 		  if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && 
 		      pdir == Index3(4, -1, -3)) {
 		    std::cout << "allocating on: "
 			      << trgkey << " " << dir << std::endl;
 		  }
+#endif
                     chddcv.resize(de2dc(a, b, c).m());
                     setvalue(chddcv, cpx(0, 0));
                 }
-#if 1
+#if 0
 		if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && 
 		    pdir == Index3(4, -1, -3)) {
 		  int mpirank = getMPIRank();
@@ -325,7 +329,7 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
 		}
 #endif
                 SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
-#if 1
+#if 0
 		if (bndkey._boxkey == BoxKey(6, Index3(41, 31, 24)) && 
 		    pdir == Index3(4, -1, -3)) {
 		  std::cout << "chddcv after apply: " << std::endl
