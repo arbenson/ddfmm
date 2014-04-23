@@ -25,9 +25,6 @@
 #include <sstream>
 #include <vector>
 
-// TODO(arbenson): this is a bit of hack.
-#define DVMAX 400
-
 int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqUpwardPass");

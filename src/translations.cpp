@@ -20,9 +20,6 @@
 #include <utility>
 #include <vector>
 
-// TODO(arbenson): this is a bit of hack.
-#define DVMAX 400
-
 int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
                         DblNumMat& dcp, DblNumMat& uep) {
 #ifndef RELEASE
@@ -140,11 +137,8 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
     CpxNumMat& E1 = uc2ue(0);
     CpxNumMat& E2 = uc2ue(1);
     CpxNumMat& E3 = uc2ue(2);
-    cpx dat0[DVMAX], dat1[DVMAX];
-    CpxNumVec tmp0(E3.m(), false, dat0);
-    CHECK_TRUE(DVMAX >= E3.m());
-    CpxNumVec tmp1(E2.m(), false, dat1);
-    CHECK_TRUE(DVMAX >= E2.m());
+    CpxNumVec tmp0(E3.m());
+    CpxNumVec tmp1(E2.m());
     upeqnden.resize(E1.m());
     setvalue(upeqnden, cpx(0, 0));
     SAFE_FUNC_EVAL( zgemv(1.0, E3, upchkval, 0.0, tmp0) );
@@ -167,11 +161,11 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     CpxNumMat& E1 = dc2de(0);
     CpxNumMat& E2 = dc2de(1);
     CpxNumMat& E3 = dc2de(2);
-    cpx dat0[DVMAX], dat1[DVMAX], dat2[DVMAX];
-    CpxNumVec tmp0(E3.m(), false, dat0);
-    CpxNumVec tmp1(E2.m(), false, dat1);
-    CpxNumVec dneqnden(E1.m(), false, dat2);
-    // TODO(arbenson): FIX THIS
+    CpxNumVec tmp0(E3.m());
+    CpxNumVec tmp1(E2.m());
+    CpxNumVec dneqnden(E1.m());
+    
+    // TODO(arbenson): remove this check?
     if (dnchkval.m() == 0) {
         return 0;
     }
