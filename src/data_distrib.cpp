@@ -26,7 +26,6 @@
 
 #include <vector>
 
-#define BOX_AND_DIR_KEY_MPI_SIZE (6)
 #define BOX_KEY_MPI_SIZE (3)
 
 namespace par {
@@ -62,58 +61,12 @@ public:
 }
 
 
-
-void BoxAndDirection(BoxAndDirKey& key, std::vector<int>& out_key) {
-#ifndef RELEASE
-    CallStackEntry entry("BoxAndDirection");
-#endif
-    out_key.resize(BOX_AND_DIR_KEY_MPI_SIZE);
-
-    // Direction information.
-    out_key[0] = key._dir[0];
-    out_key[1] = key._dir[1];
-    out_key[2] = key._dir[2];
-    // Box index.
-    out_key[3] = key._boxkey.second[0];
-    out_key[4] = key._boxkey.second[1];
-    out_key[5] = key._boxkey.second[2];
-}
-
-void FillKeyVector(std::vector<BoxAndDirKey>& keys, std::vector<int>& data,
-                   int level) {
-#ifndef RELEASE
-    CallStackEntry entry("FillKeyVector");
-#endif
-   // Keys are represented as 6 integers:
-   //    (x, y, z) direction
-   //    (x, y, z) box index
-    for (int i = 0; i < static_cast<int>(data.size()); i += BOX_AND_DIR_KEY_MPI_SIZE) {
-        Index3 dir(data[i], data[i + 1], data[i + 2]);
-        Index3 ind(data[i + 3], data[i + 4], data[i + 5]);
-        BoxKey boxkey(level, ind);
-        keys.push_back(BoxAndDirKey(boxkey, dir));
-    }
-}
-
 void FormPrtnMap(BoxAndDirLevelPrtn& map, std::vector<BoxAndDirKey>& start_data,
                  std::vector<BoxAndDirKey>& end_data, int level) {
 #ifndef RELEASE
     CallStackEntry entry("FormPrtnMap");
 #endif
     CHECK_TRUE(start_data.size() == end_data.size());
-#if 0
-    CHECK_TRUE(start_data.size() / getMPISize() == BOX_AND_DIR_KEY_MPI_SIZE);
-#endif
-
-#if 0
-    std::vector<BoxAndDirKey>& part = map.partition_;
-    FillKeyVector(part, start_data, level);
-    
-    // We only need the starting keys to determine the partition.  However,
-    // we also store the ending keys for debugging.
-    std::vector<BoxAndDirKey>& end_part = map.end_partition_;
-    FillKeyVector(end_part, end_data, level);
-#endif
     map.partition_ = start_data;
     // We only need the starting keys to determine the partition.  However,
     // we also store the ending keys for debugging.
@@ -141,28 +94,10 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
 
     std::vector<int> counts(mpisize);
     std::vector< std::vector<BoxAndDirKey> > recv_bufs(mpisize);
-#if 0
-    for (int i = 0; i < mpisize; ++i) {
-        counts[i] = sizes[i] / mpisize;
-        recv_bufs[i].resize(counts[i] * BOX_AND_DIR_KEY_MPI_SIZE);
-    }
-#endif
     for (int i = 0; i < mpisize; ++i) {
         counts[i] = sizes[i] / mpisize;
         recv_bufs[i].resize(counts[i]);
     }
-#if 0
-    // Create buffer to scatter
-    std::vector<BoxAndDirKey> my_data(keys.size() * BOX_AND_DIR_KEY_MPI_SIZE);
-    for (int i = 0; i < static_cast<int>(keys.size()); ++i) {
-        std::vector<int> curr_key;
-        BoxAndDirection(keys[i], curr_key);
-        CHECK_TRUE(curr_key.size() == BOX_AND_DIR_KEY_MPI_SIZE);
-        for (int k = 0; k < BOX_AND_DIR_KEY_MPI_SIZE; ++k) {
-            my_data[i * BOX_AND_DIR_KEY_MPI_SIZE + k] = curr_key[k];
-        }
-    }
-#endif
 
     // Do the scatters
     for (int i = 0; i < mpisize; ++i) {
@@ -176,10 +111,6 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
                     i, MPI_COMM_WORLD);
     }
 
-#if 0
-    // Clean up
-    my_data.clear();
-#endif
     // Get the tail end of the keys that didn't get transferred.
     std::vector<BoxAndDirKey> keys_to_keep;
     for (int i = mpisize * counts[mpirank]; i < static_cast<int>(keys.size()); ++i) {
@@ -187,17 +118,11 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     }
     keys.clear();
     
-#if 0
     // Insert into keys
     for (int i = 0; i < mpisize; ++i) {
-        FillKeyVector(keys, recv_bufs[i], level);
-    }
-#endif
-    // Insert into keys
-    for (int i = 0; i < mpisize; ++i) {
-      for (int j = 0; j < static_cast<int>(recv_bufs[i].size()); ++j) {
-	keys.push_back(recv_bufs[i][j]);
-      }
+        for (int j = 0; j < static_cast<int>(recv_bufs[i].size()); ++j) {
+            keys.push_back(recv_bufs[i][j]);
+	}
     }
     for (int i = 0; i < static_cast<int>(keys_to_keep.size()); ++i) {
         keys.push_back(keys_to_keep[i]);
@@ -244,11 +169,6 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate starting keys for each processor.
-#if 0
-        std::vector<int> start_data;
-        BoxAndDirection(curr_level_keys[0], start_data);
-        std::vector<int> start_recv_buf(start_data.size() * mpisize);
-#endif
 	std::vector<BoxAndDirKey> start_recv_buf(mpisize);
         SAFE_FUNC_EVAL(MPI_Allgather(&curr_level_keys[0], 1,
 				     par::Mpi_datatype<BoxAndDirKey>::value(),
@@ -258,11 +178,6 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate ending keys for each processor.
-#if 0
-        std::vector<int> end_data;
-        BoxAndDirection(curr_level_keys.back(), end_data);
-        std::vector<int> end_recv_buf(end_data.size() * mpisize);
-#endif
 	std::vector<BoxAndDirKey> end_recv_buf(mpisize);
         SAFE_FUNC_EVAL(MPI_Allgather(&curr_level_keys[curr_level_keys.size() - 1], 1,
 				     par::Mpi_datatype<BoxAndDirKey>::value(),
