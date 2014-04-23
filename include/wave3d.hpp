@@ -66,7 +66,7 @@ public:
     // TODO (Austin): Some of these should be private
     int _fftnum;
     int _fftcnt;
-    //
+
     DblNumMat _extpos;   // positions of exact points (leaf level)
     CpxNumVec _extden;   // Exact densities  
     CpxNumVec _upeqnden; // Upward equivalent density
@@ -75,7 +75,7 @@ public:
 
     int _tag;
     std::vector<int> _ptidxvec;
-    //
+
     std::vector<BoxKey> _undeidxvec;  // U List
     std::vector<BoxKey> _vndeidxvec;  // V List
     std::vector<BoxKey> _wndeidxvec;  // W List
@@ -90,7 +90,7 @@ public:
     std::set<Index3> _incdirset;
     std::set<Index3> _outdirset;
 
-    BoxDat(): _tag(0), _fftnum(0), _fftcnt(0) {;} //by default, no children
+    BoxDat(): _tag(0), _fftnum(0), _fftcnt(0) {;}  // by default, no children
     ~BoxDat() {;}
 
     int& tag() { return _tag; }
@@ -319,8 +319,6 @@ public:
   level_hdkeys_map_t _level_hdmap_out;
   level_hdkeys_map_t _level_hdmap_inc;
 
-
-
 private:
   int unit_level_;
 };
@@ -508,7 +506,7 @@ private:
                     DblNumMat& dcp, DblNumMat& uep);
     int HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                     NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-		    std::set<BoxAndDirKey>& affected_keys);
+                    std::set<BoxAndDirKey>& affected_keys);
 
 
     // Routines for communication
@@ -523,33 +521,33 @@ private:
     int HighFreqM2LComm(int level,
                         std::set<BoxAndDirKey>& request_keys);
     int HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
-	                  std::vector<int>& pids);
+                          std::vector<int>& pids);
     static int HighFreqL2LDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-					 std::vector<int>& pids);
+                                         std::vector<int>& pids);
     int HighFreqM2MDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
-	                  std::vector<int>& pids);
+                          std::vector<int>& pids);
     static int HighFreqM2MDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-					 std::vector<int>& pids);
+                                         std::vector<int>& pids);
 
-     // Tools for data distribution.
-     void PrtnDirections(level_hdkeys_t& level_hdkeys,
+    // Tools for data distribution.
+    void PrtnDirections(level_hdkeys_t& level_hdkeys,
                          std::vector<LevelBoxAndDirVec>& level_hf_vecs);
-     int PrtnUnitLevel();
-     int FormUnitPrtnMap(UnitLevelBoxPrtn& prtn, std::vector<int>& start_data,
-                         std::vector<int>& end_data);
+    int PrtnUnitLevel();
+    int FormUnitPrtnMap(UnitLevelBoxPrtn& prtn, std::vector<int>& start_data,
+                        std::vector<int>& end_data);
 
-     int TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
-                               std::vector<int>& pids);
-     static int TransferBoxAndDirData_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-                                              std::vector<int>& pids);
-     int TransferUnitLevelData(BoxKey key, BoxDat& dat,
-                               std::vector<int>& pids);
-     static int TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
-					      std::vector<int>& pids);
-     int TransferDataToLevels();
+    int TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
+                              std::vector<int>& pids);
+    static int TransferBoxAndDirData_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
+                                             std::vector<int>& pids);
+    int TransferUnitLevelData(BoxKey key, BoxDat& dat,
+                              std::vector<int>& pids);
+    static int TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
+                                             std::vector<int>& pids);
+    int TransferDataToLevels();
 
-     int CleanLevel(int level);
-     int CleanBoxvec();
+    int CleanLevel(int level);
+    int CleanBoxvec();
 };
 
 //-------------------

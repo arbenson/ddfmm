@@ -592,78 +592,47 @@ int Wave3d::CleanBoxvec() {
     return 0;
 }
 
+template <typename T>
+int FindInd(std::vector<T>& partition, std::vector<T>& end_partition, T key) {
+    CHECK_TRUE_MSG(partition.size() != 0, "Missing partition!");
+    int ind = std::lower_bound(partition.begin(),
+			       partition.end(), key) - partition.begin();
+    --ind;
+    if (ind < static_cast<int>(partition.size()) - 1 &&
+	key == partition[ind + 1]) {
+        ++ind;
+    }
+    if (ind == partition.size() || ind == -1 ||
+	key > end_partition[ind]) {
+        return -1;
+    }
+    return ind;
+}
+
 int BoxAndDirLevelPrtn::owner(BoxAndDirKey& key) {
 #ifndef RELEASE
-        CallStackEntry entry("BoxAndDirLevelPrtn::owner");
+    CallStackEntry entry("BoxAndDirLevelPrtn::owner");
 #endif
-	CHECK_TRUE_MSG(partition_.size() != 0, "Missing partition!");
-        int ind = std::lower_bound(partition_.begin(),
-                                   partition_.end(), key) - partition_.begin();
-        --ind;
-        if (ind < static_cast<int>(partition_.size()) - 1 &&
-            key == partition_[ind + 1]) {
-            ++ind;
-        }
-	if (ind == partition_.size() || ind == -1) {
-	    return -1;
-	}
-	if (key > end_partition_[ind]) {
-	  return -1;
-	}
-        return ind;
+    return FindInd(partition_, end_partition_, key);
 }
 
 int UnitLevelBoxPrtn::owner(BoxAndDirKey& key) {
 #ifndef RELEASE
-        CallStackEntry entry("UnitLevelBoxPrtn::owner");
+    CallStackEntry entry("UnitLevelBoxPrtn::owner");
 #endif
-        BoxKey boxkey = key._boxkey;
-        int ind = std::lower_bound(partition_.begin(),
-                                   partition_.end(), boxkey) - partition_.begin();
-        --ind;
-        if (ind < static_cast<int>(partition_.size()) - 1 &&
-            boxkey == partition_[ind + 1]) {
-            ++ind;
-        }
-	if (ind == partition_.size() || ind == -1) {
-	    return -1;
-	}
-        CHECK_TRUE_MSG(boxkey <= end_partition_[ind],
-		       "Something wrong with partition");
-        return ind;
+    BoxKey boxkey = key._boxkey;
+    return FindInd(partition_, end_partition_, boxkey);
 }
 
 int LowFreqBoxPrtn::owner(BoxKey& key) {
 #ifndef RELEASE
-        CallStackEntry entry("LowFreqBoxPrtn::owner");
+    CallStackEntry entry("LowFreqBoxPrtn::owner");
 #endif
-        int level = key.first;
-	CHECK_TRUE_MSG(level >= unit_level_, "bad level");
-	int factor = pow2(level - unit_level_);
-	Index3 idx = key.second;
-	idx = idx / factor;
-	BoxKey new_key(unit_level_, idx);
-        int ind = std::lower_bound(partition_.begin(),
-                                   partition_.end(), new_key) - partition_.begin();
-        --ind;
-        if (ind < static_cast<int>(partition_.size()) - 1 &&
-            new_key == partition_[ind + 1]) {
-            ++ind;
-        }
-	if (ind == partition_.size() || ind == -1) {
-	    return -1;
-	}
-	if (new_key > end_partition_[ind]) {
-	  // Key is not owned by any processor
-	  return -1;
-	}
-	if (new_key > end_partition_[ind]) {
-	  std::cout << "ind: " << ind << std::endl;
-	  std::cout << "new_key: " << new_key << std::endl;;
-	  std::cout << "start: " << partition_[ind] << std::endl;
-	  std::cout << "end: " << end_partition_[ind] << std::endl;
-	}
-        CHECK_TRUE_MSG(new_key <= end_partition_[ind],
-		       "Something wrong with partition");
-        return ind;
+    int level = key.first;
+    CHECK_TRUE_MSG(level >= unit_level_, "bad level");
+    int factor = pow2(level - unit_level_);
+    Index3 idx = key.second;
+    idx = idx / factor;
+    BoxKey new_key(unit_level_, idx);
+    return FindInd(partition_, end_partition_, new_key);
 }

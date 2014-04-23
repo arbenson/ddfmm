@@ -63,8 +63,8 @@ public:
     // Functions for keeping track of the amount of data that is sent
     // and received.
     int initialize_data() {
-	_kbytes_received = 0;
-	_kbytes_sent = 0;
+        _kbytes_received = 0;
+        _kbytes_sent = 0;
     }
     int kbytes_received() { return _kbytes_received; }
     int kbytes_sent() { return _kbytes_sent; }
@@ -90,8 +90,7 @@ private:
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>
-int ParVec<Key,Data,Partition>::resetVecs()
-{
+int ParVec<Key,Data,Partition>::resetVecs() {
 #ifndef RELEASE
     CallStackEntry entry("ParVec::resetVecs");
 #endif
@@ -152,8 +151,8 @@ int ParVec<Key,Data,Partition>::makeBufReqs(std::vector<int>& rszvec,
                       MPI_COMM_WORLD, &_reqs[2 * k] ) );
         SAFE_FUNC_EVAL( MPI_Isend((void *)&(_sbufvec[k][0]), sszvec[k], MPI_BYTE, k, 0,
                       MPI_COMM_WORLD, &_reqs[2 * k + 1] ) );
-	_kbytes_received += rszvec[k] / 1024;
-	_kbytes_sent += sszvec[k] / 1024;
+        _kbytes_received += rszvec[k] / 1024;
+        _kbytes_sent += sszvec[k] / 1024;
     }
     return 0;
 }
@@ -311,10 +310,12 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
     MPI_Request *reqs = new MPI_Request[2 * mpisize];
     MPI_Status  *stats = new MPI_Status[2 * mpisize];
     for (int k = 0; k < mpisize; ++k) {
-        SAFE_FUNC_EVAL( MPI_Irecv( (void*)&(rkeyvec[k][0]), rszvec[k] * sizeof(Key), MPI_BYTE,
-                        k, 0, MPI_COMM_WORLD, &reqs[2 * k] ) );
-        SAFE_FUNC_EVAL( MPI_Isend( (void*)&(skeyvec[k][0]), sszvec[k] * sizeof(Key), MPI_BYTE,
-                       k, 0, MPI_COMM_WORLD, &reqs[2 * k + 1] ) );
+        SAFE_FUNC_EVAL( MPI_Irecv( (void*)&(rkeyvec[k][0]),
+                                   rszvec[k] * sizeof(Key), MPI_BYTE,
+                                   k, 0, MPI_COMM_WORLD, &reqs[2 * k] ) );
+        SAFE_FUNC_EVAL( MPI_Isend( (void*)&(skeyvec[k][0]),
+                                   sszvec[k] * sizeof(Key), MPI_BYTE,
+                                   k, 0, MPI_COMM_WORLD, &reqs[2 * k + 1] ) );
     }
     SAFE_FUNC_EVAL( MPI_Waitall(2 * mpisize, &reqs[0], &stats[0]) );
     delete[] reqs;
