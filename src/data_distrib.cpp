@@ -95,14 +95,17 @@ void FillKeyVector(std::vector<BoxAndDirKey>& keys, std::vector<int>& data,
     }
 }
 
-void FormPrtnMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
-                 std::vector<int>& end_data, int level) {
+void FormPrtnMap(BoxAndDirLevelPrtn& map, std::vector<BoxAndDirKey>& start_data,
+                 std::vector<BoxAndDirKey>& end_data, int level) {
 #ifndef RELEASE
     CallStackEntry entry("FormPrtnMap");
 #endif
     CHECK_TRUE(start_data.size() == end_data.size());
+#if 0
     CHECK_TRUE(start_data.size() / getMPISize() == BOX_AND_DIR_KEY_MPI_SIZE);
+#endif
 
+#if 0
     std::vector<BoxAndDirKey>& part = map.partition_;
     FillKeyVector(part, start_data, level);
     
@@ -110,6 +113,11 @@ void FormPrtnMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
     // we also store the ending keys for debugging.
     std::vector<BoxAndDirKey>& end_part = map.end_partition_;
     FillKeyVector(end_part, end_data, level);
+#endif
+    map.partition_ = start_data;
+    // We only need the starting keys to determine the partition.  However,
+    // we also store the ending keys for debugging.
+    map.end_partition_ = end_data;
 }
 
 void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
@@ -236,21 +244,31 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate starting keys for each processor.
+#if 0
         std::vector<int> start_data;
         BoxAndDirection(curr_level_keys[0], start_data);
         std::vector<int> start_recv_buf(start_data.size() * mpisize);
-        SAFE_FUNC_EVAL(MPI_Allgather((void *)&start_data[0], start_data.size(), MPI_INT,
-                                     (void *)&start_recv_buf[0], start_data.size(),
-                                     MPI_INT, MPI_COMM_WORLD));
+#endif
+	std::vector<BoxAndDirKey> start_recv_buf(mpisize);
+        SAFE_FUNC_EVAL(MPI_Allgather(&curr_level_keys[0], 1,
+				     par::Mpi_datatype<BoxAndDirKey>::value(),
+                                     &start_recv_buf[0], 1,
+                                     par::Mpi_datatype<BoxAndDirKey>::value(),
+				     MPI_COMM_WORLD));
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate ending keys for each processor.
+#if 0
         std::vector<int> end_data;
         BoxAndDirection(curr_level_keys.back(), end_data);
         std::vector<int> end_recv_buf(end_data.size() * mpisize);
-        SAFE_FUNC_EVAL(MPI_Allgather(&end_data[0], end_data.size(), MPI_INT,
-                                     &end_recv_buf[0], end_data.size(),
-                                     MPI_INT, MPI_COMM_WORLD));
+#endif
+	std::vector<BoxAndDirKey> end_recv_buf(mpisize);
+        SAFE_FUNC_EVAL(MPI_Allgather(&curr_level_keys[curr_level_keys.size() - 1], 1,
+				     par::Mpi_datatype<BoxAndDirKey>::value(),
+                                     &end_recv_buf[0], 1,
+				     par::Mpi_datatype<BoxAndDirKey>::value(),
+				     MPI_COMM_WORLD));
         FormPrtnMap(level_hf_vecs[level].prtn(), start_recv_buf, end_recv_buf, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
