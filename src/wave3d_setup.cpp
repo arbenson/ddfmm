@@ -102,7 +102,6 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
     CallStackEntry entry("Wave3d::RecursiveBoxInsert");
 #endif
     double eps = 1e-12;
-    int mpirank = getMPIRank();
     ParVec<int, Point3, PtPrtn>& pos = *_posptr;
     while (!tmpq.empty()) {
         std::pair<BoxKey, BoxDat> curent = tmpq.front();
@@ -117,13 +116,15 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
         // we are in the low frequency regime with sufficient number of points and
         // not at the max depth.
         // If no action is taken, we are at a leaf node.
-        bool action = (curkey.first <= UnitLevel() && curdat.ptidxvec().size() > 0) ||
-            (curdat.ptidxvec().size() > ptsmax() && curkey.first < maxlevel() - 1);
+        bool action = (curkey.first <= UnitLevel() &&
+		       curdat.ptidxvec().size() > 0) ||
+	               (static_cast<int>(curdat.ptidxvec().size()) > ptsmax() &&
+			curkey.first < maxlevel() - 1);
         if (action) {
 	    // Subdivide to get new children
             NumTns<BoxDat> chdboxtns(2, 2, 2);
             Point3 curctr = BoxCenter(curkey);
-            for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
+            for (int g = 0; g < static_cast<int>(curdat.ptidxvec().size()); ++g) {
                 int tmpidx = curdat.ptidxvec()[g];
                 Point3 tmp = pos.access(tmpidx); // get position value
                 Index3 idx;
@@ -149,7 +150,7 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
         } else {
             // Copy data into _extpos
             curdat.extpos().resize(3, curdat.ptidxvec().size());
-            for (int g = 0; g < curdat.ptidxvec().size(); ++g) {
+            for (int g = 0; g < static_cast<int>(curdat.ptidxvec().size()); ++g) {
                 int tmpidx = curdat.ptidxvec()[g];
                 Point3 tmp = pos.access(tmpidx);
                 for (int d = 0; d < 3; ++d) {
@@ -169,6 +170,7 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
 	    _level_prtns._lf_boxvec.insert(curkey, curdat);
         }
     }
+    return 0;
 }
 
 //---------------------------------------------------------------------
@@ -177,7 +179,6 @@ int Wave3d::SetupTree() {
     CallStackEntry entry("Wave3d::SetupTree");
 #endif
     int mpirank = getMPIRank();
-    double eps = 1e-12;
     double K = this->K();
 
     std::queue< std::pair<BoxKey, BoxDat> > tmpq;
@@ -366,7 +367,7 @@ int Wave3d::SetupTreeHighFreqLists(BoxKey curkey, BoxDat& curdat) {
     } else {
         BoxKey parkey = ParentKey(curkey);
         BoxDat& pardata = BoxData(parkey);
-        for (int k = 0; k < pardata.endeidxvec().size(); ++k) {
+        for (int k = 0; k < static_cast<int>(pardata.endeidxvec().size()); ++k) {
             BoxKey trykey = pardata.endeidxvec()[k];
             for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
                 BoxKey othkey = ChildKey(trykey, Index3(CHILD_IND1(ind),
@@ -662,7 +663,7 @@ int Wave3d::GetHighFreqDirs() {
             for (std::map< Index3, std::vector<BoxKey> >::iterator mi = curdat.fndeidxvec().begin();
                 mi != curdat.fndeidxvec().end(); mi++) {
                 std::vector<BoxKey>& tmplist = mi->second;
-                for (int k = 0; k < tmplist.size(); ++k) {
+                for (int k = 0; k < static_cast<int>(tmplist.size()); ++k) {
                     BoxKey othkey = tmplist[k];
                     Point3 othctr = BoxCenter(othkey);
                     Point3 tmp = othctr - curctr;

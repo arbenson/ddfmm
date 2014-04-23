@@ -37,7 +37,6 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
         }
     }
     BoxAndDirKey bndkey(trgkey, dir);
-    int level = trgkey.first;
     std::pair<bool, BoxAndDirDat&> data = _level_prtns.SafeAccess(bndkey, false);
     CHECK_TRUE_MSG(data.first, "Missing incoming data");
     int mpirank = getMPIRank();
@@ -46,7 +45,7 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
     BoxAndDirDat& bnddat = data.second;
     CpxNumVec& dcv = bnddat.dirdnchkval();
     std::vector<BoxAndDirKey>& interactionlist = bnddat.interactionlist();
-    for (int i = 0; i < interactionlist.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(interactionlist.size()); ++i) {
         BoxAndDirKey key = interactionlist[i];
         BoxKey srckey = key._boxkey;
         Point3 srcctr = BoxCenter(srckey);
@@ -61,7 +60,6 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
                 tmpuep(d, k) = uep(d, k) + srcctr(d);
             }
         }
-        int level = srckey.first;
         std::pair<bool, BoxAndDirDat&> data = _level_prtns.SafeAccess(key, true);
         CHECK_TRUE_MSG(data.first, "Missing outgoing data");
         CpxNumVec& ued = data.second.dirupeqnden();
@@ -133,10 +131,8 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
                 CpxNumVec& chdued = bnddat.dirupeqnden();
                 // TODO(arbenson): fix this
                 if (chdued.m() != 0) {
-                    int mpirank = getMPIRank();
                     SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
-                }
-
+		}
             }
         }
     }
@@ -167,7 +163,6 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
 #endif
     double eps = 1e-12;
     BoxAndDirKey bndkey(trgkey, dir);
-    int level = trgkey.first;
     BoxAndDirDat& bnddat = _level_prtns.Access(bndkey, false);
     CpxNumVec& dnchkval = bnddat.dirdnchkval();
     CpxNumMat& E1 = dc2de(0);
@@ -181,7 +176,6 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     if (dnchkval.m() == 0) {
       return 0;
     }
-    int mpirank = getMPIRank();
 
     CHECK_TRUE_MSG(E3.n() == dnchkval.m(), "E3 mismatch");
     SAFE_FUNC_EVAL( zgemv(1.0, E3, dnchkval, 0.0, tmp0) );

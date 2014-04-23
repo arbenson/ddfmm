@@ -108,7 +108,8 @@ int Wave3d::HighFreqPass() {
 
     // Communication for M2L
     t0 = time(0);
-    for (int level = 0; level < _level_prtns._hdkeys_inc.size(); ++level) {
+    for (int level = 0;
+	 level < static_cast<int>(_level_prtns._hdkeys_inc.size()); ++level) {
         if (mpirank == 0) {
             std::cout << "----------------------" << std::endl;
             std::cout << "Level: " << level << std::endl;
@@ -123,7 +124,8 @@ int Wave3d::HighFreqPass() {
 
     // Downwards pass
     t0 = time(0);
-    for (int level = 0; level < level_hdmap_inc.size(); ++level) {
+    for (int level = 0; level < static_cast<int>(level_hdmap_inc.size());
+	 ++level) {
         double W = _K / pow2(level);
         SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
         if (mpirank == 0) {
@@ -131,7 +133,6 @@ int Wave3d::HighFreqPass() {
             std::cout << "Box width for downwards pass: " << W << std::endl;
         }
         std::map<Index3, std::vector<BoxKey> >& level_inc = level_hdmap_inc[level];
-        std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
 
         // Handle pre-communication for this level.  We send up the directional
         // downward check values for the children.  We assume that boxes on the
@@ -215,7 +216,7 @@ int Wave3d::GatherLocalKeys() {
                     std::vector<BoxKey>& tmpvec = curdat.fndeidxvec()[dir];
                     std::vector<BoxAndDirKey>& interactionlist = dat.interactionlist();
                     interactionlist.resize(tmpvec.size());
-                    for (int i = 0; i < tmpvec.size(); ++i) {
+                    for (int i = 0; i < static_cast<int>(tmpvec.size()); ++i) {
                         interactionlist[i] = BoxAndDirKey(tmpvec[i], dir);
                     }
                     // into bndvec
@@ -236,7 +237,7 @@ int Wave3d::GatherLocalKeys() {
     return 0;
 }
 
-int Wave3d::ConstructLowFreqMap(ldmap_t& ldmap) {
+void Wave3d::ConstructLowFreqMap(ldmap_t& ldmap) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::ConstructLowFreqMap");
 #endif
@@ -263,7 +264,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
 #endif
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     _self = this;
-    time_t t0, t1, t2, t3;
     int mpirank = getMPIRank();
 
     // Delete of empty boxes
@@ -284,7 +284,6 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
 
     // Setup of low and high frequency maps
     ldmap_t ldmap;
-    int max_level = 10;
     _level_prtns.Init(_K);
     GatherLocalKeys();
     PrtnDirections(_level_prtns._hdkeys_out,
@@ -339,7 +338,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
 	    IsLeaf(curdat)) {
             CpxNumVec& extval = curdat.extval();
             std::vector<int>& curpis = curdat.ptidxvec();
-            for (int k = 0; k < curpis.size(); ++k) {
+            for (int k = 0; k < static_cast<int>(curpis.size()); ++k) {
                 int poff = curpis[k];
                 val.lclmap()[poff] = extval(k);
 		if (val.prtn().owner(poff) != mpirank) {
@@ -367,7 +366,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
     SAFE_FUNC_EVAL( _mlibptr->UpwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
-    for (int k = 0; k < srcvec.size(); ++k) {
+    for (int k = 0; k < static_cast<int>(srcvec.size()); ++k) {
         BoxKey srckey = srcvec[k];
         BoxDat& srcdat = _level_prtns._lf_boxvec.access(srckey);
         LowFreqM2M(srckey, srcdat, uep, ucp, uc2ue, ue2uc);
@@ -395,7 +394,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
     DblNumMat uep;
     SAFE_FUNC_EVAL( _mlibptr->DownwardLowFetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
     //------------------
-    for (int k = 0; k < trgvec.size(); ++k) {
+    for (int k = 0; k < static_cast<int>(trgvec.size()); ++k) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _level_prtns._lf_boxvec.access(trgkey);
         CHECK_TRUE(HasPoints(trgdat));  // should have points
@@ -416,7 +415,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
     SAFE_FUNC_EVAL( _mlibptr->UpwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
-    for (int k = 0; k < srcvec.size(); ++k) {
+    for (int k = 0; k < static_cast<int>(srcvec.size()); ++k) {
         BoxKey srckey = srcvec[k];
         Point3 srcctr = BoxCenter(srckey);
         BoxAndDirKey bndkey(srckey, dir);
@@ -432,8 +431,6 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardHigh");
 #endif
-    int mpirank = getMPIRank();
-
     DblNumMat dep;
     DblNumMat dcp;
     NumVec<CpxNumMat> dc2de;
@@ -441,7 +438,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
     DblNumMat uep;
     SAFE_FUNC_EVAL( _mlibptr->DownwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     //LEXING: IMPORTANT
-    for (int k = 0; k < trgvec.size(); ++k) {
+    for (int k = 0; k < static_cast<int>(trgvec.size()); ++k) {
         BoxKey trgkey = trgvec[k];
         SAFE_FUNC_EVAL( HighFreqM2L(W, dir, trgkey, dcp, uep) );
         SAFE_FUNC_EVAL( HighFreqL2L(W, dir, trgkey, dc2de, de2dc, affected_keys) );

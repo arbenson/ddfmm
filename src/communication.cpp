@@ -33,7 +33,7 @@ int Wave3d::HighFreqInteractionListKeys(int level,
     for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = lclmap.begin();
          mi != lclmap.end(); ++mi) {
         std::vector<BoxAndDirKey>& interaction_list = mi->second.interactionlist();
-        for (int j = 0; j < interaction_list.size(); ++j) {
+        for (int j = 0; j < static_cast<int>(interaction_list.size()); ++j) {
             request_keys.insert(interaction_list[j]);
         }
     }
@@ -44,13 +44,11 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqDownwardComm");
 #endif
-    int mpirank = getMPIRank();
     time_t t0 = time(0);
     std::vector<BoxKey> reqbox;
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
-    for (int i = 0; i < reqbox.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(reqbox.size()); ++i) {
 	BoxKey key = reqbox[i];
-	int owner = _level_prtns.Owner(key);
     }
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_extden] = 1;
@@ -80,7 +78,7 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
             _level_prtns.Owner(curkey) == mpirank &&
             IsLeaf(curdat)) {
             std::vector<int>& curpis = curdat.ptidxvec();
-            for (int k = 0; k < curpis.size(); ++k) {
+            for (int k = 0; k < static_cast<int>(curpis.size()); ++k) {
                 int poff = curpis[k];
                 req_dens.insert(poff);
             }
@@ -111,7 +109,7 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
             std::vector<int>& curpis = curdat.ptidxvec();
             CpxNumVec& extden = curdat.extden();
             extden.resize(curpis.size());
-            for (int k = 0; k < curpis.size(); ++k) {
+            for (int k = 0; k < static_cast<int>(curpis.size()); ++k) {
                 int poff = curpis[k];
                 extden(k) = den.access(poff);
             }
@@ -199,10 +197,9 @@ int Wave3d::HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
     CallStackEntry entry("Wave3d::HighFreqL2LDataUp");
 #endif
     BoxKey parkey = ParentKey(key._boxkey);
-    int parlevel = parkey.first;
     // Child directions are directions associated with the parent box.
     std::vector<Index3> dirs = ChildDir(key._dir);
-    for (int i = 0; i < dirs.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(dirs.size()); ++i) {
         BoxAndDirKey new_key(parkey, dirs[i]);
         int pid = _level_prtns.Owner(new_key, false);
         if (0 <= pid && pid < getMPISize()) {
@@ -286,10 +283,9 @@ int Wave3d::HighFreqM2MDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
     CallStackEntry entry("Wave3d::HighFreqM2MDataUp");
 #endif
     BoxKey parkey = ParentKey(key._boxkey);
-    int parlevel = parkey.first;
     // Child directions are directions associated with the parent box.
     std::vector<Index3> dirs = ChildDir(key._dir);
-    for (int i = 0; i < dirs.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(dirs.size()); ++i) {
         BoxAndDirKey new_key(parkey, dirs[i]);
         int pid = _level_prtns.Owner(new_key, true);
         if (0 <= pid && pid < getMPISize()) {

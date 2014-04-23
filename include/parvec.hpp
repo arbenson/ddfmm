@@ -62,7 +62,7 @@ public:
 
     // Functions for keeping track of the amount of data that is sent
     // and received.
-    int initialize_data() {
+    void initialize_data() {
         _kbytes_received = 0;
         _kbytes_sent = 0;
     }
@@ -241,8 +241,8 @@ int ParVec<Key,Data,Partition>::getBegin(int (*e2ps)(Key, Data&, std::vector<int
         const Data& dat = mi->second;
         if (_prtn.owner(key) == mpirank) {
             std::vector<int> pids;
-            int res = (*e2ps)(mi->first, mi->second, pids);
-            for (int i = 0; i < pids.size(); ++i) {
+            (*e2ps)(mi->first, mi->second, pids);
+            for (int i = 0; i < static_cast<int>(pids.size()); ++i) {
                 int k = pids[i];
                 if (k != mpirank) { //DO NOT SEND TO MYSELF
                     SAFE_FUNC_EVAL( serialize(key, *(ossvec[k]), mask) );
@@ -284,7 +284,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
 
     // 1. go through the keyvec to partition them among other procs
     std::vector< std::vector<Key> > skeyvec(mpisize);
-    for (int i = 0; i < keyvec.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(keyvec.size()); ++i) {
         Key key = keyvec[i];
         int owner = _prtn.owner(key);
         if (owner != mpirank) {
@@ -329,7 +329,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
         ossvec[k] = new std::ostringstream();
     }
     for (int k = 0; k < mpisize; ++k) {
-        for (int g = 0; g < rkeyvec[k].size(); g++) {
+        for (int g = 0; g < static_cast<int>(rkeyvec[k].size()); ++g) {
             Key curkey = rkeyvec[k][g];
             typename std::map<Key, Data>::iterator mi = _lclmap.find(curkey);
             CHECK_TRUE( mi != _lclmap.end() );
@@ -418,7 +418,7 @@ int ParVec<Key,Data,Partition>::putBegin(std::vector<Key>& keyvec,
     }
 
     // 1. Go through the keyvec to partition them among other procs
-    for (int i = 0; i < keyvec.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(keyvec.size()); ++i) {
         Key key = keyvec[i];
         int k = _prtn.owner(key); //the owner
         if (k != mpirank) {
@@ -513,7 +513,7 @@ int ParVec<Key,Data,Partition>::discard(std::vector<Key>& keyvec) {
     CallStackEntry entry("ParVec::discard");
 #endif
     int mpirank = getMPIRank();
-    for (int i = 0; i < keyvec.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(keyvec.size()); ++i) {
         Key key = keyvec[i];
         if (_prtn.owner(key) != mpirank) {
             _lclmap.erase(key);

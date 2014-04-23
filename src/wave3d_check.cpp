@@ -18,6 +18,8 @@
 #include "wave3d.hpp"
 #include "vecmatop.hpp"
 
+#include <vector>
+
 //---------------------------------------------------------------------
 int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
                   IntNumVec& chkkeys, double& relerr) {
@@ -54,7 +56,7 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     }
   
     std::vector<Point3> tmptrgpos;
-    for (int i = 0; i < chkkeyvec.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(chkkeyvec.size()); ++i) {
         tmptrgpos.push_back( pos.access(chkkeyvec[i]) );
     }
 
@@ -86,12 +88,12 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
     val.getBegin(chkkeyvec, all);
     val.getEnd(all);
     CpxNumVec truval(chkkeyvec.size());
-    for (int i = 0; i < chkkeyvec.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(chkkeyvec.size()); ++i) {
         truval(i) = val.access(chkkeyvec[i]);
     }
   
     CpxNumVec errval(chkkeyvec.size());
-    for (int i = 0; i < chkkeyvec.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(chkkeyvec.size()); ++i) {
         errval(i) = allval(i) - truval(i);
     }
 

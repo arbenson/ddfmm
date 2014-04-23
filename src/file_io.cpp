@@ -22,7 +22,6 @@
 #include "numtns.hpp"
 
 #include <algorithm>
-#include <stdio>
 #include <string>
 #include <vector>
 
@@ -47,7 +46,7 @@ int ReadWrl(std::string fname, std::vector<Point3>& points,
     points.clear();
     coords.clear();
     char pts[MAX_LINE_LENGTH];
-    fscanf(geom_file, "%s", &pts);
+    fscanf(geom_file, "%s", &pts[0]);
     if (strncmp(pts, "points", 6)) {
 	std::cerr << "Did not find 'points' at the beginning of geometry file"
                   << std::endl;
@@ -61,7 +60,7 @@ int ReadWrl(std::string fname, std::vector<Point3>& points,
 	points.push_back(Point3(x1, x2, x3));
     }
     // Should fail on an empty line.  The next line is coords.
-    fscanf(geom_file, "%s", &pts);
+    fscanf(geom_file, "%s", &pts[0]);
     if (strncmp(pts, "coords", 6)) {
 	std::cerr << "Did not find 'coords' in geometry file" << std::endl;
 	return -1;
@@ -82,7 +81,7 @@ int ReadWrl(std::string fname, std::vector<Point3>& points,
     // Find min and max points along each row
     Point3 min(points[0][0], points[0][1], points[0][2]);
     Point3 max(points[0][0], points[0][1], points[0][2]);
-    for (int i = 0; i < points.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(points.size()); ++i) {
 	Point3 p = points[i];
 	for (int j = 0; j < 3; ++j) {
 	    min[j] = std::min(min[j], p[j]);
@@ -94,7 +93,7 @@ int ReadWrl(std::string fname, std::vector<Point3>& points,
     Point3 diff = max - min;
     diff /= 2;
     double avg_diff = std::max(std::max(diff[0], diff[1]), diff[2]);
-    for (int i = 0; i < points.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(points.size()); ++i) {
 	points[i] -= mid;
 	points[i] /= avg_diff;
     }
@@ -131,7 +130,7 @@ int LloydsAlgorithm(std::vector<int>& assignment, int num_its, int NCPU,
 	
 	assignment.insert(assignment.begin(), num_coords, -1);
 	int total_points = 0;
-	for (int i = 0; i < num_points.size(); ++i) {
+	for (int i = 0; i < static_cast<int>(num_points.size()); ++i) {
 	    total_points += num_points[i];
 	}
 	double avg_weight = ((double) total_points) / NCPU;
@@ -156,7 +155,7 @@ int LloydsAlgorithm(std::vector<int>& assignment, int num_its, int NCPU,
 		}
 	    }
 	}
-	for (int i = 0; i < assignment.size(); ++i) {
+	for (int i = 0; i < static_cast<int>(assignment.size()); ++i) {
 	    if (assignment[i] < 0 || assignment[i] >= NCPU) {
 		std::cerr << "Assignment incorrect!" << std::endl;
 		return -1;
@@ -182,7 +181,7 @@ int AssignPoints(std::vector<int>& assignment, int NCPU,
     }
 
     std::vector< std::pair<int, int> > sorted_num_points;
-    for (int i = 0; i < num_points.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(num_points.size()); ++i) {
 	sorted_num_points.push_back(std::pair<int, int>(i, num_points[i]));
     }
     std::sort(sorted_num_points.begin(), sorted_num_points.end(),
@@ -232,7 +231,7 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
 	all_weights[a + b * NC + c * NC * NC].second += num_points[k];
     }
     int non_empty = 0;
-    for (int i = 0; i < all_weights.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(all_weights.size()); ++i) {
 	if (all_weights[i].second > 0) {
 	    ++non_empty;
 	}
@@ -248,7 +247,7 @@ int AssignGeom(IntNumTns& geom, std::vector<int>& num_points,
     curr_weights.insert(curr_weights.begin(), NCPU, 0);
 
     std::sort(all_weights.begin(), all_weights.end(), CompPairDescend);
-    for (int k = 0; k < all_weights.size(); ++k) {
+    for (int k = 0; k < static_cast<int>(all_weights.size()); ++k) {
 	if (all_weights[k].second == 0) {
 	    // No cells with points left to assign.
 	    break;
@@ -314,7 +313,7 @@ int NewData(std::string fname, double K, double NPW, int NCPU,
     ReadWrl(fname, points, coords);
 
     // Scaling of points
-    for (int i = 0; i < points.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(points.size()); ++i) {
 	points[i] *= (K / 2) * 0.875;
     }
     

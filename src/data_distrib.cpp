@@ -19,8 +19,8 @@
 #include "wave3d.hpp"
 #include "parvec.hpp"
 
-#include "external/bitonic.h"
-#include "external/dtypes.h"
+#include "external/sorting/bitonic.h"
+#include "external/sorting/dtypes.h"
 
 #include "mpi.h"
 
@@ -85,7 +85,7 @@ void FillKeyVector(std::vector<BoxAndDirKey>& keys, std::vector<int>& data,
    // Keys are represented as 6 integers:
    //    (x, y, z) direction
    //    (x, y, z) box index
-   for (int i = 0; i < data.size(); i += BOX_AND_DIR_KEY_MPI_SIZE) {
+    for (int i = 0; i < static_cast<int>(data.size()); i += BOX_AND_DIR_KEY_MPI_SIZE) {
         Index3 dir(data[i], data[i + 1], data[i + 2]);
         Index3 ind(data[i + 3], data[i + 4], data[i + 5]);
         BoxKey boxkey(level, ind);
@@ -94,7 +94,7 @@ void FillKeyVector(std::vector<BoxAndDirKey>& keys, std::vector<int>& data,
 }
 
 void FormPrtnMap(BoxAndDirLevelPrtn& map, std::vector<int>& start_data,
-		 std::vector<int>& end_data, int level) {
+                 std::vector<int>& end_data, int level) {
 #ifndef RELEASE
     CallStackEntry entry("FormPrtnMap");
 #endif
@@ -123,10 +123,10 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     SAFE_FUNC_EVAL( MPI_Allgather(&my_size, 1, MPI_INT, &sizes[0], 1, MPI_INT,
                                   MPI_COMM_WORLD) );
     if (mpirank == 0) {
-      std::cout << "sizes: " << std::endl;
-      for (int i = 0; i < sizes.size(); ++i) {
-	std::cout << i << ": " << sizes[i] << std::endl;
-      }
+        std::cout << "sizes: " << std::endl;
+        for (int i = 0; i < static_cast<int>(sizes.size()); ++i) {
+            std::cout << i << ": " << sizes[i] << std::endl;
+        }
     }
 
     std::vector<int> counts(mpisize);
@@ -137,24 +137,24 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     }
     // Create buffer to scatter
     std::vector<int> my_data(keys.size() * BOX_AND_DIR_KEY_MPI_SIZE);
-    for (int i = 0; i < keys.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(keys.size()); ++i) {
         std::vector<int> curr_key;
-	BoxAndDirection(keys[i], curr_key);
-	CHECK_TRUE(curr_key.size() == BOX_AND_DIR_KEY_MPI_SIZE);
-	for (int k = 0; k < BOX_AND_DIR_KEY_MPI_SIZE; ++k) {
-	    my_data[i * BOX_AND_DIR_KEY_MPI_SIZE + k] = curr_key[k];
-	}
+        BoxAndDirection(keys[i], curr_key);
+        CHECK_TRUE(curr_key.size() == BOX_AND_DIR_KEY_MPI_SIZE);
+        for (int k = 0; k < BOX_AND_DIR_KEY_MPI_SIZE; ++k) {
+            my_data[i * BOX_AND_DIR_KEY_MPI_SIZE + k] = curr_key[k];
+        }
     }
 
     // Do the scatters
     for (int i = 0; i < mpisize; ++i) {
         int *sendbuf = NULL;
-	if (i == mpirank) {
+        if (i == mpirank) {
             sendbuf = &my_data[0];
-	}
-	// TODO (arbenson): make this asynchronous        
-	MPI_Scatter(sendbuf, counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
-	            &(recv_bufs[i][0]), counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
+        }
+        // TODO (arbenson): make this asynchronous        
+        MPI_Scatter(sendbuf, counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
+                    &(recv_bufs[i][0]), counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
                     i, MPI_COMM_WORLD);
     }
 
@@ -162,7 +162,7 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     my_data.clear();
     // Get the tail end of the keys that didn't get transferred.
     std::vector<BoxAndDirKey> keys_to_keep;
-    for (int i = mpisize * counts[mpirank]; i < keys.size(); ++i) {
+    for (int i = mpisize * counts[mpirank]; i < static_cast<int>(keys.size()); ++i) {
         keys_to_keep.push_back(keys[i]);
     }
     keys.clear();
@@ -171,7 +171,7 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     for (int i = 0; i < mpisize; ++i) {
         FillKeyVector(keys, recv_bufs[i], level);
     }
-    for (int i = 0; i < keys_to_keep.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(keys_to_keep.size()); ++i) {
         keys.push_back(keys_to_keep[i]);
     }
     keys_to_keep.clear();
@@ -187,7 +187,7 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
 
     // Figure out which level is the starting level.
     int local_start_level = level_hdkeys.size();
-    for (int i = 0; i < level_hdkeys.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(level_hdkeys.size()); ++i) {
         if (level_hdkeys[i].size() > 0) {
             local_start_level = i;
             break;
@@ -209,10 +209,8 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
             std::cerr << "Partitioning level: " << level << std::endl;
         }
         std::vector<BoxAndDirKey>& curr_level_keys = level_hdkeys[level];
-        int s1 = curr_level_keys.size();
         ScatterKeys(curr_level_keys, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-        int s2 = curr_level_keys.size();
         CHECK_TRUE_MSG(curr_level_keys.size() > 0, "Empty keys");
         bitonicSort(curr_level_keys, MPI_COMM_WORLD);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
@@ -237,7 +235,7 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Build my ParVec for this level.
-        for (int i = 0; i < curr_level_keys.size(); ++i) {
+        for (int i = 0; i < static_cast<int>(curr_level_keys.size()); ++i) {
             BoxAndDirKey key = curr_level_keys[i];
             BoxAndDirDat dummy;
             level_hf_vecs[level].insert(key, dummy);
@@ -252,19 +250,20 @@ int Wave3d::FormUnitPrtnMap(UnitLevelBoxPrtn& prtn,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::FormUnitPrtnMap");
 #endif
-  int mpisize = getMPISize();
-  CHECK_TRUE(start_data.size() == end_data.size());
-  CHECK_TRUE(start_data.size() / BOX_KEY_MPI_SIZE == mpisize);
-  std::vector<BoxKey>& part = prtn.partition_;
-  part.resize(0);
-  std::vector<BoxKey>& end_part = prtn.end_partition_;
-  end_part.resize(0);
-  for (int i = 0; i < start_data.size(); i += BOX_KEY_MPI_SIZE) {
+    int mpisize = getMPISize();
+    CHECK_TRUE(start_data.size() == end_data.size());
+    CHECK_TRUE(static_cast<int>(start_data.size()) / BOX_KEY_MPI_SIZE == mpisize);
+    std::vector<BoxKey>& part = prtn.partition_;
+    part.resize(0);
+    std::vector<BoxKey>& end_part = prtn.end_partition_;
+    end_part.resize(0);
+    for (int i = 0; i < static_cast<int>(start_data.size());
+       i += BOX_KEY_MPI_SIZE) {
         Index3 start_ind(start_data[i], start_data[i + 1], start_data[i + 2]);
         Index3 end_ind(end_data[i], end_data[i + 1], end_data[i + 2]);
         part.push_back(BoxKey(UnitLevel(), start_ind));
         end_part.push_back(BoxKey(UnitLevel(), end_ind));
-   }
+    }
 }
 
 
@@ -284,10 +283,10 @@ int Wave3d::PrtnUnitLevel() {
     // TODO(arbenson): Use morton ordering here.
     // Deal with just the set of boxes.
     std::set<BoxKey> boxes_set;
-    for (int i = 0; i < keys_out.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(keys_out.size()); ++i) {
         boxes_set.insert(keys_out[i]._boxkey);
     }
-    for (int i = 0; i < keys_inc.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(keys_inc.size()); ++i) {
         boxes_set.insert(keys_inc[i]._boxkey);
     }
     std::vector<BoxKey> boxes;
@@ -384,10 +383,10 @@ int Wave3d::TransferDataToLevels() {
     for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = _bndvec.lclmap().begin();
        mi != _bndvec.lclmap().end(); ++mi) {
         BoxAndDirKey key = mi->first;
-	int owner = _level_prtns.Owner(key, false);
-	if (owner != mpirank) {
+        int owner = _level_prtns.Owner(key, false);
+        if (owner != mpirank) {
             continue;
-	}
+        }
         BoxAndDirDat dat = mi->second;
         int level = key._boxkey.first;
         if (level == UnitLevel()) {
@@ -396,9 +395,9 @@ int Wave3d::TransferDataToLevels() {
 
         } else if (dat.interactionlist().size() > 0) {
             // Put high-frequency directions into the appropriate vector.
-	    // It is an incoming direction iff the interaction list is nonempty.
+            // It is an incoming direction iff the interaction list is nonempty.
             LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[level];
-	    vec.lclmap()[key] = dat;
+            vec.lclmap()[key] = dat;
         }
     }
     return 0;
@@ -443,17 +442,17 @@ void LevelPartitions::Init(int K) {
 }
 
 void InsertIntoDirMap(std::map<Index3, std::vector<BoxKey> >& dir_map,
-		      std::map<BoxAndDirKey, BoxAndDirDat>& curr_map) {
+                      std::map<BoxAndDirKey, BoxAndDirDat>& curr_map) {
 #ifndef RELEASE
     CallStackEntry entry("InsertIntoDirMap");
 #endif
     for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_map.begin();
          mi != curr_map.end(); ++mi) {
         BoxAndDirKey key = mi->first;
-	Index3 dir = key._dir;
-	BoxKey boxkey = key._boxkey;
-	// TODO(arbenson): check to make sure I own this data
-	dir_map[dir].push_back(boxkey);
+        Index3 dir = key._dir;
+        BoxKey boxkey = key._boxkey;
+        // TODO(arbenson): check to make sure I own this data
+        dir_map[dir].push_back(boxkey);
     }
 }
 
@@ -462,23 +461,23 @@ void LevelPartitions::FormMaps() {
     CallStackEntry entry("LevelPartitions::FormMaps");
 #endif
     // Outgoing (upwards pass)
-    for (int i = 0; i < _hf_vecs_out.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(_hf_vecs_out.size()); ++i) {
         InsertIntoDirMap(_level_hdmap_out[i], _hf_vecs_out[i].lclmap());
     }
     InsertIntoDirMap(_level_hdmap_out[unit_level_], _unit_vec.lclmap());
     // Incoming (downwards pass)
-    for (int i = 0; i < _hf_vecs_inc.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(_hf_vecs_inc.size()); ++i) {
         InsertIntoDirMap(_level_hdmap_inc[i], _hf_vecs_inc[i].lclmap());
     }
     InsertIntoDirMap(_level_hdmap_inc[unit_level_], _unit_vec.lclmap());
     // Remove old data.
-    for (int i = 0; i < _hdkeys_out.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(_hdkeys_out.size()); ++i) {
         std::vector<BoxAndDirKey>& old_keys = _hdkeys_out[i];
-	std::vector<BoxAndDirKey>().swap(old_keys);
+        std::vector<BoxAndDirKey>().swap(old_keys);
     }
-    for (int i = 0; i < _hdkeys_inc.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(_hdkeys_inc.size()); ++i) {
         std::vector<BoxAndDirKey>& old_keys = _hdkeys_inc[i];
-	std::vector<BoxAndDirKey>().swap(old_keys);
+        std::vector<BoxAndDirKey>().swap(old_keys);
     }
 }
 
@@ -496,7 +495,8 @@ BoxAndDirDat& LevelPartitions::Access(BoxAndDirKey key, bool out) {
     return _hf_vecs_inc[level].access(key);
 }
 
-std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key, bool out) {
+std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key,
+							   bool out) {
 #ifndef RELEASE
     CallStackEntry entry("LevelPartitions::SafeAccess");
 #endif
@@ -547,7 +547,7 @@ void CleanBoxAndDirMap(std::map<BoxAndDirKey, BoxAndDirDat>& curr_map) {
     CallStackEntry entry("CleanBoxAndDirMap");
 #endif
     for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_map.begin();
-	 mi != curr_map.end(); ++mi) {
+         mi != curr_map.end(); ++mi) {
         mi->second._dirupeqnden.resize(0);
         mi->second._dirdnchkval.resize(0);
         std::vector<BoxAndDirKey>().swap(mi->second.interactionlist());
@@ -575,18 +575,18 @@ int Wave3d::CleanBoxvec() {
     CallStackEntry entry("Wave3d::CleanBoxvec");
 #endif
     for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-	 mi != _boxvec.lclmap().end(); ++mi) {
+         mi != _boxvec.lclmap().end(); ++mi) {
         BoxDat& dat = mi->second;
-	std::vector<BoxKey>().swap(dat._undeidxvec);
-	std::vector<BoxKey>().swap(dat._vndeidxvec);
-	std::vector<BoxKey>().swap(dat._wndeidxvec);
-	std::vector<BoxKey>().swap(dat._xndeidxvec);
-	std::vector<BoxKey>().swap(dat._endeidxvec);
-	for (std::map<Index3, std::vector<BoxKey> >::iterator mi2 = dat._fndeidxvec.begin();
-	   mi2 != dat._fndeidxvec.end(); ++mi2) {
+        std::vector<BoxKey>().swap(dat._undeidxvec);
+        std::vector<BoxKey>().swap(dat._vndeidxvec);
+        std::vector<BoxKey>().swap(dat._wndeidxvec);
+        std::vector<BoxKey>().swap(dat._xndeidxvec);
+        std::vector<BoxKey>().swap(dat._endeidxvec);
+        for (std::map<Index3, std::vector<BoxKey> >::iterator mi2 = dat._fndeidxvec.begin();
+           mi2 != dat._fndeidxvec.end(); ++mi2) {
             std::vector<BoxKey>().swap(mi2->second);
-	}
-	dat._fndeidxvec.clear();
+        }
+        dat._fndeidxvec.clear();
     }
     _boxvec.lclmap().clear();
     return 0;
@@ -596,14 +596,14 @@ template <typename T>
 int FindInd(std::vector<T>& partition, std::vector<T>& end_partition, T key) {
     CHECK_TRUE_MSG(partition.size() != 0, "Missing partition!");
     int ind = std::lower_bound(partition.begin(),
-			       partition.end(), key) - partition.begin();
+                               partition.end(), key) - partition.begin();
     --ind;
     if (ind < static_cast<int>(partition.size()) - 1 &&
-	key == partition[ind + 1]) {
+        key == partition[ind + 1]) {
         ++ind;
     }
     if (ind == partition.size() || ind == -1 ||
-	key > end_partition[ind]) {
+        key > end_partition[ind]) {
         return -1;
     }
     return ind;

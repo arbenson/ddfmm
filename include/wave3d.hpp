@@ -63,6 +63,9 @@ typedef std::pair<int, Index3> BoxKey; // level, offset_in_level
 
 class BoxDat {
 public:
+    BoxDat(): _fftnum(0), _fftcnt(0), _tag(0) {;}  // by default, no children
+    ~BoxDat() {;}
+
     // TODO (Austin): Some of these should be private
     int _fftnum;
     int _fftcnt;
@@ -89,9 +92,6 @@ public:
     CpxNumTns _upeqnden_fft;
     std::set<Index3> _incdirset;
     std::set<Index3> _outdirset;
-
-    BoxDat(): _tag(0), _fftnum(0), _fftcnt(0) {;}  // by default, no children
-    ~BoxDat() {;}
 
     int& tag() { return _tag; }
     std::vector<int>& ptidxvec() { return _ptidxvec; }
@@ -327,30 +327,28 @@ private:
 //---------------------------------------------------------------------------
 class Wave3d: public ComObject {
 public:
-    //-----------------------
     ParVec<int, Point3, PtPrtn>* _posptr;
     Kernel3d _kernel;
     int _ACCU;
     int _NPQ;
-    Mlib3d* _mlibptr; // Read data in parallel and then send to other processors
+    Mlib3d* _mlibptr;  // Read data in parallel and then send to other processors
     IntNumTns _geomprtn;
-    //
+
     double _K;
     Point3 _ctr;
     int _ptsmax;
     int _maxlevel;
-    //
+
     ParVec<BoxKey, BoxDat, BoxPrtn> _boxvec;
     ParVec<BoxAndDirKey, BoxAndDirDat, BoxAndDirPrtn> _bndvec;
-    //
+
     CpxNumTns _denfft, _valfft;
     fftw_plan _fplan, _bplan;
-    //
+
     static Wave3d* _self;
-public:
+
     Wave3d(const std::string& p);
     ~Wave3d();
-    //member access
     ParVec<int, Point3, PtPrtn>*& posptr() { return _posptr; }
     Kernel3d& kernel() { return _kernel; }
     int& ACCU() { return _ACCU; }
@@ -480,7 +478,7 @@ private:
                          std::set<BoxAndDirKey>& affected_keys);
 
     int GatherLocalKeys();
-    int ConstructLowFreqMap(ldmap_t& ldmap);
+    void ConstructLowFreqMap(ldmap_t& ldmap);
     int GatherDensities(ParVec<int,cpx,PtPrtn>& den);
     
     int UListCompute(BoxDat& trgdat);
