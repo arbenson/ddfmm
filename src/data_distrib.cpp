@@ -61,6 +61,8 @@ public:
 };
 }
 
+
+
 void BoxAndDirection(BoxAndDirKey& key, std::vector<int>& out_key) {
 #ifndef RELEASE
     CallStackEntry entry("BoxAndDirection");
@@ -130,13 +132,20 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     }
 
     std::vector<int> counts(mpisize);
-    std::vector< std::vector<int> > recv_bufs(mpisize);
+    std::vector< std::vector<BoxAndDirKey> > recv_bufs(mpisize);
+#if 0
     for (int i = 0; i < mpisize; ++i) {
         counts[i] = sizes[i] / mpisize;
         recv_bufs[i].resize(counts[i] * BOX_AND_DIR_KEY_MPI_SIZE);
     }
+#endif
+    for (int i = 0; i < mpisize; ++i) {
+        counts[i] = sizes[i] / mpisize;
+        recv_bufs[i].resize(counts[i]);
+    }
+#if 0
     // Create buffer to scatter
-    std::vector<int> my_data(keys.size() * BOX_AND_DIR_KEY_MPI_SIZE);
+    std::vector<BoxAndDirKey> my_data(keys.size() * BOX_AND_DIR_KEY_MPI_SIZE);
     for (int i = 0; i < static_cast<int>(keys.size()); ++i) {
         std::vector<int> curr_key;
         BoxAndDirection(keys[i], curr_key);
@@ -145,21 +154,24 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
             my_data[i * BOX_AND_DIR_KEY_MPI_SIZE + k] = curr_key[k];
         }
     }
+#endif
 
     // Do the scatters
     for (int i = 0; i < mpisize; ++i) {
-        int *sendbuf = NULL;
+        BoxAndDirKey *sendbuf = NULL;
         if (i == mpirank) {
-            sendbuf = &my_data[0];
+            sendbuf = &keys[0];
         }
         // TODO (arbenson): make this asynchronous        
-        MPI_Scatter(sendbuf, counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
-                    &(recv_bufs[i][0]), counts[i] * BOX_AND_DIR_KEY_MPI_SIZE, MPI_INT,
+        MPI_Scatter(sendbuf, counts[i], par::Mpi_datatype<BoxAndDirKey>::value(),
+                    &(recv_bufs[i][0]), counts[i], par::Mpi_datatype<BoxAndDirKey>::value(),
                     i, MPI_COMM_WORLD);
     }
 
+#if 0
     // Clean up
     my_data.clear();
+#endif
     // Get the tail end of the keys that didn't get transferred.
     std::vector<BoxAndDirKey> keys_to_keep;
     for (int i = mpisize * counts[mpirank]; i < static_cast<int>(keys.size()); ++i) {
@@ -167,9 +179,17 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     }
     keys.clear();
     
+#if 0
     // Insert into keys
     for (int i = 0; i < mpisize; ++i) {
         FillKeyVector(keys, recv_bufs[i], level);
+    }
+#endif
+    // Insert into keys
+    for (int i = 0; i < mpisize; ++i) {
+      for (int j = 0; j < static_cast<int>(recv_bufs[i].size()); ++j) {
+	keys.push_back(recv_bufs[i][j]);
+      }
     }
     for (int i = 0; i < static_cast<int>(keys_to_keep.size()); ++i) {
         keys.push_back(keys_to_keep[i]);
