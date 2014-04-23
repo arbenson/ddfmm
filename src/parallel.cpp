@@ -74,7 +74,7 @@ int SharedRead(std::string name, std::istringstream& is) {
     getMPIInfo(&mpirank, &mpisize);
 
     std::vector<char> tmpstr;
-    if(mpirank == 0) {
+    if (mpirank == 0) {
 	char filename[MAX_FILE_NAME_LENGTH];
 	sprintf(filename, "data/%s", name.c_str());
 	std::cerr << filename << std::endl;
@@ -111,7 +111,7 @@ int SharedWrite(std::string name, std::ostringstream& os) {
     getMPIInfo(&mpirank, &mpisize);
 
     //
-    if(mpirank == 0) {
+    if (mpirank == 0) {
 	char filename[MAX_FILE_NAME_LENGTH];
 	sprintf(filename, "data/%s", name.c_str());
 	std::cerr << filename << std::endl;

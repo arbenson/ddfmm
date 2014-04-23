@@ -288,7 +288,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
     for (int i = 0; i < keyvec.size(); ++i) {
         Key key = keyvec[i];
         int owner = _prtn.owner(key);
-        if(owner != mpirank) {
+        if (owner != mpirank) {
             skeyvec[owner].push_back(key);
         }
     }

@@ -55,15 +55,13 @@ inline int pow2(int l) { assert(l >= 0); return (1 << l); }
 //#define CHECK_TRUE(expr) { if((expr) == 0) { assert(0); } }
 
 template <class T, class S>
-std::istream& operator>>(std::istream& is, std::pair<T,S>& a)
-{
+std::istream& operator>>(std::istream& is, std::pair<T, S>& a) {
   is >> a.first;
   is >> a.second;
   return is;
 }
 template <class T, class S>
-std::ostream& operator<<(std::ostream& os, const std::pair<T,S>& a)
-{
+std::ostream& operator<<(std::ostream& os, const std::pair<T, S>& a) {
   os << a.first << " " << a.second;
   return os;
 }
@@ -80,11 +78,11 @@ void DumpCallStack( std::ostream& os=std::cerr );
 class CallStackEntry {
 public:
     CallStackEntry( std::string s ) { 
-        if( !std::uncaught_exception() )
+        if ( !std::uncaught_exception() )
             PushCallStack(s); 
     }
     ~CallStackEntry() { 
-        if( !std::uncaught_exception() ) 
+        if ( !std::uncaught_exception() ) 
             PopCallStack(); 
     }
 };

@@ -42,7 +42,7 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
     CHECK_TRUE_MSG(data.first, "Missing incoming data");
     int mpirank = getMPIRank();
     CHECK_TRUE_MSG(_level_prtns.Owner(bndkey, false) == mpirank,
-		   "Updating data that I do not own");
+                   "Updating data that I do not own");
     BoxAndDirDat& bnddat = data.second;
     CpxNumVec& dcv = bnddat.dirdnchkval();
     std::vector<BoxAndDirKey>& interactionlist = bnddat.interactionlist();
@@ -93,7 +93,7 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
     BoxAndDirDat& bnddat = _level_prtns.Access(bndkey, true);
     int mpirank = getMPIRank();
     CHECK_TRUE_MSG(_level_prtns.Owner(bndkey, true) == mpirank,
-		   "Updating data that I do not own");
+                   "Updating data that I do not own");
     CpxNumVec& upeqnden = bnddat.dirupeqnden();
     CpxNumVec upchkval(ue2uc(0, 0, 0).m());
     setvalue(upchkval, cpx(0, 0));
@@ -230,7 +230,7 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
                 }
                 SAFE_FUNC_EVAL( zgemv(1.0, de2dc(a, b, c), dneqnden, 1.0, chddcv) );
                 // We updated the data, so we need to send it back to the children.
-		keys_affected.insert(bndkey);
+                keys_affected.insert(bndkey);
             }
         }
     }
@@ -307,16 +307,16 @@ int Wave3d::LowFreqM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
     CpxNumVec& dnchkval = trgdat.dnchkval();
     if (dnchkval.m() == 0) {
         dnchkval.resize(dcp.n());
-        setvalue(dnchkval,cpx(0,0));
+        setvalue(dnchkval,cpx(0, 0));
     }
     if (trgdat.extval().m() == 0) {
         trgdat.extval().resize( trgdat.extpos().n() );
-        setvalue(trgdat.extval(), cpx(0,0));
+        setvalue(trgdat.extval(), cpx(0, 0));
     }
     DblNumMat dnchkpos(dcp.m(), dcp.n());
     for (int k = 0; k < dcp.n(); ++k) {
         for (int d = 0; d < dim(); ++d) {
-          dnchkpos(d, k) = dcp(d, k) + trgctr(d);
+            dnchkpos(d, k) = dcp(d, k) + trgctr(d);
         }
     }
     // List computations
@@ -337,7 +337,7 @@ int Wave3d::LowFreqM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
         mid(k) = mid(k) * is(k, 0);
     }
     dneqnden.resize(v.m());
-    setvalue(dneqnden, cpx(0,0));
+    setvalue(dneqnden, cpx(0, 0));
     SAFE_FUNC_EVAL( zgemv(1.0, v, mid, 0.0, dneqnden) );
     return 0;
 }
@@ -392,7 +392,6 @@ int Wave3d::UListCompute(BoxDat& trgdat) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
-        //mul
         CpxNumMat mat;
         SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
         SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
@@ -413,13 +412,12 @@ int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNu
         BoxKey neikey = (*vi);
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
-        //mul
         Point3 neictr = BoxCenter(neikey);
         Index3 idx;
         for (int d = 0; d < dim(); ++d) {
-            idx(d) = int(round( (trgctr[d] - neictr[d]) / W )); //LEXING:CHECK
+            idx(d) = int(round( (trgctr[d] - neictr[d]) / W ));
         }
-        //create if it is missing
+        // Create if it is missing
         if (neidat.fftcnt() == 0) {
             setvalue(_denfft, cpx(0,0));
             CpxNumVec& neiden = neidat.upeqnden();

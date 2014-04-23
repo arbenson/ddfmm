@@ -93,32 +93,22 @@ public:
     BoxDat(): _tag(0), _fftnum(0), _fftcnt(0) {;} //by default, no children
     ~BoxDat() {;}
 
-    // Size of directional interaction list
-    int DirInteractionOAListSize() {
-        int num = 0;
-        for (std::map< Index3, std::vector<BoxKey> >::iterator mi = _fndeidxvec.begin();
-             mi != _fndeidxvec.end(); ++mi) {
-            num += mi->second.size();
-        }
-        return num;
-    }
-    //
     int& tag() { return _tag; }
     std::vector<int>& ptidxvec() { return _ptidxvec; }
-    //
+
     std::vector<BoxKey>& undeidxvec() { return _undeidxvec; }
     std::vector<BoxKey>& vndeidxvec() { return _vndeidxvec; }
     std::vector<BoxKey>& wndeidxvec() { return _wndeidxvec; }
     std::vector<BoxKey>& xndeidxvec() { return _xndeidxvec; }
     std::vector<BoxKey>& endeidxvec() { return _endeidxvec; }
     std::map< Index3, std::vector<BoxKey> >& fndeidxvec() { return _fndeidxvec; }
-    //
+
     DblNumMat& extpos() { return _extpos; }
     CpxNumVec& extden() { return _extden; }
     CpxNumVec& upeqnden() { return _upeqnden; }
     CpxNumVec& extval() { return _extval; }
     CpxNumVec& dnchkval() { return _dnchkval; }
-    //
+
     CpxNumTns& upeqnden_fft() { return _upeqnden_fft; }
     std::set<Index3>& incdirset() { return _incdirset; }
     std::set<Index3>& outdirset() { return _outdirset; }

@@ -23,10 +23,9 @@
 
 std::stack<std::string> callStack;
 
-void PushCallStack( std::string s )
-{ 
+void PushCallStack(std::string s) {
 #ifdef HAVE_OPENMP
-    if( omp_get_thread_num() != 0 )
+    if ( omp_get_thread_num() != 0 )
         return;
 #endif // HAVE_OPENMP
     ::callStack.push(s); 
@@ -35,16 +34,15 @@ void PushCallStack( std::string s )
 void PopCallStack()
 { 
 #ifdef HAVE_OPENMP
-    if( omp_get_thread_num() != 0 )
+    if ( omp_get_thread_num() != 0 )
         return;
 #endif // HAVE_OPENMP
     ::callStack.pop(); 
 }
 
-void DumpCallStack( std::ostream& os )
-{
+void DumpCallStack(std::ostream& os) {
     std::ostringstream msg;
-    while( ! ::callStack.empty() ) {
+    while ( ! ::callStack.empty() ) {
         msg << "[" << ::callStack.size() << "]: " << ::callStack.top() << "\n";
         ::callStack.pop();
     }

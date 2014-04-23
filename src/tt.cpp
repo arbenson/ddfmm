@@ -31,7 +31,7 @@
 int optionsCreate(int argc, char** argv, std::map<std::string,
                   std::string>& options) {
     options.clear();
-    for(int k = 1; k < argc; k += 2) {
+    for (int k = 1; k < argc; k += 2) {
       options[ std::string(argv[k]) ] = std::string(argv[k + 1]);
     }
     return 0;

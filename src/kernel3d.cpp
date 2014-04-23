@@ -30,7 +30,7 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
 #endif
     int M = trgpos.n();
     int N = srcpos.n();
-    double K = 2*M_PI;
+    double K = 2 * M_PI;
     cpx I(0, 1);
     double mindif2 = _mindif * _mindif;
 
@@ -62,8 +62,8 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         mat_dsincos(M, N, kr, skr, ckr);
     
         inter.resize(M, N);
-        for (int i = 0; i < M; i++)     {
-            for(int j = 0; j < N; j++) {
+        for (int i = 0; i < M; ++i)     {
+            for (int j = 0; j < N; ++j) {
                 inter(i,j) = cpx( ckr(i, j) * ir(i, j), skr(i, j) * ir(i, j) );
             }
         }
@@ -92,8 +92,8 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         mat_dsincos(M, N, kr, skr, ckr);
     
         inter.resize(M, N);
-        for(int i = 0; i < M; ++i) {
-            for(int j = 0; j < N; ++j) {
+        for (int i = 0; i < M; ++i) {
+            for (int j = 0; j < N; ++j) {
                 inter(i, j) = cpx(ckr(i, j), skr(i, j));
             }
         }

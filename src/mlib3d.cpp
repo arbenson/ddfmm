@@ -34,8 +34,8 @@ int Transpose(CpxNumMat& trg, CpxNumMat& src) {
     CallStackEntry entry("Transpose");
 #endif
     trg.resize(src.n(),src.m());
-    for(int i = 0; i < trg.m(); ++i) {
-        for(int j = 0; j < trg.n(); j++) {
+    for (int i = 0; i < trg.m(); ++i) {
+        for (int j = 0; j < trg.n(); ++j) {
             trg(i, j) = src(j, i);
         }
     }
@@ -46,8 +46,8 @@ int ApplyShift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
 #ifndef RELEASE
     CallStackEntry entry("ApplyShift");
 #endif
-    for(int k = 0; k < src.n(); ++k) {
-        for(int d = 0; d < 3; ++d) {
+    for (int k = 0; k < src.n(); ++k) {
+        for (int d = 0; d < 3; ++d) {
             trg(d, k) = src(d, k) + shift(d);
         }
     }
@@ -75,17 +75,17 @@ int Mlib3d::setup(std::map<std::string, std::string>& opts)
     //get params
     std::map<std::string, std::string>::iterator mi;
     mi = opts.find("-" + prefix() + "NPQ");
-    if(mi!=opts.end()) {
+    if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _NPQ;
     }
     mi = opts.find("-" + prefix() + "ldname");
-    if(mi!=opts.end()) {
+    if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _ldname;
     }
     mi = opts.find("-" + prefix() + "hdname");
-    if(mi!=opts.end()) {
+    if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _hdname;
     }
@@ -115,7 +115,7 @@ int Mlib3d::UpwardLowFetch(double W, DblNumMat& uep, DblNumMat& ucp,
     ucp = le.ucp();
     uc2ue.resize(3);
     for (int i = 0; i < 3; ++i) {
-      uc2ue(i) = le.uc2ue()(i);
+        uc2ue(i) = le.uc2ue()(i);
     }
   
     DblNumMat uepchd = _w2ldmap[W / 2].uep();
@@ -151,7 +151,7 @@ int Mlib3d::DownwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
     Transpose(dc2de(2), tmp0);
     DblNumMat dcpchd = _w2ldmap[W / 2].uep();
   
-    de2dc.resize(2,2,2);
+    de2dc.resize(2, 2, 2);
     for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
         DblNumMat tmp(dcpchd.m(), dcpchd.n());
         ApplyShift(tmp, dcpchd, ShiftedPoint(ind, W));
@@ -159,12 +159,12 @@ int Mlib3d::DownwardLowFetch(double W, DblNumMat& dep, DblNumMat& dcp,
                                              CHILD_IND3(ind))) );
     }
   
-    ue2dc.resize(7,7,7);
-    for (int a = 0; a < 7; a++) {
-        for (int b = 0; b < 7; b++) {
-            for (int c = 0; c < 7; c++) {
-                if (abs(a - 3) > 1 || abs(b - 3) > 1 || abs(c-3) > 1) {
-                    ue2dc(a,b,c) = le.ue2dc()(a,b,c);
+    ue2dc.resize(7, 7, 7);
+    for (int a = 0; a < 7; ++a) {
+        for (int b = 0; b < 7; ++b) {
+            for (int c = 0; c < 7; ++c) {
+                if (abs(a - 3) > 1 || abs(b - 3) > 1 || abs(c - 3) > 1) {
+                    ue2dc(a, b, c) = le.ue2dc()(a, b, c);
                 }
             }
         }
