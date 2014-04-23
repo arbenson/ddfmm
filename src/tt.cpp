@@ -202,9 +202,8 @@ int main(int argc, char** argv) {
 	SAFE_FUNC_EVAL( SharedRead(opt, iss) );
 	SAFE_FUNC_EVAL( deserialize(chkkeyvec, iss, all) );
 	int numchk = chkkeyvec.m();
-	double relerr;
 	ck0 = clock();
-	SAFE_FUNC_EVAL( wave.check(den, val, chkkeyvec, relerr) );
+	double relerr = wave.check(den, val, chkkeyvec);
 	ck1 = clock();
 	if (mpirank == 0) {
 	    std::cout << "wave check used " << CLOCK_DIFF_SECS(ck1, ck0)
@@ -223,7 +222,6 @@ int main(int argc, char** argv) {
 	    printf("Ea %.6e\n", relerr);
 	    printf("----------------------\n");
 	}
-	//
 	SAFE_FUNC_EVAL( MPI_Finalize() );
 #ifndef RELEASE
     } catch( ... ) {

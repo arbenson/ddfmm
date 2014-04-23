@@ -21,8 +21,8 @@
 #include <vector>
 
 //---------------------------------------------------------------------
-int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
-                  IntNumVec& chkkeys, double& relerr) {
+double Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
+                     IntNumVec& chkkeys) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::check");
 #endif
@@ -106,8 +106,7 @@ int Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
 
     double tn = sqrt( energy(truval) );
     double en = sqrt( energy(errval) );
-    relerr = en / tn;
-  
+    double relerr = en / tn;
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    return 0;
+    return relerr;
 }

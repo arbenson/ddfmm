@@ -82,8 +82,8 @@ int Wave3d::HighFreqPass() {
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
         if (mpirank == 0) {
-          std::cout << "---------------------------------" << std::endl;
-          std::cout << "Box width for upwards pass: " << W << std::endl;
+            std::cout << "---------------------------------" << std::endl;
+            std::cout << "Box width for upwards pass: " << W << std::endl;
         }
         std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
 
@@ -101,7 +101,8 @@ int Wave3d::HighFreqPass() {
         // communication for that level.
         HighFreqM2MLevelComm(level);
 
-        // TODO(arbenson): remove data from parvec to save memory
+        // TODO(arbenson): If we need memory, we can remove data received from other
+	// processors at this level.
     }
     t1 = time(0);
     PrintParData(GatherParData(t0, t1), "High frequency upward pass");
@@ -109,7 +110,7 @@ int Wave3d::HighFreqPass() {
     // Communication for M2L
     t0 = time(0);
     for (int level = 0;
-	 level < static_cast<int>(_level_prtns._hdkeys_inc.size()); ++level) {
+         level < static_cast<int>(_level_prtns._hdkeys_inc.size()); ++level) {
         if (mpirank == 0) {
             std::cout << "----------------------" << std::endl;
             std::cout << "Level: " << level << std::endl;
@@ -256,6 +257,23 @@ void Wave3d::ConstructLowFreqMap(ldmap_t& ldmap) {
     }
 }
 
+void Wave3d::DeleteEmptyBoxes(std::map<BoxKey, BoxDat>& data) {
+    std::list<BoxKey> to_delete;
+    for (std::map<BoxKey, BoxDat>::iterator mi = data.begin(); mi != data.end();
+	 ++mi) {
+        BoxKey curkey = mi->first;
+        BoxDat& curdat = mi->second;
+        if (!HasPoints(curdat)) {
+            to_delete.push_back(curkey);
+        }
+    }
+    for (std::list<BoxKey>::iterator mi = to_delete.begin();
+         mi != to_delete.end(); ++mi) {
+        BoxKey curkey = *mi;
+        data.erase(curkey);
+    }
+}
+
 
 //---------------------------------------------------------------------
 int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
@@ -267,20 +285,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     int mpirank = getMPIRank();
 
     // Delete of empty boxes
-    std::list<BoxKey> to_delete;
-    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
-        if (!HasPoints(curdat)) {
-            to_delete.push_back(curkey);
-        }
-    }
-    for (std::list<BoxKey>::iterator mi = to_delete.begin();
-         mi != to_delete.end(); ++mi) {
-        BoxKey curkey = *mi;
-        _boxvec._lclmap.erase(curkey);
-    }
+    DeleteEmptyBoxes(_boxvec.lclmap());
 
     // Setup of low and high frequency maps
     ldmap_t ldmap;
@@ -304,6 +309,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     // Remove old boxvec data.
     CleanBoxvec();
 
+    // Delete boxes without points
+    DeleteEmptyBoxes(_level_prtns._lf_boxvec.lclmap());
+    
     // Gather the interaction lists.
     std::vector<int> mask2(BoxAndDirDat_Number, 0);
     mask2[BoxAndDirDat_interactionlist] = 1;

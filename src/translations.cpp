@@ -107,8 +107,7 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
             if (data.first) {
                 BoxDat& chddat = data.second;
-                // TODO: fix this check
-                // CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
+                CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
                 if (HasPoints(chddat)) {
                     CpxNumVec& chdued = chddat.upeqnden();
                     SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
@@ -174,7 +173,7 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     CpxNumVec dneqnden(E1.m(), false, dat2);
     // TODO(arbenson): FIX THIS
     if (dnchkval.m() == 0) {
-      return 0;
+        return 0;
     }
 
     CHECK_TRUE_MSG(E3.n() == dnchkval.m(), "E3 mismatch");
@@ -264,10 +263,9 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
             int c = CHILD_IND3(ind);
             BoxKey key = ChildKey(srckey, Index3(a, b, c));
             std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
-            // TODO(arbenson): remove check on HasPoints by removing those boxes
-            // ahead of time.
-            if (data.first && HasPoints(data.second)) {
+            if (data.first) {
                 BoxDat& chddat = data.second;
+		CHECK_TRUE(HasPoints(chddat));
                 SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
             }
         }
@@ -278,13 +276,13 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     CpxNumMat& is = uc2ue(1);
     CpxNumMat& up = uc2ue(2);
     CpxNumVec mid(up.m());
-    setvalue(mid,cpx(0,0));
+    setvalue(mid,cpx(0, 0));
     SAFE_FUNC_EVAL( zgemv(1.0, up, upchkval, 0.0, mid) );
     for (int k = 0; k < mid.m(); ++k) {
         mid(k) = mid(k) * is(k, 0);
     }
     upeqnden.resize(v.m());
-    setvalue(upeqnden,cpx(0,0));
+    setvalue(upeqnden,cpx(0, 0));
     SAFE_FUNC_EVAL( zgemv(1.0, v, mid, 0.0, upeqnden) );
 
     return 0;
@@ -400,7 +398,6 @@ int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNu
 #endif
     double step = W / (_P - 1);
     setvalue(_valfft,cpx(0, 0));
-    //LEXING: SPECIAL
     for (std::vector<BoxKey>::iterator vi = trgdat.vndeidxvec().begin();
          vi != trgdat.vndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
@@ -422,7 +419,7 @@ int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNu
                 _denfft(a,b,c) = neiden(k);
             }
             fftw_execute(_fplan);
-            neidat.upeqnden_fft() = _denfft; //COPY to the right place
+            neidat.upeqnden_fft() = _denfft;  // COPY to the right place
         }
         CpxNumTns& neidenfft = neidat.upeqnden_fft();
         CpxNumTns& interaction_tensor = ue2dc(idx[0] + 3, idx[1] + 3, idx[2] + 3);

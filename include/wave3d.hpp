@@ -360,15 +360,14 @@ public:
     int& ptsmax() { return _ptsmax; }
     int& maxlevel() { return _maxlevel; }
 
-    //main functions
     int setup(std::map<std::string, std::string>& opts);
 
     // Compute the potentials at the target points.
     int eval( ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val);
 
-    // Compute the true solution and store the relative err in relerr.
-    int check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
-              IntNumVec& chkkeyvec, double& relerr);
+    // Compute the true solution at a few points and return the relative error.
+    double check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
+                 IntNumVec& chkkeyvec);
 
     bool CompareBoxAndDirKey(BoxAndDirKey a, BoxAndDirKey b) {
         return BoxWidth(a._boxkey) < BoxWidth(b._boxkey);
@@ -383,9 +382,6 @@ private:
     Point3 BoxCenter(BoxKey& curkey);
     double BoxWidth(BoxKey& curkey) { return _K / pow2(curkey.first); }
     bool IsCellLevelBox(const BoxKey& curkey) { return curkey.first == CellLevel(); }
-
-    // TODO(arbenson): move this to parvec
-    int CreateIfUnavail(BoxAndDirKey key);
 
     // Return the key of the parent box of the box corresponding to curkey.
     BoxKey ParentKey(BoxKey& curkey) {
@@ -546,6 +542,7 @@ private:
 
     int CleanLevel(int level);
     int CleanBoxvec();
+    void DeleteEmptyBoxes(std::map<BoxKey, BoxDat>& data);
 };
 
 //-------------------
