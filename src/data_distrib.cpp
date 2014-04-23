@@ -93,12 +93,17 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     }
 
     std::vector<int> counts(mpisize);
+#if 0
     std::vector< std::vector<BoxAndDirKey> > recv_bufs(mpisize);
+#endif
     for (int i = 0; i < mpisize; ++i) {
         counts[i] = sizes[i] / mpisize;
+#if 0
         recv_bufs[i].resize(counts[i]);
+#endif
     }
 
+#if 0
     // Do the scatters
     for (int i = 0; i < mpisize; ++i) {
         BoxAndDirKey *sendbuf = NULL;
@@ -110,6 +115,30 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
                     &(recv_bufs[i][0]), counts[i], par::Mpi_datatype<BoxAndDirKey>::value(),
                     i, MPI_COMM_WORLD);
     }
+#endif
+    std::vector<int> recv_displs(mpisize), send_displs(mpisize);
+    for (int i = 0; i < mpisize; ++i) {
+        if (i == 0) {
+	  recv_displs[i] = 0;
+	  send_displs[i] = 0;
+        } else {
+	    recv_displs[i] = recv_displs[i-1] + counts[i-1];
+	    send_displs[i] = send_displs[i - 1] + counts[mpirank];
+	}
+    }
+
+
+    int total_count = 0;
+    for (int i = 0; i < static_cast<int>(counts.size()); ++i) {
+        total_count += counts[i];
+    }
+    std::vector<BoxAndDirKey> recv_buf(total_count);
+    std::vector<int> send_counts(mpisize, counts[mpirank]);
+    MPI_Alltoallv(&keys[0], &send_counts[0], &send_displs[0],
+		  par::Mpi_datatype<BoxAndDirKey>::value(),
+		  &recv_buf[0], &counts[0], &recv_displs[0],
+		  par::Mpi_datatype<BoxAndDirKey>::value(),
+		  MPI_COMM_WORLD);
 
     // Get the tail end of the keys that didn't get transferred.
     std::vector<BoxAndDirKey> keys_to_keep;
@@ -119,10 +148,15 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     keys.clear();
     
     // Insert into keys
+#if 0
     for (int i = 0; i < mpisize; ++i) {
         for (int j = 0; j < static_cast<int>(recv_bufs[i].size()); ++j) {
             keys.push_back(recv_bufs[i][j]);
 	}
+    }
+#endif
+    for (int i = 0; i < static_cast<int>(recv_buf.size()); ++i) {
+        keys.push_back(recv_buf[i]);
     }
     for (int i = 0; i < static_cast<int>(keys_to_keep.size()); ++i) {
         keys.push_back(keys_to_keep[i]);
