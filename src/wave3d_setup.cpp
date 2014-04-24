@@ -404,8 +404,9 @@ bool Wave3d::SetupTreeFind(BoxKey wntkey, BoxKey& trykey) {
         }
         trykey = ParentKey(trykey);
     }
-    // TODO(arbenson): FIX THIS.  WE NEED TO DEAL WITH DATA IN ANCESTOR TREE not
-    // being on this processor.
+    // TODO(arbenson): Fix this.  We need to deal with data in ancestor tree
+    // that does not belong to this processor.  For now, it is OK to return always
+    // return true, but it is not the most efficient thing to do.
     return true;
 #if 0
     std::map<BoxKey, BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().find(trykey);
