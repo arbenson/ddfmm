@@ -196,19 +196,13 @@ int Wave3d::GatherLocalKeys() {
                     si != curdat.outdirset().end(); ++si) {
                     // into bndvec
                     _bndvec.insert(BoxAndDirKey(curkey, *si), dummy);
-                    int level = curkey.first;
-		    if (curkey.first == 6 && curkey.second == Index3(38, 32, 20) ) {
-		      std::cout << "Magic key outgoing!" << std::endl;
-		    }
+                    int level = curkey._level;
                     level_hdkeys_out[level].push_back(BoxAndDirKey(curkey, *si));
                 }
                 
                 // For each incoming direction of this box, add to the second list
                 for (std::set<Index3>::iterator si = curdat.incdirset().begin();
                     si != curdat.incdirset().end(); ++si) {
-		    if (curkey.first == 6 && curkey.second == Index3(38, 32, 20) ) {
-		      std::cout << "Magic key incoming!" << std::endl;
-		    }
                     BoxAndDirDat dat;
                     Index3 dir = *si;
                     std::vector<BoxKey>& tmpvec = curdat.fndeidxvec()[dir];
@@ -219,7 +213,7 @@ int Wave3d::GatherLocalKeys() {
                     }
                     // into bndvec
                     _bndvec.insert(BoxAndDirKey(curkey, dir), dat);
-                    int level = curkey.first;
+                    int level = curkey._level;
                     level_hdkeys_inc[level].push_back(BoxAndDirKey(curkey, *si));
                 }
 

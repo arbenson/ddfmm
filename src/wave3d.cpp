@@ -22,9 +22,9 @@ Wave3d* Wave3d::_self = NULL;
 
 //-----------------------------------
 Wave3d::Wave3d(const std::string& p): ComObject(p), _posptr(NULL), _ACCU(1),
-				      _NPQ(4), _mlibptr(NULL), _K(64),
-				      _ctr(Point3(0, 0, 0)), _ptsmax(100),
-				      _fplan(NULL), _bplan(NULL),
+                                      _NPQ(4), _mlibptr(NULL), _K(64),
+                                      _ctr(Point3(0, 0, 0)), _ptsmax(100),
+                                      _fplan(NULL), _bplan(NULL),
                                       _starting_level(0) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::Wave3d");
@@ -51,10 +51,10 @@ Index3 Wave3d::nml2dir(Point3 n, double W) {
     int midx = 0;
     double mval = abs(n(0));
     for (int d = 1; d < 3; ++d) {
-	if (mval < abs(n(d))) {
+        if (mval < abs(n(d))) {
             midx = d;
             mval = abs(n(d));
-	}
+        }
     }
     //midx gives the direction (can be + or -)
     Point3 val = n / mval;
@@ -82,7 +82,7 @@ Index3 Wave3d::ParentDir(Index3 dir) {
     int midx = -1;
     for (int d = 0; d < 3; ++d) {
       if (abs(dir(d)) == C) {
-	midx = d;
+        midx = d;
       }
     }
     assert(midx!=-1);
@@ -104,18 +104,18 @@ std::vector<Index3> Wave3d::ChildDir(Index3 dir) {
     int C = dir.linfty();
     std::vector<int> oidx;
     for (int d = 0; d < 3; ++d) {
-	if(abs(dir(d)) != C) {
-	    oidx.push_back(d);
-	}
+        if(abs(dir(d)) != C) {
+            oidx.push_back(d);
+        }
     }
     std::vector<Index3> res;
     for (int a = 0; a < 2; ++a) {
-	for (int b = 0; b < 2; ++b) {
-	    Index3 tmp = 2 * dir;
-	    tmp(oidx[0]) += 2 * a - 1;
-	    tmp(oidx[1]) += 2 * b - 1;
-	    res.push_back(tmp);
-	}
+        for (int b = 0; b < 2; ++b) {
+            Index3 tmp = 2 * dir;
+            tmp(oidx[0]) += 2 * a - 1;
+            tmp(oidx[1]) += 2 * b - 1;
+            res.push_back(tmp);
+        }
     }
     return res;
 }
@@ -134,11 +134,11 @@ Point3 Wave3d::BoxCenter(BoxKey& curkey) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::center");
 #endif
-    Index3 path = curkey.second;
-    int tmp = pow2(curkey.first);
+    Index3 path = curkey._index;
+    int tmp = pow2(curkey._level);
     Point3 t;
     for (int d = 0; d < 3; ++d) {
-	t(d) = _ctr(d) - _K / 2 + (path(d) + 0.5) / tmp * _K;
+        t(d) = _ctr(d) - _K / 2 + (path(d) + 0.5) / tmp * _K;
     }
     return t;
 }
@@ -151,11 +151,11 @@ int Wave3d::P() {
     CHECK_TRUE(_ACCU >= 1 && _ACCU <= 3);
     switch (_ACCU) {
     case 1:
-	return 4;
+        return 4;
     case 2:
-	return 6;
+        return 6;
     default:
-	return 8;
+        return 8;
     }
 }
 
@@ -272,15 +272,15 @@ int deserialize(BoxAndDirDat& val, std::istream& is,
     if (mask[i] == 1) {
         CpxNumVec tmp;
         deserialize(tmp, is, mask);
-	if (val._dirdnchkval.m() == tmp.m()) {
+        if (val._dirdnchkval.m() == tmp.m()) {
             for (int i = 0; i < val._dirdnchkval.m(); ++i) {
                 val._dirdnchkval(i) += tmp(i);
-	    }
-	} else {
-	    // Copy to dirdnchkval
+            }
+        } else {
+            // Copy to dirdnchkval
             val._dirdnchkval.resize(tmp.m());
             val._dirdnchkval.fill(tmp);
-	}
+        }
     }
     i++;
     if (mask[i] == 1) deserialize(val._interactionlist, is, mask);  i++;
@@ -288,26 +288,50 @@ int deserialize(BoxAndDirDat& val, std::istream& is,
     return 0;
 }
 
-//-----------------------------------------------------------
-int serialize(const BoxAndDirKey& key, std::ostream& os, const std::vector<int>& mask) {
+
+int serialize(const BoxAndDirKey& key, std::ostream& os,
+              const std::vector<int>& mask) {
+#ifndef RELEASE
+  CallStackEntry entry("serialize");
+#endif
+  int i = 0;
+  serialize(key._boxkey, os, mask); i++;
+  serialize(key._dir, os, mask); i++;
+  CHECK_TRUE(i == BoxAndDirKey_Number);
+  return 0;
+}
+
+int deserialize(BoxAndDirKey& key, std::istream& is,
+                const std::vector<int>& mask) {
+#ifndef RELEASE
+  CallStackEntry entry("deserialize");
+#endif
+  int i = 0;
+  deserialize(key._boxkey, is, mask);  i++;
+  deserialize(key._dir, is, mask);  i++;
+  CHECK_TRUE(i == BoxAndDirKey_Number);
+  return 0;
+}
+
+int serialize(const BoxKey& key, std::ostream& os,
+              const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif
     int i = 0;
-    serialize(key._boxkey, os, mask); i++;
-    serialize(key._dir, os, mask); i++;
-    CHECK_TRUE(i == BoxAndDirKey_Number);
+    serialize(key._level, os, mask); i++;
+    serialize(key._index, os, mask); i++;
+    CHECK_TRUE(i == BoxKey_Number);
     return 0;
 }
-//-----------------------------------------------------------
-int deserialize(BoxAndDirKey& key, std::istream& is,
-                const std::vector<int>& mask) {
+
+int deserialize(BoxKey& key, std::istream& is, const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
 #endif
     int i = 0;
-    deserialize(key._boxkey, is, mask);  i++;
-    deserialize(key._dir, is, mask);  i++;
-    CHECK_TRUE(i == BoxAndDirKey_Number);
+    deserialize(key._level, is, mask);  i++;
+    deserialize(key._index, is, mask);  i++;
+    CHECK_TRUE(i == BoxKey_Number);
     return 0;
 }

@@ -262,7 +262,7 @@ int Wave3d::PrtnUnitLevel() {
     // Processor i sends starting box to processor i - 1.
     // Processor i receives starting box to processor i + 1.
     CHECK_TRUE_MSG(boxes.size() > 0, "empty boxes after sort");
-    Index3 start_box = boxes[0].second;
+    Index3 start_box = boxes[0]._index;
     Index3 nbr_start_box(0, 0, 0);
     MPI_Status status;
     MPI_Sendrecv(start_box.array(), BOX_KEY_MPI_SIZE, MPI_INT,
@@ -272,7 +272,7 @@ int Wave3d::PrtnUnitLevel() {
 
     // Local adjustments for ending position if they happen to overlap.
     if (mpirank > 0) {
-        while (boxes.size() > 0 && nbr_start_box == boxes.back().second) {
+        while (boxes.size() > 0 && nbr_start_box == boxes.back()._index) {
             boxes.pop_back();
         }
     }
@@ -287,7 +287,7 @@ int Wave3d::PrtnUnitLevel() {
   
     // Communicate ending keys for each processor.
     std::vector<int> end_recv_buf(BOX_KEY_MPI_SIZE * mpisize);
-    SAFE_FUNC_EVAL(MPI_Allgather(boxes.back().second.array(), BOX_KEY_MPI_SIZE, MPI_INT,
+    SAFE_FUNC_EVAL(MPI_Allgather(boxes.back()._index.array(), BOX_KEY_MPI_SIZE, MPI_INT,
                                  &end_recv_buf[0], BOX_KEY_MPI_SIZE,
                                  MPI_INT, MPI_COMM_WORLD));
 
@@ -317,7 +317,7 @@ int Wave3d::TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
 #endif
     pids.clear();
     int owner = _level_prtns.Owner(key, false);
-    int level = key._boxkey.first;
+    int level = key._boxkey._level;
     if (level == UnitLevel()) {
         pids.push_back(owner);
     } else if (dat.interactionlist().size() > 0) {
@@ -348,7 +348,7 @@ int Wave3d::TransferDataToLevels() {
             continue;
         }
         BoxAndDirDat dat = mi->second;
-        int level = key._boxkey.first;
+        int level = key._boxkey._level;
         if (level == UnitLevel()) {
             // Put unit-level directions into the appropriate vector
             _level_prtns._unit_vec.lclmap()[key] = dat;
@@ -371,8 +371,7 @@ int Wave3d::TransferUnitLevelData(BoxKey key, BoxDat& dat,
     CallStackEntry entry("Wave3d::TransferUnitLevelData");
 #endif
     pids.clear();
-    int level = key.first;
-    if (level == UnitLevel()) {
+    if (key._level == UnitLevel()) {
         Index3 dummy_dir(1, 1, 1);
         BoxAndDirKey new_key(key, dummy_dir);
         pids.push_back(_level_prtns.Owner(new_key, false));
@@ -445,7 +444,7 @@ BoxAndDirDat& LevelPartitions::Access(BoxAndDirKey key, bool out) {
 #ifndef RELEASE
     CallStackEntry entry("LevelPartitions::Access");
 #endif
-    int level = key._boxkey.first;
+    int level = key._boxkey._level;
     if (level == unit_level_) {
         return _unit_vec.access(key);
     }
@@ -460,7 +459,7 @@ std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key,
 #ifndef RELEASE
     CallStackEntry entry("LevelPartitions::SafeAccess");
 #endif
-    int level = key._boxkey.first;
+    int level = key._boxkey._level;
     if (level == unit_level_) {
         return _unit_vec.contains(key);
     }
@@ -474,7 +473,7 @@ int LevelPartitions::Owner(BoxAndDirKey key, bool out) {
 #ifndef RELEASE
     CallStackEntry entry("LevelPartitions::Owner");
 #endif
-    int level = key._boxkey.first;
+    int level = key._boxkey._level;
     if (level == unit_level_) {
         return _unit_vec.prtn().owner(key);
     }
@@ -588,10 +587,10 @@ int LowFreqBoxPrtn::owner(BoxKey& key) {
 #ifndef RELEASE
     CallStackEntry entry("LowFreqBoxPrtn::owner");
 #endif
-    int level = key.first;
+    int level = key._level;
     CHECK_TRUE_MSG(level >= unit_level_, "bad level");
     int factor = pow2(level - unit_level_);
-    Index3 idx = key.second;
+    Index3 idx = key._index;
     idx = idx / factor;
     BoxKey new_key(unit_level_, idx);
     return FindInd(partition_, end_partition_, new_key);

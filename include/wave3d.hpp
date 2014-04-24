@@ -59,7 +59,52 @@ public:
 };
 
 //---------------------------------------------------------------------------
+#if 0
 typedef std::pair<int, Index3> BoxKey; // level, offset_in_level
+#endif
+class BoxKey {
+public:
+    BoxKey() {;}
+    BoxKey(int level, Index3 index) : _level(level), _index(index) {;}
+    BoxKey(const BoxKey& key) : _level(key._level), _index(key._index) {;}
+    ~BoxKey() {;}
+
+    int _level;
+    Index3 _index;
+
+    inline bool operator==(const BoxKey& rhs) const {
+        return _level == rhs._level && _index == rhs._index;
+    }
+
+    inline bool operator!=(const BoxKey& rhs) const {
+        return !operator==(rhs);
+    }
+
+    inline bool operator>(const BoxKey& rhs) const {
+        return _level > rhs._level ||
+               (_level == rhs._level && _index > rhs._index);
+    }
+
+    inline bool operator<(const BoxKey& rhs) const {
+        return _level < rhs._level ||
+               (_level == rhs._level && _index < rhs._index);
+    }
+
+    inline bool operator>=(const BoxKey& rhs) const {
+        return operator>(rhs) || operator==(rhs);
+    }
+
+    inline bool operator<=(const BoxKey& rhs) const {
+        return operator<(rhs) || operator==(rhs);
+    }
+};
+
+#define BoxKey_Number 2
+enum {
+    BoxKey_level = 0,
+    BoxKey_index = 1,
+};
+
 
 class BoxDat {
 public:
@@ -153,15 +198,14 @@ public:
 #ifndef RELEASE
         CallStackEntry entry("BoxPrtn::owner");
 #endif
-        int lvl = key.first;
-        Index3 idx = key.second;
+        int lvl = key._level;
+        Index3 idx = key._index;
         int COEF = pow2(lvl) / _ownerinfo.m();
         idx = idx / COEF;
         return _ownerinfo(idx(0), idx(1), idx(2));
     }
 };
 
-//---------------------------------------------------------------------------
 class BoxAndDirKey {
 public:
     BoxAndDirKey(BoxKey boxkey, Index3 dir) : _boxkey(boxkey), _dir(dir) {}
@@ -267,7 +311,7 @@ enum {
     BoxAndDirDat_interactionlist = 2,
 };
 
-class BoxAndDirPrtn{
+class BoxAndDirPrtn {
 public:
     IntNumTns _ownerinfo;
 public:
@@ -278,8 +322,8 @@ public:
 #ifndef RELEASE
         CallStackEntry entry("BoxAndDirPrtn::owner");
 #endif
-        int lvl = key._boxkey.first;
-        Index3 idx = key._boxkey.second;
+        int lvl = key._boxkey._level;
+        Index3 idx = key._boxkey._index;
         int COEF = pow2(lvl) / _ownerinfo.m();
         idx = idx / COEF;
         return _ownerinfo(idx(0), idx(1), idx(2));
@@ -380,18 +424,18 @@ private:
     double width() { return _K; }
     //access information from BoxKey
     Point3 BoxCenter(BoxKey& curkey);
-    double BoxWidth(BoxKey& curkey) { return _K / pow2(curkey.first); }
-    bool IsCellLevelBox(const BoxKey& curkey) { return curkey.first == CellLevel(); }
+    double BoxWidth(BoxKey& curkey) { return _K / pow2(curkey._level); }
+    bool IsCellLevelBox(const BoxKey& curkey) { return curkey._level == CellLevel(); }
 
     // Return the key of the parent box of the box corresponding to curkey.
     BoxKey ParentKey(BoxKey& curkey) {
-        return BoxKey(curkey.first - 1, curkey.second / 2);
+        return BoxKey(curkey._level - 1, curkey._index / 2);
     }
 
     // Return the key of a child box of the box corresponding to curkey.
     // The index into the 8 children is given by idx
     BoxKey ChildKey(BoxKey& curkey, Index3 idx) {
-        return BoxKey(curkey.first + 1, 2 * curkey.second + idx);
+        return BoxKey(curkey._level + 1, 2 * curkey._index + idx);
     }
 
     BoxDat& BoxData(BoxKey& curkey) { return _boxvec.access(curkey); }
@@ -548,6 +592,9 @@ private:
 //-------------------
 int serialize(const PtPrtn&, std::ostream&, const std::vector<int>&);
 int deserialize(PtPrtn&, std::istream&, const std::vector<int>&);
+//-------------------
+int serialize(const BoxKey&, std::ostream&, const std::vector<int>&);
+int deserialize(BoxKey&, std::istream&, const std::vector<int>&);
 //-------------------
 int serialize(const BoxDat&, std::ostream&, const std::vector<int>&);
 int deserialize(BoxDat&, std::istream&, const std::vector<int>&);

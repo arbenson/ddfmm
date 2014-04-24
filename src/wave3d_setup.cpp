@@ -116,10 +116,10 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
         // we are in the low frequency regime with sufficient number of points and
         // not at the max depth.
         // If no action is taken, we are at a leaf node.
-        bool action = (curkey.first <= UnitLevel() &&
+        bool action = (curkey._level <= UnitLevel() &&
 		       curdat.ptidxvec().size() > 0) ||
 	               (static_cast<int>(curdat.ptidxvec().size()) > ptsmax() &&
-			curkey.first < maxlevel() - 1);
+			curkey._level < maxlevel() - 1);
         if (action) {
 	    // Subdivide to get new children
             NumTns<BoxDat> chdboxtns(2, 2, 2);
@@ -134,7 +134,7 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
                 // put points to children
                 chdboxtns(idx(0), idx(1), idx(2)).ptidxvec().push_back(tmpidx);
             }
-	    if ((curkey.first != UnitLevel() && first_pass) || !first_pass) {
+	    if ((curkey._level != UnitLevel() && first_pass) || !first_pass) {
                 // Put non-empty ones into queue
 	        for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
                     int a = CHILD_IND1(ind);
@@ -251,11 +251,11 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
     std::set<BoxKey> Uset, Vset, Wset, Xset;
     // Only deal with boxes strictly in low frequency regime.
     CHECK_TRUE(!IsCellLevelBox(curkey));
-    Index3 curpth = curkey.second;
+    Index3 curpth = curkey._index;
     BoxKey parkey = ParentKey(curkey);
-    Index3 parpth = parkey.second;
+    Index3 parpth = parkey._index;
     //
-    int L = pow2(curkey.first);
+    int L = pow2(curkey._level);
     int il, iu, jl, ju, kl, ku;
     il = std::max(2 * parpth(0) - 2, 0);  iu = std::min(2 * parpth(0) + 4, L);
     jl = std::max(2 * parpth(1) - 2, 0);  ju = std::min(2 * parpth(1) + 4, L);
@@ -269,7 +269,7 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                     && trypth(2) == curpth(2)) {
                     continue;
                 }
-                BoxKey wntkey(curkey.first, trypth);
+                BoxKey wntkey(curkey._level, trypth);
                 // Look for the box.  If it does not exist, no cell box covers it.
                 // In this case, we can ignore it.
                 BoxKey reskey;
@@ -284,7 +284,7 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                 }
                 bool adj = SetupTreeAdjacent(reskey, curkey);
 
-                if (reskey.first < curkey.first && HasPoints(resdat)) {
+                if (reskey._level < curkey._level && HasPoints(resdat)) {
                     if (!adj) {
                         Xset.insert(reskey);
                     } else if (IsLeaf(curdat)) {
@@ -292,9 +292,9 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                     }
                 }
 
-                if (reskey.first == curkey.first) {
+                if (reskey._level == curkey._level) {
                     if (!adj) {
-                        Index3 bb = reskey.second - curkey.second;
+                        Index3 bb = reskey._index - curkey._index;
                         CHECK_TRUE( bb.linfty() <= 3 );
                         if (HasPoints(resdat)) {
                             Vset.insert(reskey);
@@ -418,12 +418,12 @@ bool Wave3d::SetupTreeAdjacent(BoxKey meekey, BoxKey youkey) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::SetupTreeAdjacent");
 #endif
-    int md = std::max(meekey.first, youkey.first);
+    int md = std::max(meekey._level, youkey._level);
     Index3 one(1, 1, 1);
-    Index3 meectr((2 * meekey.second + one) * pow2(md - meekey.first));
-    Index3 youctr((2 * youkey.second + one) * pow2(md - youkey.first));
-    int meerad = pow2(md - meekey.first);
-    int yourad = pow2(md - youkey.first);
+    Index3 meectr((2 * meekey._index + one) * pow2(md - meekey._level));
+    Index3 youctr((2 * youkey._index + one) * pow2(md - youkey._level));
+    int meerad = pow2(md - meekey._level);
+    int yourad = pow2(md - youkey._level);
     Index3 dif(ewabs(meectr - youctr));
     int rad  = meerad + yourad;
     // return true iff at least one edge touch
@@ -692,7 +692,7 @@ int Wave3d::SetupLowFreqOctree() {
     std::queue< std::pair<BoxKey, BoxDat> > lf_q;
     for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
          mi != _boxvec.lclmap().end(); ++mi) {
-        int level = mi->first.first;
+        int level = mi->first._level;
         BoxKey key = mi->first;
         BoxDat dat = mi->second;
         Index3 dummy_dir(1, 1, 1);
