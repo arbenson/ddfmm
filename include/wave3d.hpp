@@ -58,10 +58,10 @@ public:
     }
 };
 
+// Returns true if and only if lhs > rhs in the z-order curve.
+bool MortonOrderGreater(Index3 lhs, Index3 rhs);
+
 //---------------------------------------------------------------------------
-#if 0
-typedef std::pair<int, Index3> BoxKey; // level, offset_in_level
-#endif
 class BoxKey {
 public:
     BoxKey() {;}
@@ -82,12 +82,12 @@ public:
 
     inline bool operator>(const BoxKey& rhs) const {
         return _level > rhs._level ||
-               (_level == rhs._level && _index > rhs._index);
+              (_level == rhs._level && MortonOrderGreater(_index, rhs._index));
     }
 
     inline bool operator<(const BoxKey& rhs) const {
         return _level < rhs._level ||
-               (_level == rhs._level && _index < rhs._index);
+               (_level == rhs._level && MortonOrderGreater(rhs._index, _index));
     }
 
     inline bool operator>=(const BoxKey& rhs) const {
@@ -225,12 +225,12 @@ public:
 
     inline bool operator>(const BoxAndDirKey& rhs) const {
         return _boxkey > rhs._boxkey ||
-               (_boxkey == rhs._boxkey && _dir > rhs._dir);
+               (_boxkey == rhs._boxkey && MortonOrderGreater(_dir, rhs._dir));
     }
 
     inline bool operator<(const BoxAndDirKey& rhs) const {
         return _boxkey < rhs._boxkey ||
-               (_boxkey == rhs._boxkey && _dir < rhs._dir);
+               (_boxkey == rhs._boxkey && MortonOrderGreater(rhs._dir, _dir));
     }
 
     inline bool operator>=(const BoxAndDirKey& rhs) const {

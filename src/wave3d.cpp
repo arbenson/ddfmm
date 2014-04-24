@@ -160,6 +160,24 @@ int Wave3d::P() {
 }
 
 //-----------------------------------------------------------
+bool MortonOrderGreater(Index3 lhs, Index3 rhs) {
+    // Following: http://en.wikipedia.org/wiki/Z-order_curve
+    int j = 0;
+    unsigned int x = 0;
+    for (int k = 0; k < 3; ++k) {
+        unsigned int lhs_k = static_cast<unsigned int>(lhs[k]);
+        unsigned int rhs_k = static_cast<unsigned int>(rhs[k]);
+        unsigned int y = lhs_k ^ rhs_k;
+        if (x < y && x < (x ^ y)) {
+            j = k;
+            x = y;
+        }
+    }
+    return  (lhs[j] - rhs[j]) > 0;
+}
+
+
+//-----------------------------------------------------------
 int serialize(const PtPrtn& val, std::ostream& os, const std::vector<int>& mask)
 {
 #ifndef RELEASE
