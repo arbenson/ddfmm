@@ -148,6 +148,22 @@ int main(int argc, char** argv) {
 	geomfile = opt;
 
         IntNumTns geomprtn;
+        opt = findOption(opts, "-geomprtn");
+        if (opt.empty()) {
+	  return 0;
+        }
+  
+	std::istringstream giss;
+        SAFE_FUNC_EVAL( SharedRead(opt, giss) );
+        SAFE_FUNC_EVAL( deserialize(geomprtn, giss, all) );
+        if (mpirank == 0) {
+	  std::cerr << "Done reading geomprtn " << geomprtn.m() << " "
+		    << geomprtn.n() << " " << geomprtn.p() << std::endl
+		    << geomprtn << std::endl;
+        }
+
+#if 0
+        IntNumTns geomprtn;
 	NewData(geomfile, K, NPW, mpisize, geomprtn);
 
         if (mpirank == 0) {
@@ -157,6 +173,7 @@ int main(int argc, char** argv) {
 		      << geomprtn.p() << std::endl
 		      << geomprtn << std::endl;
         }
+#endif
 
         Wave3d wave("wave3d_");
         wave.posptr() = &pos;
