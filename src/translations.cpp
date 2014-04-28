@@ -125,7 +125,7 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
                 // TODO(arbenson): fix this
                 if (chdued.m() != 0) {
                     SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chdued, 1.0, upchkval) );
-		}
+                }
             }
         }
     }
@@ -228,14 +228,14 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     // TODO(arbenson): What was this being used for before?
     int tdof = 1;
 
-    CHECK_TRUE(HasPoints(srcdat));  // should have points
+    CHECK_TRUE(srcdat.HasPoints());  // should have points
     Point3 srcctr = BoxCenter(srckey);
     // get array
     CpxNumVec upchkval(tdof * ucp.n());
     setvalue(upchkval, cpx(0, 0));
     CpxNumVec& upeqnden = srcdat.upeqnden();
     // ue2dc
-    if (IsLeaf(srcdat)) {
+    if (srcdat.IsLeaf()) {
         DblNumMat upchkpos(ucp.m(), ucp.n());
         for (int k = 0; k < ucp.n(); ++k) {
             for (int d = 0; d < dim(); ++d) {
@@ -330,7 +330,7 @@ int Wave3d::LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
     Point3 trgctr = BoxCenter(trgkey);
 
     // Add potentials to children or to exact points
-    if (IsLeaf(trgdat)) {
+    if (trgdat.IsLeaf()) {
         DblNumMat dneqnpos(dep.m(), dep.n());
         for (int k = 0; k < dep.n(); ++k) {
             for (int d = 0; d < dim(); ++d) {
@@ -370,7 +370,7 @@ int Wave3d::UListCompute(BoxDat& trgdat) {
         vi != trgdat.undeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
-        CHECK_TRUE(HasPoints(neidat));
+        CHECK_TRUE(neidat.HasPoints());
         CpxNumMat mat;
         SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
         SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
@@ -389,7 +389,7 @@ int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNu
          vi != trgdat.vndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
-        CHECK_TRUE(HasPoints(neidat));
+        CHECK_TRUE(neidat.HasPoints());
         Point3 neictr = BoxCenter(neikey);
         Index3 idx;
         for (int d = 0; d < dim(); ++d) {
@@ -445,9 +445,9 @@ int Wave3d::XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
         vi != trgdat.xndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
-        CHECK_TRUE(HasPoints(neidat));
+        CHECK_TRUE(neidat.HasPoints());
         Point3 neictr = BoxCenter(neikey);
-        if(IsLeaf(trgdat) && trgdat.extpos().n() < dcp.n()) {
+        if (trgdat.IsLeaf() && trgdat.extpos().n() < dcp.n()) {
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
@@ -468,10 +468,10 @@ int Wave3d::WListCompute(BoxDat& trgdat, double W, DblNumMat& uep) {
         vi != trgdat.wndeidxvec().end(); ++vi) {
         BoxKey neikey = (*vi);
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
-        CHECK_TRUE(HasPoints(neidat));
+        CHECK_TRUE(neidat.HasPoints());
         Point3 neictr = BoxCenter(neikey);
         // upchkpos
-        if (IsLeaf(neidat) && neidat.extpos().n() < uep.n()) {
+        if (neidat.IsLeaf() && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
             SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );

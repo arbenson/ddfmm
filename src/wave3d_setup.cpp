@@ -283,10 +283,10 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
 		BoxDat& resdat = _level_prtns._lf_boxvec.access(reskey);
                 bool adj = SetupTreeAdjacent(reskey, curkey);
 
-                if (reskey._level < curkey._level && HasPoints(resdat)) {
+                if (reskey._level < curkey._level && resdat.HasPoints()) {
                     if (!adj) {
                         Xset.insert(reskey);
-                    } else if (IsLeaf(curdat)) {
+                    } else if (curdat.IsLeaf()) {
                         Uset.insert(reskey);
                     }
                 }
@@ -295,10 +295,10 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                     if (!adj) {
                         Index3 bb = reskey._index - curkey._index;
                         CHECK_TRUE( bb.linfty() <= 3 );
-                        if (HasPoints(resdat)) {
+                        if (resdat.HasPoints()) {
                             Vset.insert(reskey);
                         }
-                    } else if (IsLeaf(curdat)) {
+                    } else if (curdat.IsLeaf()) {
                         std::queue<BoxKey> rest;
                         rest.push(reskey);
                         while (!rest.empty()) {
@@ -307,13 +307,13 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                             BoxDat& fntdat = _level_prtns._lf_boxvec.access(fntkey);
 
                             bool adj = SetupTreeAdjacent(fntkey, curkey);
-                            if (!adj && HasPoints(fntdat)) {
+                            if (!adj && fntdat.HasPoints()) {
                                 Wset.insert(fntkey);
                             } 
-                            if (adj && IsLeaf(fntdat) && HasPoints(fntdat)) {
+                            if (adj && fntdat.IsLeaf() && fntdat.HasPoints()) {
                                 Uset.insert(fntkey);
                             }
-                            if (adj && !IsLeaf(fntdat)) {
+                            if (adj && !fntdat.IsLeaf()) {
                                 for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
                                     rest.push( ChildKey(fntkey, Index3(CHILD_IND1(ind),
                                                                        CHILD_IND2(ind),
@@ -326,7 +326,7 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
             }
         }
     }
-    if (IsLeaf(curdat) && HasPoints(curdat)) {
+    if (curdat.IsLeaf() && curdat.HasPoints()) {
         Uset.insert(curkey);
     }
     curdat.undeidxvec().insert(curdat.undeidxvec().begin(), Uset.begin(), Uset.end());
@@ -352,7 +352,7 @@ int Wave3d::SetupTreeHighFreqLists(BoxKey curkey, BoxDat& curdat) {
              IsCellLevelBox(mi->first); mi++) {
             BoxKey othkey = mi->first;
             BoxDat& othdat = BoxData(othkey);
-            if (HasPoints(othdat)) {
+            if (othdat.HasPoints()) {
                 //LEXING: ALWAYS target - source
                 Point3 diff = curctr - BoxCenter(othkey);
                 if (diff.l2() >= threshold) {
@@ -373,7 +373,7 @@ int Wave3d::SetupTreeHighFreqLists(BoxKey curkey, BoxDat& curdat) {
                                                         CHILD_IND2(ind),
                                                         CHILD_IND3(ind)));
                 BoxDat& othdat = BoxData(othkey);
-                if (HasPoints(othdat)) {
+                if (othdat.HasPoints()) {
                     //LEXING: ALWAYS target - source
                     Point3 diff = curctr - BoxCenter(othkey);
                     if (diff.l2() >= threshold) {
@@ -564,7 +564,7 @@ int Wave3d::SetupHighFreqCallLists() {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         // For all of my boxes with points, setup the call list.
-        if (OwnBox(curkey, mpirank) && HasPoints(curdat)) {
+        if (OwnBox(curkey, mpirank) && curdat.HasPoints()) {
             if (BoxWidth(curkey) >= 1 - eps) { // High frequency regime
                 SAFE_FUNC_EVAL(SetupTreeHighFreqLists(curkey, curdat));
             }
@@ -585,7 +585,7 @@ int Wave3d::SetupLowFreqCallLists() {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         if (_level_prtns.Owner(curkey) == mpirank &&
-            HasPoints(curdat)) {
+            curdat.HasPoints()) {
             CHECK_TRUE(BoxWidth(curkey) < 1 - eps);
             SAFE_FUNC_EVAL(SetupTreeLowFreqLists(curkey, curdat));
         }
@@ -603,7 +603,7 @@ int Wave3d::GetExtPos() {
         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
+        if (curdat.HasPoints() && _level_prtns.Owner(curkey) == mpirank) {
             reqboxset.insert(curdat.undeidxvec().begin(), curdat.undeidxvec().end());
             reqboxset.insert(curdat.vndeidxvec().begin(), curdat.vndeidxvec().end());
             reqboxset.insert(curdat.wndeidxvec().begin(), curdat.wndeidxvec().end());
@@ -620,7 +620,7 @@ int Wave3d::GetExtPos() {
          mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
+        if (curdat.HasPoints() && _level_prtns.Owner(curkey) == mpirank) {
            for (std::vector<BoxKey>::iterator vi = curdat.vndeidxvec().begin();
                 vi != curdat.vndeidxvec().end(); ++vi) {
                 BoxKey neikey = (*vi);
@@ -644,7 +644,7 @@ int Wave3d::GetHighFreqDirs() {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = BoxWidth(curkey);
-        if (OwnBox(curkey, mpirank) && W > 1 - eps && HasPoints(curdat)) {
+        if (OwnBox(curkey, mpirank) && W > 1 - eps && curdat.HasPoints()) {
             if (!IsCellLevelBox(curkey)) {
                 BoxKey parkey = ParentKey(curkey);
                 BoxDat& pardat = BoxData(parkey);

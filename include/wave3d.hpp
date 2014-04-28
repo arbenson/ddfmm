@@ -138,6 +138,9 @@ public:
     std::set<Index3> _incdirset;
     std::set<Index3> _outdirset;
 
+    bool HasPoints() const { return _tag & WAVE3D_PTS; }
+    bool IsLeaf() const { return _tag & WAVE3D_LEAF; }
+
     int& tag() { return _tag; }
     std::vector<int>& ptidxvec() { return _ptidxvec; }
 
@@ -439,11 +442,6 @@ private:
     }
 
     BoxDat& BoxData(BoxKey& curkey) { return _boxvec.access(curkey); }
-
-    bool IsLeaf(BoxDat& curdat) { return curdat.tag() & WAVE3D_LEAF; }
-
-    // Returns true iff curdat contains points.
-    bool HasPoints(BoxDat& curdat) { return curdat.tag() & WAVE3D_PTS; }
 
     // Determine whether the box corresponding to curkey is owned
     // by this processor.
