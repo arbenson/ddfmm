@@ -185,7 +185,7 @@ int Wave3d::GatherLocalKeys() {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = BoxWidth(curkey);
-        if (curdat.HasPoints() && OwnBox(curkey, mpirank)) {
+        if (HasPoints(curdat) && OwnBox(curkey, mpirank)) {
             // Boxes of width less than one that are nonempty and are owned
             // by this processor get put in the low-frequency map.
           if (W > 1 - eps) {
@@ -241,7 +241,7 @@ void Wave3d::ConstructLowFreqMap(ldmap_t& ldmap) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
         double W = BoxWidth(curkey);
-        if (curdat.HasPoints() && _level_prtns.Owner(curkey) == mpirank) {
+        if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
             CHECK_TRUE(W < 1 - eps);
             ldmap[W].push_back(curkey);
         }
@@ -254,7 +254,7 @@ void Wave3d::DeleteEmptyBoxes(std::map<BoxKey, BoxDat>& data) {
 	 ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (!curdat.HasPoints()) {
+        if (!HasPoints(curdat)) {
             to_delete.push_back(curkey);
         }
     }
@@ -332,9 +332,9 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (curdat.HasPoints() && 
+        if (HasPoints(curdat) && 
 	    _level_prtns.Owner(curkey) == mpirank &&
-	    curdat.IsLeaf()) {
+	    IsLeaf(curdat)) {
             CpxNumVec& extval = curdat.extval();
             std::vector<int>& curpis = curdat.ptidxvec();
             for (int k = 0; k < static_cast<int>(curpis.size()); ++k) {
@@ -396,7 +396,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
     for (int k = 0; k < static_cast<int>(trgvec.size()); ++k) {
         BoxKey trgkey = trgvec[k];
         BoxDat& trgdat = _level_prtns._lf_boxvec.access(trgkey);
-        CHECK_TRUE(trgdat.HasPoints());  // should have points
+        CHECK_TRUE(HasPoints(trgdat));  // should have points
         CpxNumVec dneqnden;
         LowFreqM2L(W, trgkey, trgdat, dcp, ue2dc, dneqnden, uep, dc2de);
         LowFreqL2L(trgkey, trgdat, dep, de2dc, dneqnden);

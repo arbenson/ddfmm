@@ -138,9 +138,6 @@ public:
     std::set<Index3> _incdirset;
     std::set<Index3> _outdirset;
 
-    bool HasPoints() const { return _tag & WAVE3D_PTS; }
-    bool IsLeaf() const { return _tag & WAVE3D_LEAF; }
-
     int& tag() { return _tag; }
     std::vector<int>& ptidxvec() { return _ptidxvec; }
 
@@ -408,6 +405,9 @@ public:
     int& maxlevel() { return _maxlevel; }
 
     int setup(std::map<std::string, std::string>& opts);
+
+    bool HasPoints(BoxDat& dat) const { return dat.tag() & WAVE3D_PTS; }
+    bool IsLeaf(BoxDat& dat) const { return dat.tag() & WAVE3D_LEAF; }
 
     // Compute the potentials at the target points.
     int eval( ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val);

@@ -74,9 +74,9 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (curdat.HasPoints() &&
+        if (HasPoints(curdat) &&
             _level_prtns.Owner(curkey) == mpirank &&
-            curdat.IsLeaf()) {
+            IsLeaf(curdat)) {
             std::vector<int>& curpis = curdat.ptidxvec();
             for (int k = 0; k < static_cast<int>(curpis.size()); ++k) {
                 int poff = curpis[k];
@@ -103,9 +103,9 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
         BoxKey curkey = mi->first;
         BoxDat& curdat = mi->second;
-        if (curdat.HasPoints() &&
+        if (HasPoints(curdat) &&
             _level_prtns.Owner(curkey) == mpirank &&
-            curdat.IsLeaf()) {
+            IsLeaf(curdat)) {
             std::vector<int>& curpis = curdat.ptidxvec();
             CpxNumVec& extden = curdat.extden();
             extden.resize(curpis.size());
