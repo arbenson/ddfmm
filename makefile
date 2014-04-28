@@ -20,6 +20,7 @@ ifndef HOST
   $(error "$${HOST} is not defined")
 endif
 include makeinc/${HOST}
+CXXFLAGS += -std=c++0x
 
 # default rule
 %.o: %.cpp
