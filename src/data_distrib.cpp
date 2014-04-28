@@ -73,6 +73,14 @@ void FormPrtnMap(BoxAndDirLevelPrtn& map, std::vector<BoxAndDirKey>& start_data,
     map.end_partition_ = end_data;
 }
 
+void AdvancePosInd(std::vector<int>& diffs, int& pos) {
+    while (pos < static_cast<int>(diffs.size()) && diffs[pos] <= 0) { ++pos; }
+}
+
+void AdvanceNegInd(std::vector<int>& diffs, int& neg) {
+    while (neg < static_cast<int>(diffs.size()) && diffs[neg] >= 0) { ++neg; }
+}
+
 void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
 #ifndef RELEASE
     CallStackEntry entry("ScatterKeys");
@@ -92,44 +100,93 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
         }
     }
 
-    std::vector<int> recv_counts(mpisize);
-    for (int i = 0; i < mpisize; ++i) {
-        recv_counts[i] = sizes[i] / mpisize;
+    unsigned int total_size = 0;
+    for (int i = 0; i < static_cast<int>(sizes.size()); ++i) {
+        total_size += static_cast<unsigned int>(sizes[i]);
+    }
+    unsigned int avg_size = total_size / mpisize;
+    if (mpirank == 0) {
+        std::cout << "Targeting " << avg_size << " keys per process." << std::endl;
+    }
+    CHECK_TRUE_MSG(avg_size > 0, "Not enough keys!");
+    std::vector<int> diffs(mpisize);
+    for (int i = 0; i < static_cast<int>(diffs.size()); ++i) {
+        diffs[i] = sizes[i] - avg_size;
     }
 
-    std::vector<int> recv_displs(mpisize), send_displs(mpisize);
-    for (int i = 0; i < mpisize; ++i) {
-        if (i == 0) {
-            recv_displs[i] = 0;
-	    send_displs[i] = 0;
+    // Get starting indices of negative and positive positions
+    int pos = 0;
+    AdvancePosInd(diffs, pos);
+    int neg = 0;
+    AdvanceNegInd(diffs, neg);
+
+    // amt_to_send[rank] is a list of (proc, amt) data to send
+    std::vector< std::vector< std::pair<int, int> > > amt_to_send(mpisize);
+    while (neg < diffs.size()) {
+        if (-diffs[neg] <= diffs[pos]) {
+            // positive can fill negative
+            amt_to_send[pos].push_back(std::pair<int, int>(neg, -diffs[neg]));
+            diffs[pos] += diffs[neg];  // Should _decrease_ diffs[neg]
+            diffs[neg] = 0;
+            AdvanceNegInd(diffs, neg);
+            AdvancePosInd(diffs, pos);
         } else {
-	    recv_displs[i] = recv_displs[i - 1] + recv_counts[i - 1];
-	    send_displs[i] = send_displs[i - 1] + recv_counts[mpirank];
-	}
+            // positive cannot fully fill negative
+            amt_to_send[pos].push_back(std::pair<int, int>(neg, diffs[pos]));
+            diffs[neg] += diffs[pos];
+            diffs[pos] = 0;
+            AdvancePosInd(diffs, pos);
+        }
+        CHECK_TRUE_MSG(!(neg < diffs.size() && pos >= diffs.size()),
+                       "Ran out of keys to distribute.");
+    }
+    
+    std::vector<MPI_Request> reqs;
+    // Make all receive requests on this process.
+    std::vector< std::vector<BoxAndDirKey> > recv_bufs(mpisize);
+    for (int i = 0; i < mpisize; ++i) {
+        for (int j = 0; j < static_cast<int>(amt_to_send[i].size()); ++j) {
+            if (amt_to_send[i][j].first == mpirank) {
+                recv_bufs[i].resize(amt_to_send[i][j].second);
+                reqs.emplace_back();
+                CHECK_TRUE_MSG(i != mpirank, "Trying to receive data to myself.");
+                MPI_Irecv(&(recv_bufs[i][0]), recv_bufs[i].size(),
+                          par::Mpi_datatype<BoxAndDirKey>::value(), i,
+                          0, MPI_COMM_WORLD, &reqs.back());
+            }
+        }
     }
 
-    int total_count = 0;
-    for (int i = 0; i < static_cast<int>(recv_counts.size()); ++i) {
-        total_count += recv_counts[i];
+    // Make all send requests on this process.
+    int key_ind = 0;
+    std::vector< std::pair<int, int> >& my_sends = amt_to_send[mpirank];
+    for (int i = 0; i < static_cast<int>(my_sends.size()); ++i) {
+        reqs.emplace_back();
+        CHECK_TRUE_MSG(my_sends[i].first != mpirank,
+                       "Trying to send data to myself.");
+        MPI_Isend(&keys[key_ind], my_sends[i].second, 
+                  par::Mpi_datatype<BoxAndDirKey>::value(), my_sends[i].first,
+                  0, MPI_COMM_WORLD, &reqs.back());
+        key_ind += my_sends[i].second;
     }
-    std::vector<BoxAndDirKey> recv_buf(total_count);
-    std::vector<int> send_counts(mpisize, recv_counts[mpirank]);
-    MPI_Alltoallv(&keys[0], &send_counts[0], &send_displs[0],
-		  par::Mpi_datatype<BoxAndDirKey>::value(),
-		  &recv_buf[0], &recv_counts[0], &recv_displs[0],
-		  par::Mpi_datatype<BoxAndDirKey>::value(),
-		  MPI_COMM_WORLD);
 
     // Get the tail end of the keys that didn't get transferred.
     std::vector<BoxAndDirKey> keys_to_keep;
-    for (int i = mpisize * recv_counts[mpirank]; i < static_cast<int>(keys.size()); ++i) {
+    for (int i = key_ind; i < static_cast<int>(keys.size()); ++i) {
         keys_to_keep.push_back(keys[i]);
     }
-    keys.clear();
+
+    // Wait for all of the data to transfer
+    std::vector<MPI_Status> stats(reqs.size());
+    MPI_Waitall(reqs.size(), &reqs[0], &stats[0]);
+    keys.clear();  // all data has been handled 
     
-    // Insert into keys
-    for (int i = 0; i < static_cast<int>(recv_buf.size()); ++i) {
-        keys.push_back(recv_buf[i]);
+    // Insert back into keys
+    for (int i = 0; i < mpisize; ++i) {
+        for (int j = 0; j < static_cast<int>(recv_bufs[i].size()); ++j) {
+            keys.push_back(recv_bufs[i][j]);
+        }
+        std::vector<BoxAndDirKey>().swap(recv_bufs[i]);
     }
     for (int i = 0; i < static_cast<int>(keys_to_keep.size()); ++i) {
         keys.push_back(keys_to_keep[i]);
@@ -176,21 +233,21 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate starting keys for each processor.
-	std::vector<BoxAndDirKey> start_recv_buf(mpisize);
+        std::vector<BoxAndDirKey> start_recv_buf(mpisize);
         SAFE_FUNC_EVAL(MPI_Allgather(&curr_level_keys[0], 1,
-				     par::Mpi_datatype<BoxAndDirKey>::value(),
+                                     par::Mpi_datatype<BoxAndDirKey>::value(),
                                      &start_recv_buf[0], 1,
                                      par::Mpi_datatype<BoxAndDirKey>::value(),
-				     MPI_COMM_WORLD));
+                                     MPI_COMM_WORLD));
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Communicate ending keys for each processor.
-	std::vector<BoxAndDirKey> end_recv_buf(mpisize);
+        std::vector<BoxAndDirKey> end_recv_buf(mpisize);
         SAFE_FUNC_EVAL(MPI_Allgather(&curr_level_keys[curr_level_keys.size() - 1], 1,
-				     par::Mpi_datatype<BoxAndDirKey>::value(),
+                                     par::Mpi_datatype<BoxAndDirKey>::value(),
                                      &end_recv_buf[0], 1,
-				     par::Mpi_datatype<BoxAndDirKey>::value(),
-				     MPI_COMM_WORLD));
+                                     par::Mpi_datatype<BoxAndDirKey>::value(),
+                                     MPI_COMM_WORLD));
         FormPrtnMap(level_hf_vecs[level].prtn(), start_recv_buf, end_recv_buf, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
@@ -455,7 +512,7 @@ BoxAndDirDat& LevelPartitions::Access(BoxAndDirKey key, bool out) {
 }
 
 std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key,
-							   bool out) {
+                                                           bool out) {
 #ifndef RELEASE
     CallStackEntry entry("LevelPartitions::SafeAccess");
 #endif
