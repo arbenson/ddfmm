@@ -345,7 +345,7 @@ public:
 
   // out specifies outgoing / incoming
   BoxAndDirDat& Access(BoxAndDirKey key, bool out);
-  std::pair<bool, BoxAndDirDat&> SafeAccess(BoxAndDirKey key, bool out);
+  bool Contains(BoxAndDirKey key, bool out);
   int Owner(BoxAndDirKey key, bool out);
   int Owner(BoxKey key);
   void Init(int K);

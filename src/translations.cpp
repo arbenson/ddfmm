@@ -34,12 +34,12 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
         }
     }
     BoxAndDirKey bndkey(trgkey, dir);
-    std::pair<bool, BoxAndDirDat&> data = _level_prtns.SafeAccess(bndkey, false);
-    CHECK_TRUE_MSG(data.first, "Missing incoming data");
+    CHECK_TRUE_MSG(_level_prtns.Contains(bndkey, false),
+		   "Missing incoming data");
     int mpirank = getMPIRank();
     CHECK_TRUE_MSG(_level_prtns.Owner(bndkey, false) == mpirank,
                    "Updating data that I do not own");
-    BoxAndDirDat& bnddat = data.second;
+    BoxAndDirDat& bnddat = _level_prtns.Access(bndkey, false);
     CpxNumVec& dcv = bnddat.dirdnchkval();
     std::vector<BoxAndDirKey>& interactionlist = bnddat.interactionlist();
     for (int i = 0; i < static_cast<int>(interactionlist.size()); ++i) {
@@ -57,9 +57,8 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
                 tmpuep(d, k) = uep(d, k) + srcctr(d);
             }
         }
-        std::pair<bool, BoxAndDirDat&> data = _level_prtns.SafeAccess(key, true);
-        CHECK_TRUE_MSG(data.first, "Missing outgoing data");
-        CpxNumVec& ued = data.second.dirupeqnden();
+        CHECK_TRUE_MSG(_level_prtns.Contains(key, true), "Missing outgoing data");
+        CpxNumVec& ued = _level_prtns.Access(key, true).dirupeqnden();
         CpxNumMat Mts;
         SAFE_FUNC_EVAL( _kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
         // allocate space if necessary
@@ -101,9 +100,8 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             int c = CHILD_IND3(ind);
             BoxKey key = ChildKey(srckey, Index3(a, b, c));
             // Do not compute unless we have the child key.
-            std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
-            if (data.first) {
-                BoxDat& chddat = data.second;
+            if (_level_prtns._lf_boxvec.contains(key)) {
+                BoxDat& chddat = _level_prtns._lf_boxvec.access(key);
                 CHECK_TRUE_MSG(HasPoints(chddat), "No points on child.");
                 if (HasPoints(chddat)) {
                     CpxNumVec& chdued = chddat.upeqnden();
@@ -121,9 +119,8 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
             int c = CHILD_IND3(ind);
             BoxKey chdkey = ChildKey(srckey, Index3(a, b, c));
             BoxAndDirKey bndkey(chdkey, pdir);
-            std::pair<bool, BoxAndDirDat&> data = _level_prtns.SafeAccess(bndkey, true);
-            if (data.first) {
-                BoxAndDirDat& bnddat = data.second;
+            if (_level_prtns.Contains(bndkey, true)) {
+                BoxAndDirDat& bnddat = _level_prtns.Access(bndkey, true);
                 CpxNumVec& chdued = bnddat.dirupeqnden();
                 // TODO(arbenson): fix this
                 if (chdued.m() != 0) {
@@ -184,12 +181,11 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
             int b = CHILD_IND2(ind);
             int c = CHILD_IND3(ind);
             BoxKey key = ChildKey(trgkey, Index3(a, b, c));
-            std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
             // If the box was empty, it will not be stored
-            if (!data.first) {
+            if (!_level_prtns._lf_boxvec.contains(key)) {
                 continue;
             }
-            BoxDat& chddat = data.second;
+            BoxDat& chddat = _level_prtns._lf_boxvec.access(key);
             CpxNumVec& chddcv = chddat.dnchkval();
             if (chddcv.m() == 0) {
                 chddcv.resize(de2dc(a,b,c).m());
@@ -206,10 +202,9 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
             int c = CHILD_IND3(ind);             
             BoxKey chdkey = ChildKey(trgkey, Index3(a, b, c));
             BoxAndDirKey bndkey(chdkey, pdir);
-            std::pair<bool, BoxAndDirDat&> dat = _level_prtns.SafeAccess(bndkey, false);
             // If we have the data, then we update the directional check values.
-            if (dat.first) {
-                BoxAndDirDat& bnddat = dat.second;
+            if (_level_prtns.Contains(bndkey, false)) {
+                BoxAndDirDat& bnddat = _level_prtns.Access(bndkey, false);
                 CpxNumVec& chddcv = bnddat.dirdnchkval();
                 if (chddcv.m() == 0) {
                     chddcv.resize(de2dc(a, b, c).m());
@@ -256,9 +251,8 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
             int b = CHILD_IND2(ind);
             int c = CHILD_IND3(ind);
             BoxKey key = ChildKey(srckey, Index3(a, b, c));
-            std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
-            if (data.first) {
-                BoxDat& chddat = data.second;
+            if (_level_prtns._lf_boxvec.contains(key)) {
+                BoxDat& chddat = _level_prtns._lf_boxvec.access(key);
 		CHECK_TRUE(HasPoints(chddat));
                 SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
             }
@@ -353,11 +347,10 @@ int Wave3d::LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
             int b = CHILD_IND2(ind);
             int c = CHILD_IND3(ind);
             BoxKey key = ChildKey(trgkey, Index3(a, b, c));
-            std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(key);
-            if (!data.first) {
+            if (!_level_prtns._lf_boxvec.contains(key)) {
                 continue;
             }
-            BoxDat& chddat = data.second;
+            BoxDat& chddat = _level_prtns._lf_boxvec.access(key);
             if (chddat.dnchkval().m() == 0) {
                 chddat.dnchkval().resize(de2dc(a, b, c).m());
                 setvalue(chddat.dnchkval(), cpx(0, 0));

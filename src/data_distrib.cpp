@@ -511,8 +511,7 @@ BoxAndDirDat& LevelPartitions::Access(BoxAndDirKey key, bool out) {
     return _hf_vecs_inc[level].access(key);
 }
 
-std::pair<bool, BoxAndDirDat&> LevelPartitions::SafeAccess(BoxAndDirKey key,
-                                                           bool out) {
+bool LevelPartitions::Contains(BoxAndDirKey key, bool out) {
 #ifndef RELEASE
     CallStackEntry entry("LevelPartitions::SafeAccess");
 #endif

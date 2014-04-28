@@ -277,11 +277,10 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                 if (!found) {
                     continue;
                 }
-                std::pair<bool, BoxDat&> data = _level_prtns._lf_boxvec.contains(reskey);
-                BoxDat& resdat = data.second;
-                if (!data.first) {
+                if (!_level_prtns._lf_boxvec.contains(reskey)) {
                     continue;
                 }
+		BoxDat& resdat = _level_prtns._lf_boxvec.access(reskey);
                 bool adj = SetupTreeAdjacent(reskey, curkey);
 
                 if (reskey._level < curkey._level && HasPoints(resdat)) {
