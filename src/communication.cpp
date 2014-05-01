@@ -45,11 +45,6 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
     time_t t0 = time(0);
     std::vector<BoxKey> reqbox;
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
-#if 0
-    for (int i = 0; i < static_cast<int>(reqbox.size()); ++i) {
-	BoxKey key = reqbox[i];
-    }
-#endif
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_extden] = 1;
     mask[BoxDat_upeqnden] = 1;

@@ -230,19 +230,17 @@ int ParVec<Key,Data,Partition>::getBegin(int (*e2ps)(Key, Data&, std::vector<int
     }
 
     // 1. serialize
-    for (typename std::map<Key,Data>::iterator mi = _lclmap.begin();
-        mi!=_lclmap.end(); ++mi) {
-        Key key = mi->first;
-        const Data& dat = mi->second;
+    for (auto& kv : _lclmap) {
+        Key key = kv.first;
+        const Data& dat = kv.second;
         if (_prtn.owner(key) == mpirank) {
             std::vector<int> pids;
-            (*e2ps)(mi->first, mi->second, pids);
-            for (int i = 0; i < static_cast<int>(pids.size()); ++i) {
-                int k = pids[i];
-                if (k != mpirank) { //DO NOT SEND TO MYSELF
-                    SAFE_FUNC_EVAL( serialize(key, *(ossvec[k]), mask) );
-                    SAFE_FUNC_EVAL( serialize(dat, *(ossvec[k]), mask) );
-                    _snbvec[k]++; //LEXING: VERY IMPORTANT
+            (*e2ps)(kv.first, kv.second, pids);
+            for (int pid : pids) {
+                if (pid != mpirank) { //DO NOT SEND TO MYSELF
+                    SAFE_FUNC_EVAL( serialize(key, *(ossvec[pid]), mask) );
+                    SAFE_FUNC_EVAL( serialize(dat, *(ossvec[pid]), mask) );
+                    _snbvec[pid]++; //LEXING: VERY IMPORTANT
                 }
             }
         }
@@ -279,8 +277,7 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
 
     // 1. go through the keyvec to partition them among other procs
     std::vector< std::vector<Key> > skeyvec(mpisize);
-    for (int i = 0; i < static_cast<int>(keyvec.size()); ++i) {
-        Key key = keyvec[i];
+    for (Key& key : keyvec) {
         int owner = _prtn.owner(key);
         if (owner != mpirank) {
             skeyvec[owner].push_back(key);
@@ -324,9 +321,8 @@ int ParVec<Key,Data,Partition>::getBegin(std::vector<Key>& keyvec,
         ossvec[k] = new std::ostringstream();
     }
     for (int k = 0; k < mpisize; ++k) {
-        for (int g = 0; g < static_cast<int>(rkeyvec[k].size()); ++g) {
-            Key curkey = rkeyvec[k][g];
-            typename std::map<Key, Data>::iterator mi = _lclmap.find(curkey);
+        for (Key& curkey : rkeyvec[k]) {
+	    typename std::map<Key, Data>::iterator mi = _lclmap.find(curkey);
             CHECK_TRUE( mi != _lclmap.end() );
             CHECK_TRUE( _prtn.owner(curkey) == mpirank );
             Key key = mi->first;
@@ -413,9 +409,8 @@ int ParVec<Key,Data,Partition>::putBegin(std::vector<Key>& keyvec,
     }
 
     // 1. Go through the keyvec to partition them among other procs
-    for (int i = 0; i < static_cast<int>(keyvec.size()); ++i) {
-        Key key = keyvec[i];
-        int k = _prtn.owner(key); //the owner
+    for (Key& key : keyvec) {
+        int k = _prtn.owner(key);
         if (k != mpirank) {
             typename std::map<Key, Data>::iterator mi = _lclmap.find(key);
             CHECK_TRUE( mi != _lclmap.end() );
@@ -472,7 +467,7 @@ int ParVec<Key,Data,Partition>::putEnd( const std::vector<int>& mask ) {
             deserialize(key, *(issvec[k]), mask);
             CHECK_TRUE( _prtn.owner(key) == mpirank );
             typename std::map<Key,Data>::iterator mi = _lclmap.find(key);
-            CHECK_TRUE( mi!=_lclmap.end() );
+            CHECK_TRUE( mi != _lclmap.end() );
             deserialize(mi->second, *(issvec[k]), mask);
         }
     }
@@ -491,8 +486,7 @@ int ParVec<Key,Data,Partition>::expand(std::vector<Key>& keyvec) {
     CallStackEntry entry("ParVec::expand");
 #endif
     Data dummy;
-    for (int i = 0; i<keyvec.size(); ++i) {
-        Key key = keyvec[i];
+    for (Key& key : keyvec) {
         typename std::map<Key, Data>::iterator mi = _lclmap.find(key);
         if (mi == _lclmap.end()) {
             _lclmap[key] = dummy;
@@ -508,8 +502,7 @@ int ParVec<Key,Data,Partition>::discard(std::vector<Key>& keyvec) {
     CallStackEntry entry("ParVec::discard");
 #endif
     int mpirank = getMPIRank();
-    for (int i = 0; i < static_cast<int>(keyvec.size()); ++i) {
-        Key key = keyvec[i];
+    for (Key& key : keyvec) {
         if (_prtn.owner(key) != mpirank) {
             _lclmap.erase(key);
         }

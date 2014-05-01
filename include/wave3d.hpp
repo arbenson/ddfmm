@@ -331,7 +331,6 @@ public:
 };
 
 typedef ParVec<BoxAndDirKey, BoxAndDirDat, BoxAndDirLevelPrtn> LevelBoxAndDirVec;
-typedef std::pair< std::vector<BoxKey>, std::vector<BoxKey> > box_lists_t;
 typedef std::map< double, std::vector<BoxKey> > ldmap_t;
 typedef std::vector< std::vector<BoxAndDirKey> > level_hdkeys_t;
 typedef std::vector< std::map<Index3, std::vector<BoxKey> > > level_hdkeys_map_t;
