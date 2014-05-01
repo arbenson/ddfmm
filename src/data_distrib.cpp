@@ -191,7 +191,7 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     for (int i = 0; i < static_cast<int>(keys_to_keep.size()); ++i) {
         keys.push_back(keys_to_keep[i]);
     }
-    keys_to_keep.clear();
+    std::vector<BoxAndDirKey>().swap(keys_to_keep);
 }
 
 void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
@@ -252,8 +252,7 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
         // Build my ParVec for this level.
-        for (int i = 0; i < static_cast<int>(curr_level_keys.size()); ++i) {
-            BoxAndDirKey key = curr_level_keys[i];
+        for (BoxAndDirKey key : curr_level_keys) {
             BoxAndDirDat dummy;
             level_hf_vecs[level].insert(key, dummy);
         }
@@ -397,14 +396,13 @@ int Wave3d::TransferDataToLevels() {
     CallStackEntry entry("Wave3d::TransferDataToLevels");
 #endif
     int mpirank = getMPIRank();
-    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = _bndvec.lclmap().begin();
-       mi != _bndvec.lclmap().end(); ++mi) {
-        BoxAndDirKey key = mi->first;
+    for (auto& kv : _bndvec.lclmap()) {
+        BoxAndDirKey key = kv.first;
         int owner = _level_prtns.Owner(key, false);
         if (owner != mpirank) {
             continue;
         }
-        BoxAndDirDat dat = mi->second;
+        BoxAndDirDat dat = kv.second;
         int level = key._boxkey._level;
         if (level == UnitLevel()) {
             // Put unit-level directions into the appropriate vector
@@ -462,9 +460,8 @@ void InsertIntoDirMap(std::map<Index3, std::vector<BoxKey> >& dir_map,
 #ifndef RELEASE
     CallStackEntry entry("InsertIntoDirMap");
 #endif
-    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_map.begin();
-         mi != curr_map.end(); ++mi) {
-        BoxAndDirKey key = mi->first;
+    for (auto& kv : curr_map) {
+        BoxAndDirKey key = kv.first;
         Index3 dir = key._dir;
         BoxKey boxkey = key._boxkey;
         // TODO(arbenson): check to make sure I own this data
@@ -561,11 +558,10 @@ void CleanBoxAndDirMap(std::map<BoxAndDirKey, BoxAndDirDat>& curr_map) {
 #ifndef RELEASE
     CallStackEntry entry("CleanBoxAndDirMap");
 #endif
-    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = curr_map.begin();
-         mi != curr_map.end(); ++mi) {
-        mi->second._dirupeqnden.resize(0);
-        mi->second._dirdnchkval.resize(0);
-        std::vector<BoxAndDirKey>().swap(mi->second.interactionlist());
+    for (auto& kv : curr_map) {
+        kv.second._dirupeqnden.resize(0);
+        kv.second._dirdnchkval.resize(0);
+        std::vector<BoxAndDirKey>().swap(kv.second.interactionlist());
     }
     curr_map.clear();
 }
@@ -589,17 +585,15 @@ int Wave3d::CleanBoxvec() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::CleanBoxvec");
 #endif
-    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-         mi != _boxvec.lclmap().end(); ++mi) {
-        BoxDat& dat = mi->second;
+    for (auto& kv : _boxvec.lclmap()) {
+        BoxDat& dat = kv.second;
         std::vector<BoxKey>().swap(dat._undeidxvec);
         std::vector<BoxKey>().swap(dat._vndeidxvec);
         std::vector<BoxKey>().swap(dat._wndeidxvec);
         std::vector<BoxKey>().swap(dat._xndeidxvec);
         std::vector<BoxKey>().swap(dat._endeidxvec);
-        for (std::map<Index3, std::vector<BoxKey> >::iterator mi2 = dat._fndeidxvec.begin();
-           mi2 != dat._fndeidxvec.end(); ++mi2) {
-            std::vector<BoxKey>().swap(mi2->second);
+        for (auto& kv2 : dat._fndeidxvec) {
+            std::vector<BoxKey>().swap(kv2.second);
         }
         dat._fndeidxvec.clear();
     }

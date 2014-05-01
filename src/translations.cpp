@@ -41,9 +41,7 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
                    "Updating data that I do not own");
     BoxAndDirDat& bnddat = _level_prtns.Access(bndkey, false);
     CpxNumVec& dcv = bnddat.dirdnchkval();
-    std::vector<BoxAndDirKey>& interactionlist = bnddat.interactionlist();
-    for (int i = 0; i < static_cast<int>(interactionlist.size()); ++i) {
-        BoxAndDirKey key = interactionlist[i];
+    for (BoxAndDirKey& key : bnddat.interactionlist()) {
         BoxKey srckey = key._boxkey;
         Point3 srcctr = BoxCenter(srckey);
         // difference vector
@@ -366,9 +364,7 @@ int Wave3d::UListCompute(BoxDat& trgdat) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::UListCompute");
 #endif
-    for (std::vector<BoxKey>::iterator vi = trgdat.undeidxvec().begin();
-        vi != trgdat.undeidxvec().end(); ++vi) {
-        BoxKey neikey = (*vi);
+    for (BoxKey& neikey : trgdat.undeidxvec()) {
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
         CpxNumMat mat;
@@ -385,9 +381,7 @@ int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNu
 #endif
     double step = W / (_P - 1);
     setvalue(_valfft,cpx(0, 0));
-    for (std::vector<BoxKey>::iterator vi = trgdat.vndeidxvec().begin();
-         vi != trgdat.vndeidxvec().end(); ++vi) {
-        BoxKey neikey = (*vi);
+    for (BoxKey& neikey : trgdat.vndeidxvec()) {
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
         Point3 neictr = BoxCenter(neikey);
@@ -441,9 +435,7 @@ int Wave3d::XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::XListCompute");
 #endif
-    for (std::vector<BoxKey>::iterator vi = trgdat.xndeidxvec().begin();
-        vi != trgdat.xndeidxvec().end(); ++vi) {
-        BoxKey neikey = (*vi);
+    for (BoxKey& neikey : trgdat.xndeidxvec()) {
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
         Point3 neictr = BoxCenter(neikey);
@@ -464,9 +456,7 @@ int Wave3d::WListCompute(BoxDat& trgdat, double W, DblNumMat& uep) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::WListCompute");
 #endif
-    for (std::vector<BoxKey>::iterator vi = trgdat.wndeidxvec().begin();
-        vi != trgdat.wndeidxvec().end(); ++vi) {
-        BoxKey neikey = (*vi);
+    for (BoxKey& neikey : trgdat.wndeidxvec()) {
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
         Point3 neictr = BoxCenter(neikey);

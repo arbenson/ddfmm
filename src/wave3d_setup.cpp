@@ -117,15 +117,14 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
         // not at the max depth.
         // If no action is taken, we are at a leaf node.
         bool action = (curkey._level <= UnitLevel() &&
-		       curdat.ptidxvec().size() > 0) ||
-	               (static_cast<int>(curdat.ptidxvec().size()) > ptsmax() &&
-			curkey._level < maxlevel() - 1);
+                       curdat.ptidxvec().size() > 0) ||
+                       (static_cast<int>(curdat.ptidxvec().size()) > ptsmax() &&
+                        curkey._level < maxlevel() - 1);
         if (action) {
-	    // Subdivide to get new children
+            // Subdivide to get new children
             NumTns<BoxDat> chdboxtns(2, 2, 2);
             Point3 curctr = BoxCenter(curkey);
-            for (int g = 0; g < static_cast<int>(curdat.ptidxvec().size()); ++g) {
-                int tmpidx = curdat.ptidxvec()[g];
+            for (int tmpidx : curdat.ptidxvec()) {
                 Point3 tmp = pos.access(tmpidx); // get position value
                 Index3 idx;
                 for (int d = 0; d < 3; ++d) {
@@ -134,19 +133,19 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
                 // put points to children
                 chdboxtns(idx(0), idx(1), idx(2)).ptidxvec().push_back(tmpidx);
             }
-	    if ((curkey._level != UnitLevel() && first_pass) || !first_pass) {
+            if ((curkey._level != UnitLevel() && first_pass) || !first_pass) {
                 // Put non-empty ones into queue
-	        for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
+                for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
                     int a = CHILD_IND1(ind);
-		    int b = CHILD_IND2(ind);
-		    int c = CHILD_IND3(ind);
-		    BoxKey key = ChildKey(curkey, Index3(a,b,c));
-		    tmpq.push( std::pair<BoxKey, BoxDat>(key, chdboxtns(a, b, c)) );
-		}
-		// Destory ptidxvec to save memory.  Leave the unit level ones
-		// in for later partitioning.
+                    int b = CHILD_IND2(ind);
+                    int c = CHILD_IND3(ind);
+                    BoxKey key = ChildKey(curkey, Index3(a,b,c));
+                    tmpq.push( std::pair<BoxKey, BoxDat>(key, chdboxtns(a, b, c)) );
+                }
+                // Destory ptidxvec to save memory.  Leave the unit level ones
+                // in for later partitioning.
                 std::vector<int>().swap(curdat.ptidxvec());
-	    }
+            }
         } else {
             // Copy data into _extpos
             curdat.extpos().resize(3, curdat.ptidxvec().size());
@@ -167,7 +166,7 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
             int mpirank = getMPIRank();
             int owner = _level_prtns.Owner(curkey);
             CHECK_TRUE(mpirank == owner);
-	    _level_prtns._lf_boxvec.insert(curkey, curdat);
+            _level_prtns._lf_boxvec.insert(curkey, curdat);
         }
     }
     return 0;
@@ -196,10 +195,9 @@ int Wave3d::SetupTree() {
     Point3 bctr = ctr();  // overall center of domain
     NumTns<BoxDat> cellboxtns(numC, numC, numC);
     // Fill boxes with points.
-    for (std::map<int,Point3>::iterator mi = pos.lclmap().begin();
-         mi != pos.lclmap().end(); ++mi) {
-        int key = mi->first;
-        Point3 pos = mi->second;
+    for (auto& kv : pos.lclmap()) {
+        int key = kv.first;
+        Point3 pos = kv.second;
         Index3 idx;
         for (int d = 0; d < 3; ++d) {
              idx(d) = (int) floor(numC * ((pos(d) - bctr(d) + K / 2) / K));
@@ -228,10 +226,9 @@ int Wave3d::SetupTree() {
 
     // Delete endeidxvec since it was only used to build the interaction lists
     // in the high-frequency regime.
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
+    for (auto& kv : _boxvec.lclmap()) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
         if (OwnBox(curkey, mpirank)) {
             // Save memory
             std::vector<BoxKey>().swap(curdat.endeidxvec());
@@ -280,7 +277,7 @@ int Wave3d::SetupTreeLowFreqLists(BoxKey curkey, BoxDat& curdat) {
                 if (!_level_prtns._lf_boxvec.contains(reskey)) {
                     continue;
                 }
-		BoxDat& resdat = _level_prtns._lf_boxvec.access(reskey);
+                BoxDat& resdat = _level_prtns._lf_boxvec.access(reskey);
                 bool adj = SetupTreeAdjacent(reskey, curkey);
 
                 if (reskey._level < curkey._level && HasPoints(resdat)) {
@@ -366,8 +363,7 @@ int Wave3d::SetupTreeHighFreqLists(BoxKey curkey, BoxDat& curdat) {
     } else {
         BoxKey parkey = ParentKey(curkey);
         BoxDat& pardata = BoxData(parkey);
-        for (int k = 0; k < static_cast<int>(pardata.endeidxvec().size()); ++k) {
-            BoxKey trykey = pardata.endeidxvec()[k];
+        for (BoxKey& trykey : pardata.endeidxvec()) {
             for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
                 BoxKey othkey = ChildKey(trykey, Index3(CHILD_IND1(ind),
                                                         CHILD_IND2(ind),
@@ -559,10 +555,9 @@ int Wave3d::SetupHighFreqCallLists() {
     SAFE_FUNC_EVAL( _boxvec.getBegin( &(Wave3d::DistribBoxes_wrapper), mask1 ) );
     SAFE_FUNC_EVAL( _boxvec.getEnd( mask1 ) );
     // Compute lists, low list and high list
-    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-        mi != _boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
+    for (auto& kv : _boxvec.lclmap()) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
         // For all of my boxes with points, setup the call list.
         if (OwnBox(curkey, mpirank) && HasPoints(curdat)) {
             if (BoxWidth(curkey) >= 1 - eps) { // High frequency regime
@@ -580,10 +575,9 @@ int Wave3d::SetupLowFreqCallLists() {
     double eps = 1e-12;
     int mpirank = getMPIRank();
     std::map<BoxKey, BoxDat>& local_map = _level_prtns._lf_boxvec.lclmap();
-    for (std::map<BoxKey, BoxDat>::iterator mi = local_map.begin();
-         mi != local_map.end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
+    for (auto& kv : local_map) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
         if (_level_prtns.Owner(curkey) == mpirank &&
             HasPoints(curdat)) {
             CHECK_TRUE(BoxWidth(curkey) < 1 - eps);
@@ -599,10 +593,9 @@ int Wave3d::GetExtPos() {
 #endif
     int mpirank = getMPIRank();
     std::set<BoxKey> reqboxset;
-    for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
-        mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
+    for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
         if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
             reqboxset.insert(curdat.undeidxvec().begin(), curdat.undeidxvec().end());
             reqboxset.insert(curdat.vndeidxvec().begin(), curdat.vndeidxvec().end());
@@ -616,14 +609,11 @@ int Wave3d::GetExtPos() {
     mask[BoxDat_extpos] = 1;
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(reqbox, mask) );
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
-    for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
-         mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
+    for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
         if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
-           for (std::vector<BoxKey>::iterator vi = curdat.vndeidxvec().begin();
-                vi != curdat.vndeidxvec().end(); ++vi) {
-                BoxKey neikey = (*vi);
+            for (BoxKey& neikey : curdat.vndeidxvec()) {
                 BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
                 neidat.fftnum() ++;
             }
@@ -639,10 +629,9 @@ int Wave3d::GetHighFreqDirs() {
     int mpirank = getMPIRank();
     double eps = 1e-12;
 
-    for (std::map<BoxKey,BoxDat>::iterator mi = _boxvec.lclmap().begin();
-       mi != _boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
+    for (auto& kv : _boxvec.lclmap()) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
         double W = BoxWidth(curkey);
         if (OwnBox(curkey, mpirank) && W > 1 - eps && HasPoints(curdat)) {
             if (!IsCellLevelBox(curkey)) {
@@ -660,9 +649,8 @@ int Wave3d::GetHighFreqDirs() {
                 }
             }
             Point3 curctr = BoxCenter(curkey);
-            for (std::map< Index3, std::vector<BoxKey> >::iterator mi = curdat.fndeidxvec().begin();
-                mi != curdat.fndeidxvec().end(); mi++) {
-                std::vector<BoxKey>& tmplist = mi->second;
+            for (auto& kv : curdat.fndeidxvec()) {
+                std::vector<BoxKey>& tmplist = kv.second;
                 for (int k = 0; k < static_cast<int>(tmplist.size()); ++k) {
                     BoxKey othkey = tmplist[k];
                     Point3 othctr = BoxCenter(othkey);
@@ -690,11 +678,10 @@ int Wave3d::SetupLowFreqOctree() {
     int mpirank = getMPIRank();
     // Put all of the unit level boxes on a queue.
     std::queue< std::pair<BoxKey, BoxDat> > lf_q;
-    for (std::map<BoxKey, BoxDat>::iterator mi = _boxvec.lclmap().begin();
-         mi != _boxvec.lclmap().end(); ++mi) {
-        int level = mi->first._level;
-        BoxKey key = mi->first;
-        BoxDat dat = mi->second;
+    for (auto& kv : _boxvec.lclmap()) {
+        BoxKey key = kv.first;
+        BoxDat dat = kv.second;
+        int level = key._level;
         Index3 dummy_dir(1, 1, 1);
         BoxAndDirKey bndkey(key, dummy_dir);
         if (level == UnitLevel() &&
