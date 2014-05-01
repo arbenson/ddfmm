@@ -30,11 +30,9 @@ int Wave3d::HighFreqInteractionListKeys(int level,
     std::map<BoxAndDirKey, BoxAndDirDat>& lclmap =
       (level == UnitLevel()) ? _level_prtns._unit_vec.lclmap()
                              : _level_prtns._hf_vecs_inc[level].lclmap();
-    for (std::map<BoxAndDirKey, BoxAndDirDat>::iterator mi = lclmap.begin();
-         mi != lclmap.end(); ++mi) {
-        std::vector<BoxAndDirKey>& interaction_list = mi->second.interactionlist();
-        for (int j = 0; j < static_cast<int>(interaction_list.size()); ++j) {
-            request_keys.insert(interaction_list[j]);
+    for (auto& kv : lclmap) {
+        for (BoxAndDirKey& key : kv.second.interactionlist()) {
+            request_keys.insert(key);
         }
     }
     return 0;
@@ -47,9 +45,11 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
     time_t t0 = time(0);
     std::vector<BoxKey> reqbox;
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
+#if 0
     for (int i = 0; i < static_cast<int>(reqbox.size()); ++i) {
 	BoxKey key = reqbox[i];
     }
+#endif
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_extden] = 1;
     mask[BoxDat_upeqnden] = 1;
@@ -70,10 +70,9 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
     int mpirank = getMPIRank();
 
     std::set<int> req_dens;
-    for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
-        mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
+    for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
         if (HasPoints(curdat) &&
             _level_prtns.Owner(curkey) == mpirank &&
             IsLeaf(curdat)) {
@@ -99,10 +98,9 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
     }
 
     // Now apply the densities
-    for (std::map<BoxKey,BoxDat>::iterator mi = _level_prtns._lf_boxvec.lclmap().begin();
-        mi != _level_prtns._lf_boxvec.lclmap().end(); ++mi) {
-        BoxKey curkey = mi->first;
-        BoxDat& curdat = mi->second;
+    for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
         if (HasPoints(curdat) &&
             _level_prtns.Owner(curkey) == mpirank &&
             IsLeaf(curdat)) {
@@ -284,9 +282,8 @@ int Wave3d::HighFreqM2MDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
 #endif
     BoxKey parkey = ParentKey(key._boxkey);
     // Child directions are directions associated with the parent box.
-    std::vector<Index3> dirs = ChildDir(key._dir);
-    for (int i = 0; i < static_cast<int>(dirs.size()); ++i) {
-        BoxAndDirKey new_key(parkey, dirs[i]);
+    for (Index3 dir : ChildDir(key._dir)) {
+        BoxAndDirKey new_key(parkey, dir);
         int pid = _level_prtns.Owner(new_key, true);
         if (0 <= pid && pid < getMPISize()) {
             pids.push_back(pid);
