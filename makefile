@@ -15,12 +15,12 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with DDFMM.  If not, see <http://www.gnu.org/licenses/>.
-HOST=wave4
+HOST=stampede
 ifndef HOST
   $(error "$${HOST} is not defined")
 endif
 include makeinc/${HOST}
-CXXFLAGS += -std=c++0x
+CXXFLAGS += -std=c++11
 
 # default rule
 %.o: %.cpp
