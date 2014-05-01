@@ -1,0 +1,51 @@
+# Distributed Directional Fast Multipole Method
+#   Copyright (C) 2014 Austin Benson, Lexing Ying, and Jack Poulson
+#
+# This file is part of DDFMM.
+#
+#    DDFMM is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    DDFMM is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with DDFMM.  If not, see <http://www.gnu.org/licenses/>.
+# ----------------------------machine dependent file
+# module load fftw
+MODE = optim
+#MODE = debug
+
+# compiler and linker variable 
+INCLUDES = -I$(TACC_FFTW3_INC) -I$(TACC_MKL_INC)
+LIBS = -L$(TACC_FFTW3_LIB) -lfftw3 -L$(TACC_MKL_LIB) \
+       -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group \
+       -lm
+DEFINES = -DMKL=1
+DEFINES += -DRELEASE=1
+
+AR = ar
+ARFLAGS = rc
+
+CC  = mpicc
+CXX = mpicxx
+
+#GPROF_FLAGS = -p -g
+GPROF_FLAGS = 
+
+# -Wall -Wno-sign-compare 
+CFLAGS   = -g -MMD -w ${INCLUDES}
+CXXFLAGS = -g -MMD -w ${INCLUDES}
+ifeq ($(MODE),debug)
+else
+  CFLAGS += -O3 ${GPROF_FLAGS} -DNDEBUG
+  CXXFLAGS += -O3 ${GPROF_FLAGS} -DNDEBUG
+endif
+
+LDFLAGS = ${LIBS} ${GPROF_FLAGS}
+
+RANLIB = ranlib
