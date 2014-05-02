@@ -402,7 +402,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
     for (BoxKey& srckey : srcvec) {
         Point3 srcctr = BoxCenter(srckey);
         BoxAndDirKey bndkey(srckey, dir);
-        HighFreqM2M(W, bndkey, uc2ue, ue2uc);
+        HighFreqM2M(bndkey, uc2ue, ue2uc);
     }
 
     return 0;
@@ -421,8 +421,8 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
     DblNumMat uep;
     SAFE_FUNC_EVAL( _mlibptr->DownwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     for (BoxKey& trgkey : trgvec) {
-        SAFE_FUNC_EVAL( HighFreqM2L(W, dir, trgkey, dcp, uep) );
-        SAFE_FUNC_EVAL( HighFreqL2L(W, dir, trgkey, dc2de, de2dc, affected_keys) );
+        SAFE_FUNC_EVAL( HighFreqM2L(dir, trgkey, dcp, uep) );
+        SAFE_FUNC_EVAL( HighFreqL2L(dir, trgkey, dc2de, de2dc, affected_keys) );
     }
     return 0;
 }

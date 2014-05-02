@@ -20,8 +20,8 @@
 #include <utility>
 #include <vector>
 
-int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
-                        DblNumMat& dcp, DblNumMat& uep) {
+int Wave3d::HighFreqM2L(Index3 dir, BoxKey trgkey, DblNumMat& dcp,
+			DblNumMat& uep) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqM2L");
 #endif
@@ -47,6 +47,7 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
         // difference vector
         Point3 diff = trgctr - srcctr;
         diff /= diff.l2(); // see wave3d_setup.cpp
+	double W = BoxWidth(trgkey);
         CHECK_TRUE( nml2dir(diff, W) == dir );
         // get source
         DblNumMat tmpuep(uep.m(), uep.n());
@@ -74,12 +75,11 @@ int Wave3d::HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
 }
 
 
-int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
+int Wave3d::HighFreqM2M(BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
                         NumTns<CpxNumMat>& ue2uc) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqM2M");
 #endif
-    double eps = 1e-12;
     BoxKey srckey = bndkey._boxkey;
     Index3 dir = bndkey._dir;
     BoxAndDirDat& bnddat = _level_prtns.Access(bndkey, true);
@@ -89,8 +89,10 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
     CpxNumVec& upeqnden = bnddat.dirupeqnden();
     CpxNumVec upchkval(ue2uc(0, 0, 0).m());
     setvalue(upchkval, cpx(0, 0));
+    int level = bndkey._boxkey._level;
+    CHECK_TRUE_MSG(level <= UnitLevel(), "Incorrect level");
 
-    if (abs(W - 1) < eps) {
+    if (level == UnitLevel()) {
         // The children boxes only have non-directional equivalent densities
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
             int a = CHILD_IND1(ind);
@@ -143,13 +145,12 @@ int Wave3d::HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue
     return 0;
 }
 
-int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
-                        NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
-                        std::set<BoxAndDirKey>& keys_affected) {
+int Wave3d::HighFreqL2L(Index3 dir, BoxKey trgkey, NumVec<CpxNumMat>& dc2de,
+			NumTns<CpxNumMat>& de2dc,
+			std::set<BoxAndDirKey>& keys_affected) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqL2L");
 #endif
-    double eps = 1e-12;
     BoxAndDirKey bndkey(trgkey, dir);
     BoxAndDirDat& bnddat = _level_prtns.Access(bndkey, false);
     CpxNumVec& dnchkval = bnddat.dirdnchkval();
@@ -173,7 +174,10 @@ int Wave3d::HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
     SAFE_FUNC_EVAL( zgemv(1.0, E1, tmp1, 0.0, dneqnden) );
     dnchkval.resize(0);  // save space
 
-    if (abs(W - 1) < eps) {
+    int level = trgkey._level;
+    CHECK_TRUE_MSG(level <= UnitLevel(), "Incorrect level");
+
+    if (level == UnitLevel()) {
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
             int a = CHILD_IND1(ind);
             int b = CHILD_IND2(ind);

@@ -270,7 +270,7 @@ public:
     std::vector<BoxKey> end_partition_;  // for debugging
 
     // Return process that owns the key.
-  int owner(BoxAndDirKey& key);
+    int owner(BoxAndDirKey& key);
 };
 
 class LowFreqBoxPrtn {
@@ -415,10 +415,6 @@ public:
     double check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
                  IntNumVec& chkkeyvec);
 
-    bool CompareBoxAndDirKey(BoxAndDirKey a, BoxAndDirKey b) {
-        return BoxWidth(a._boxkey) < BoxWidth(b._boxkey);
-    }
-
 private:
     LevelPartitions _level_prtns;
     int _starting_level;
@@ -491,8 +487,6 @@ private:
     int SetupLowFreqOctree();
     int SetupLowFreqCallLists(); 
 
-    // Functions for evaluation
-
     // Travel up the octree and visit the boxes in the low frequency regime.
     // Compute outgoing non-directional equivalent densities using M2M.
     //
@@ -535,12 +529,11 @@ private:
     int LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
                    NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden);
 
-    int HighFreqM2M(double W, BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
+    int HighFreqM2M(BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
                     NumTns<CpxNumMat>& ue2uc);
-    int HighFreqM2L(double W, Index3 dir, BoxKey trgkey,
-                    DblNumMat& dcp, DblNumMat& uep);
-    int HighFreqL2L(double W, Index3 dir, BoxKey trgkey,
-                    NumVec<CpxNumMat>& dc2de, NumTns<CpxNumMat>& de2dc,
+    int HighFreqM2L(Index3 dir, BoxKey trgkey, DblNumMat& dcp, DblNumMat& uep);
+    int HighFreqL2L(Index3 dir, BoxKey trgkey, NumVec<CpxNumMat>& dc2de,
+		    NumTns<CpxNumMat>& de2dc,
                     std::set<BoxAndDirKey>& affected_keys);
 
 
