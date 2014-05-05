@@ -24,13 +24,15 @@
 #include <ctime>
 #include <iostream>
 
-ParData GatherParData(time_t t0, time_t t1) {
+double MPIDiffTime(double t0, double t1) { return (t1 - t0); }
+
+ParData GatherParData(double t0, double t1) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::GatherParData");
 #endif
     int mpirank, mpisize;
     getMPIInfo(&mpirank, &mpisize);
-    double diff = difftime(t1, t0);
+    double diff = MPIDiffTime(t0, t1);
     double *rbuf = new double[mpisize];
 
     MPI_Gather((void *)&diff, 1, MPI_DOUBLE, rbuf, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -41,10 +43,12 @@ ParData GatherParData(time_t t0, time_t t1) {
 	data.min = rbuf[0];
         for (int i = 0; i < mpisize; i++) {
             data.mean += rbuf[i];
-	    if (rbuf[i] > data.max)
+	    if (rbuf[i] > data.max) {
 		data.max = rbuf[i];
-	    if (rbuf[i] < data.min)
+	    }
+	    if (rbuf[i] < data.min) {
 		data.min = rbuf[i];
+	    }
         }
         data.mean /= mpisize;
 

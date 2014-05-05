@@ -18,8 +18,10 @@
 #ifndef _DATA_COLLECTION_HPP_
 #define _DATA_COLLECTION_HPP_
 
-#include <ctime>
+#include "mpi.h"
+
 #include <iostream>
+#include <string>
 
 typedef struct ParData {
     double mean;
@@ -36,8 +38,9 @@ typedef struct CommData {
     int total;
 } CommData;
 
+double MPIDiffTime(double t0, double t1);
 
-ParData GatherParData(time_t t0, time_t t1);
+ParData GatherParData(double t0, double t1);
 CommData GatherCommData(int amt);
 
 void PrintParData(ParData data, std::string message);

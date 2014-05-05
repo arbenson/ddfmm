@@ -79,18 +79,19 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     _bndvec.prtn() = tp;
     // Generate octree
     SAFE_FUNC_EVAL(SetupTree());
-    int _P = P();
-    _denfft.resize(2 * _P, 2 * _P, 2 * _P);
-    _fplan = fftw_plan_dft_3d(2 * _P, 2 * _P, 2 * _P, (fftw_complex*) (_denfft.data()),
-                              (fftw_complex*)(_denfft.data()), FFTW_FORWARD,
-                              FFTW_MEASURE);
+    int acc_level = AccLevel();
+    _denfft.resize(2 * acc_level, 2 * acc_level, 2 * acc_level);
+    _fplan = fftw_plan_dft_3d(2 * acc_level, 2 * acc_level, 2 * acc_level,
+			      (fftw_complex*) (_denfft.data()),
+                              (fftw_complex*)(_denfft.data()),
+			      FFTW_FORWARD, FFTW_MEASURE);
     CHECK_TRUE(_fplan != NULL);
     setvalue(_denfft,cpx(0, 0));
-    _valfft.resize(2 * _P, 2 * _P, 2 * _P);
-    _bplan = fftw_plan_dft_3d(2 * _P, 2 * _P, 2 * _P,
+    _valfft.resize(2 * acc_level, 2 * acc_level, 2 * acc_level);
+    _bplan = fftw_plan_dft_3d(2 * acc_level, 2 * acc_level, 2 * acc_level,
                               (fftw_complex*) (_valfft.data()),
-                              (fftw_complex*) (_valfft.data()), FFTW_BACKWARD,
-                                               FFTW_ESTIMATE); 
+                              (fftw_complex*) (_valfft.data()),
+			      FFTW_BACKWARD, FFTW_ESTIMATE); 
     CHECK_TRUE(_bplan != NULL);
     setvalue(_valfft,cpx(0, 0));
     return 0;

@@ -15,18 +15,16 @@
 
     You should have received a copy of the GNU General Public License
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
+#include "DataCollection.hpp"
 #include "file_io.h"
-#include "parallel.hpp"
 #include "numtns.hpp"
+#include "parallel.hpp"
 #include "wave3d.hpp"
-
 
 #include <exception>
 #include <iostream>
 #include <sstream>
 #include <string>
-
-#define CLOCK_DIFF_SECS(ck1, ck0) (double(ck1-ck0) / CLOCKS_PER_SEC)
 
 int optionsCreate(int argc, char** argv, std::map<std::string,
                   std::string>& options) {
@@ -41,7 +39,7 @@ std::string findOption(std::map<std::string, std::string>& opts,
                   std::string option) {
     std::map<std::string, std::string>::iterator mi = opts.find(option);
     if (mi == opts.end()) {
-	std::cerr << "Missing option " << option << std::endl;
+        std::cerr << "Missing option " << option << std::endl;
         return "";
     }
     return mi->second;
@@ -54,19 +52,18 @@ int main(int argc, char** argv) {
     try {
 #endif
         MPI_Init(&argc, &argv);
-	int mpirank, mpisize;
-	getMPIInfo(&mpirank, &mpisize);
+        int mpirank, mpisize;
+        getMPIInfo(&mpirank, &mpisize);
 
         //0. init and get options
         srand48(time(NULL));
-	CHECK_TRUE(argc % 1 == 0);
-        clock_t ck0, ck1;
-        time_t t0, t1;
-	std::vector<int> all(1,1);
-	std::map<std::string, std::string> opts;
-	optionsCreate(argc, argv, opts);
-	std::map<std::string, std::string>::iterator mi;
-	std::string opt;
+        CHECK_TRUE(argc % 1 == 0);
+        double t0, t1;
+        std::vector<int> all(1,1);
+        std::map<std::string, std::string> opts;
+        optionsCreate(argc, argv, opts);
+        std::map<std::string, std::string>::iterator mi;
+        std::string opt;
 
         //1. read data
         ParVec<int, Point3, PtPrtn> pos;
@@ -75,16 +72,16 @@ int main(int argc, char** argv) {
             return 0;
         }
 
-	std::istringstream piss;
+        std::istringstream piss;
         SAFE_FUNC_EVAL( SeparateRead(opt, piss) );
         SAFE_FUNC_EVAL( deserialize(pos, piss, all) );
-	std::vector<int>& tmpinfo = pos.prtn().ownerinfo();
-	// LEXING: numpts CONTAINS THE TOTAL NUMBER OF POINTS
+        std::vector<int>& tmpinfo = pos.prtn().ownerinfo();
+        // LEXING: numpts CONTAINS THE TOTAL NUMBER OF POINTS
         int numpts = tmpinfo[tmpinfo.size() - 1];
         if (mpirank == 0) {
-	    std::cerr << "Total number of points: " << numpts << std::endl;
-	    std::cerr << "Done reading pos " << pos.lclmap().size() << " "
-		      << pos.prtn().ownerinfo().size() << std::endl;
+            std::cerr << "Total number of points: " << numpts << std::endl;
+            std::cerr << "Done reading pos " << pos.lclmap().size() << " "
+                      << pos.prtn().ownerinfo().size() << std::endl;
         }
         ParVec<int, cpx, PtPrtn> den;
 
@@ -93,24 +90,24 @@ int main(int argc, char** argv) {
             return 0;
         }
 
-	std::istringstream diss;
+        std::istringstream diss;
         SAFE_FUNC_EVAL( SeparateRead(opt, diss) );
         SAFE_FUNC_EVAL( deserialize(den, diss, all) );
         if (mpirank == 0) {
             std::cerr << "Done reading den " << den.lclmap().size() << " "
-		 << den.prtn().ownerinfo().size() << std::endl;
+                 << den.prtn().ownerinfo().size() << std::endl;
         }
         ParVec<int, cpx, PtPrtn> val; // preset val to be the same as den
         val = den;
         if (mpirank==0) {
             std::cerr << "Done setting val " << val.lclmap().size() << " "
-		 << val.prtn().ownerinfo().size() << std::endl;
+                 << val.prtn().ownerinfo().size() << std::endl;
         }
         Kernel3d kernel(KERNEL_HELM);
         mi = opts.find("-kernel");
         // TODO (Austin): change this to the other format for getting an option
         if (mi != opts.end()) {
-	    std::istringstream ss(mi->second);
+            std::istringstream ss(mi->second);
             int type;
             ss >> type;
             kernel.type() = type;
@@ -121,7 +118,7 @@ int main(int argc, char** argv) {
         SAFE_FUNC_EVAL( mlib.setup(opts) );
         if (mpirank == 0) {
             std::cerr << "Done reading mlib " << mlib.w2ldmap().size() << " "
-		 << mlib.w2hdmap().size() << std::endl;
+                 << mlib.w2hdmap().size() << std::endl;
         }
 
         double K;
@@ -129,49 +126,49 @@ int main(int argc, char** argv) {
         if (opt.empty()) {
             return 0;
         }
-	std::istringstream ss(opt);
-	ss >> K;
-	
-	double NPW;
-	opt = findOption(opts, "-wave3d_NPW");
+        std::istringstream ss(opt);
+        ss >> K;
+        
+        double NPW;
+        opt = findOption(opts, "-wave3d_NPW");
         if (opt.empty()) {
             return 0;
         }
-	std::istringstream ss2(opt);
-	ss2 >> NPW;
+        std::istringstream ss2(opt);
+        ss2 >> NPW;
 
-	std::string geomfile;
-	opt = findOption(opts, "-geomfile");
+        std::string geomfile;
+        opt = findOption(opts, "-geomfile");
         if (opt.empty()) {
             return 0;
         }
-	geomfile = opt;
+        geomfile = opt;
 
         IntNumTns geomprtn;
         opt = findOption(opts, "-geomprtn");
         if (opt.empty()) {
-	  return 0;
+          return 0;
         }
   
-	std::istringstream giss;
+        std::istringstream giss;
         SAFE_FUNC_EVAL( SharedRead(opt, giss) );
         SAFE_FUNC_EVAL( deserialize(geomprtn, giss, all) );
         if (mpirank == 0) {
-	  std::cerr << "Done reading geomprtn " << geomprtn.m() << " "
-		    << geomprtn.n() << " " << geomprtn.p() << std::endl
-		    << geomprtn << std::endl;
+          std::cerr << "Done reading geomprtn " << geomprtn.m() << " "
+                    << geomprtn.n() << " " << geomprtn.p() << std::endl
+                    << geomprtn << std::endl;
         }
 
 #if 0
         IntNumTns geomprtn;
-	NewData(geomfile, K, NPW, mpisize, geomprtn);
+        NewData(geomfile, K, NPW, mpisize, geomprtn);
 
         if (mpirank == 0) {
             std::cerr << "Done reading geomprtn "
-		      << geomprtn.m() << " "
-		      << geomprtn.n() << " " 
-		      << geomprtn.p() << std::endl
-		      << geomprtn << std::endl;
+                      << geomprtn.m() << " "
+                      << geomprtn.n() << " " 
+                      << geomprtn.p() << std::endl
+                      << geomprtn << std::endl;
         }
 #endif
 
@@ -182,70 +179,69 @@ int main(int argc, char** argv) {
         wave.geomprtn() = geomprtn;
 
         //2. setup
-        t0 = time(0);
+        t0 = MPI_Wtime();
         SAFE_FUNC_EVAL( wave.setup(opts) );
-        t1 = time(0);
+        t1 = MPI_Wtime();
         if (mpirank == 0) {
-	    std::cout << "wave setup used " << difftime(t1, t0) << "secs " << std::endl;
+            std::cout << "wave setup used " << MPIDiffTime(t0, t1) << "secs " << std::endl;
         }
 
         // 3. eval
         double time_eval;
-        t0 = time(0);
-	SAFE_FUNC_EVAL( wave.eval(den, val) );
-
-	t1 = time(0);
-	if (mpirank == 0) {
-	    std::cout << "wave eval used " << difftime(t1, t0) << "secs " << std::endl;
-	}
-	time_eval = difftime(t1, t0);
+        t0 = MPI_Wtime();
+        SAFE_FUNC_EVAL( wave.eval(den, val) );
+        t1 = MPI_Wtime();
+        if (mpirank == 0) {
+            std::cout << "wave eval used " << MPIDiffTime(t0, t1) << "secs " << std::endl;
+        }
+        time_eval = MPIDiffTime(t0, t1);
 
         std::ostringstream oss;
-	SAFE_FUNC_EVAL( serialize(val, oss, all) );
+        SAFE_FUNC_EVAL( serialize(val, oss, all) );
 
-	opt = findOption(opts, "-valfile");
-	if (opt.empty()) {
-	    return 0;
-	}
-	SAFE_FUNC_EVAL( SeparateWrite(opt, oss) );
+        opt = findOption(opts, "-valfile");
+        if (opt.empty()) {
+            return 0;
+        }
+        SAFE_FUNC_EVAL( SeparateWrite(opt, oss) );
 
-	// 4. check
-	IntNumVec chkkeyvec;
-	opt = findOption(opts, "-chkfile");
-	if (opt.empty()) {
-	    return 0;
-	}
+        // 4. check
+        IntNumVec chkkeyvec;
+        opt = findOption(opts, "-chkfile");
+        if (opt.empty()) {
+            return 0;
+        }
         std::istringstream iss;
-	SAFE_FUNC_EVAL( SharedRead(opt, iss) );
-	SAFE_FUNC_EVAL( deserialize(chkkeyvec, iss, all) );
-	int numchk = chkkeyvec.m();
-	ck0 = clock();
-	double relerr = wave.check(den, val, chkkeyvec);
-	ck1 = clock();
-	if (mpirank == 0) {
-	    std::cout << "wave check used " << CLOCK_DIFF_SECS(ck1, ck0)
+        SAFE_FUNC_EVAL( SharedRead(opt, iss) );
+        SAFE_FUNC_EVAL( deserialize(chkkeyvec, iss, all) );
+        int numchk = chkkeyvec.m();
+        t0 = MPI_Wtime();
+        double relerr = wave.check(den, val, chkkeyvec);
+        t1 = MPI_Wtime();
+        if (mpirank == 0) {
+            std::cout << "wave check used " << MPIDiffTime(t0, t1)
                       << "secs " << std::endl;
-	}
+        }
 
-	// 5. output results
-	double time_drct = CLOCK_DIFF_SECS(ck1, ck0) * numpts / double(numchk);
-	if (mpirank == 0) {
-	    printf("----------------------\n");
-	    printf("RESULT\n");
-	    printf("K  %.2e\n", wave.K());
-	    printf("Ta %.2e\n", time_eval);
-	    printf("Td %.2e\n", time_drct);
-	    printf("Rt %.2e\n", time_drct / time_eval);
-	    printf("Ea %.6e\n", relerr);
-	    printf("----------------------\n");
-	}
-	SAFE_FUNC_EVAL( MPI_Finalize() );
+        // 5. output results
+        double time_drct = MPIDiffTime(t0, t1) * numpts / double(numchk);
+        if (mpirank == 0) {
+            printf("----------------------\n");
+            printf("RESULT\n");
+            printf("K  %.2e\n", wave.K());
+            printf("Ta %.2e\n", time_eval);
+            printf("Td %.2e\n", time_drct);
+            printf("Rt %.2e\n", time_drct / time_eval);
+            printf("Ea %.6e\n", relerr);
+            printf("----------------------\n");
+        }
+        SAFE_FUNC_EVAL( MPI_Finalize() );
 #ifndef RELEASE
     } catch( ... ) {
-	int mpirank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
-	std::cerr << "Process " << mpirank << " caught error." << std::endl;
-	DumpCallStack();
+        int mpirank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
+        std::cerr << "Process " << mpirank << " caught error." << std::endl;
+        DumpCallStack();
     }
 #endif
     return 0;

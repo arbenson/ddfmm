@@ -42,7 +42,7 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqDownwardComm");
 #endif
-    time_t t0 = time(0);
+    double t0 = MPI_Wtime();
     std::vector<BoxKey> reqbox;
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
     std::vector<int> mask(BoxDat_Number, 0);
@@ -51,7 +51,7 @@ int Wave3d::LowFreqDownwardComm(std::set<BoxKey>& reqboxset) {
     _level_prtns._lf_boxvec.initialize_data();
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(reqbox, mask) );
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
-    time_t t1 = time(0);
+    double t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "Low frequency downward communication");
     PrintCommData(GatherCommData( _level_prtns._lf_boxvec.kbytes_sent()),
                   "kbytes sent");
@@ -83,12 +83,12 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
     std::vector<int> reqpts;
     reqpts.insert(reqpts.begin(), req_dens.begin(), req_dens.end());
     std::vector<int> all(1, 1);
-    time_t t0 = time(0);
+    double t0 = MPI_Wtime();
     SAFE_FUNC_EVAL( den.getBegin(reqpts, all) );
     SAFE_FUNC_EVAL( den.getEnd(all) );
-    time_t t1 = time(0);
+    double t1 = MPI_Wtime();
     if (mpirank == 0) {
-        std::cout << "Density communication: " << difftime(t1, t0)
+        std::cout << "Density communication: " << MPIDiffTime(t0, t1)
                   << " secs" << std::endl;
     }
 

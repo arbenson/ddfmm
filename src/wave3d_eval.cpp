@@ -34,13 +34,13 @@ int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset) {
         std::cout << "Beginning low frequency upward pass..." << std::endl;
     }
 
-    time_t t0 = time(0);
+    double t0 = MPI_Wtime();
     // For each box width in the low frequency regime that this processor
     // owns, evaluate upward.
     for (auto& kv : ldmap) {
         SAFE_FUNC_EVAL( EvalUpwardLow(kv.first, kv.second, reqboxset) );
     }
-    time_t t1 = time(0);
+    double t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "Low frequency upward pass");
     return 0;
 }
@@ -49,12 +49,12 @@ int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqDownwardPass");
 #endif
-    time_t t0 = time(0);
+    double t0 = MPI_Wtime();
     for (ldmap_t::reverse_iterator mi = ldmap.rbegin();
         mi != ldmap.rend(); ++mi) {
         SAFE_FUNC_EVAL( EvalDownwardLow(mi->first, mi->second) );
     }
-    time_t t1 = time(0);
+    double t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "Low frequency downward pass");
     return 0;
 }
@@ -63,7 +63,6 @@ int Wave3d::HighFreqPass() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::HighFreqPass");
 #endif
-    time_t t0, t1;
     int mpirank = getMPIRank();
 
     level_hdkeys_map_t& level_hdmap_out = _level_prtns._level_hdmap_out;
@@ -74,7 +73,7 @@ int Wave3d::HighFreqPass() {
     }
 
     // Upward pass (M2M)
-    t0 = time(0);
+    double t0 = MPI_Wtime();
 
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
@@ -100,11 +99,11 @@ int Wave3d::HighFreqPass() {
         // TODO(arbenson): If we need memory, we can remove data received from other
 	// processors at this level.
     }
-    t1 = time(0);
+    double t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
     // Communication for M2L
-    t0 = time(0);
+    t0 = MPI_Wtime();
     for (int level = 0;
          level < static_cast<int>(_level_prtns._hdkeys_inc.size()); ++level) {
         if (mpirank == 0) {
@@ -116,11 +115,11 @@ int Wave3d::HighFreqPass() {
         HighFreqM2LComm(level, request_keys);
         SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
     }
-    t1 = time(0);
+    t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "High frequency communication");
 
     // Downwards pass
-    t0 = time(0);
+    t0 = MPI_Wtime();
     for (int level = 0; level < static_cast<int>(level_hdmap_inc.size());
 	 ++level) {
         double W = _K / pow2(level);
@@ -154,8 +153,7 @@ int Wave3d::HighFreqPass() {
         // Remove old data from memory.
         CleanLevel(level);
     }
-    t1 = time(0);
-
+    t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "High frequency downward pass");
     return 0;
 }
@@ -383,7 +381,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
         BoxDat& trgdat = _level_prtns._lf_boxvec.access(trgkey);
         CHECK_TRUE(HasPoints(trgdat));  // should have points
         CpxNumVec dneqnden;
-        LowFreqM2L(W, trgkey, trgdat, dcp, ue2dc, dneqnden, uep, dc2de);
+        LowFreqM2L(trgkey, trgdat, dcp, ue2dc, dneqnden, uep, dc2de);
         LowFreqL2L(trgkey, trgdat, dep, de2dc, dneqnden);
     }
     return 0;
