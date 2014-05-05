@@ -73,8 +73,8 @@ int Wave3d::HighFreqPass() {
     }
 
     // Upward pass (M2M)
-    double t0 = MPI_Wtime();
-
+    double t0, t1, t2, t3;
+    t0 = MPI_Wtime();
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
         if (mpirank == 0) {
@@ -83,23 +83,29 @@ int Wave3d::HighFreqPass() {
         }
         std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
 
+	t2 = MPI_Wtime();
         for (auto& kv : level_out) {
             Index3 dir = kv.first;
             std::vector<BoxKey>& keys_out = kv.second;
             SAFE_FUNC_EVAL( EvalUpwardHigh(W, dir, keys_out) );
         }
+	t3 = MPI_Wtime();
+	PrintParData(GatherParData(t2, t3), "M2M level computation.");
 
         // Handle communication for this level.  We need to pass
         // directional upward equivalent densities from the children to the
         // parents on the next level. We assume that boxes on the unit level
         // are partitioned  by process, so we do not need to do any
         // communication for that level.
+	t2 = MPI_Wtime();
         HighFreqM2MLevelComm(level);
+	t3 = MPI_Wtime();
+	PrintParData(GatherParData(t2, t3), "M2M level communication.");
 
         // TODO(arbenson): If we need memory, we can remove data received from other
 	// processors at this level.
     }
-    double t1 = MPI_Wtime();
+    t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "High frequency upward pass");
 
     // Communication for M2L
@@ -116,7 +122,7 @@ int Wave3d::HighFreqPass() {
         SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
     }
     t1 = MPI_Wtime();
-    PrintParData(GatherParData(t0, t1), "High frequency communication");
+    PrintParData(GatherParData(t0, t1), "High frequency M2L communication");
 
     // Downwards pass
     t0 = MPI_Wtime();
@@ -134,21 +140,30 @@ int Wave3d::HighFreqPass() {
         // downward check values for the children.  We assume that boxes on the
         // unit level are partitioned by process, so we do not need to do any
         // communication for that level.
+	t2 = MPI_Wtime();
         HighFreqL2LLevelCommPre(level);
+	t3 = MPI_Wtime();
+	PrintParData(GatherParData(t2, t3), "L2L level communication (pre).");
 
         // Maintain set of keys that get updated by L2L
+	t2 = MPI_Wtime();
         std::set<BoxAndDirKey> affected_keys;
         for (auto& kv : level_inc) {
             Index3 dir = kv.first;
             std::vector<BoxKey>& keys_inc = kv.second;
             SAFE_FUNC_EVAL( EvalDownwardHigh(W, dir, keys_inc, affected_keys) );
         }
+	t3 = MPI_Wtime();
+	PrintParData(GatherParData(t2, t3), "High frequency L2L compuation.");
 
         // Handle post-communication for this level.  We send back the
         // downward check values for the children. Again, we assume that the
         // boxes on the unit level are partitioned by process, so we do not
         // need to do any communication for that level.
+	t2 = MPI_Wtime();
         HighFreqL2LLevelCommPost(level, affected_keys);
+	t3 = MPI_Wtime();
+	PrintParData(GatherParData(t2, t3), "L2L level communication (post).");
 
         // Remove old data from memory.
         CleanLevel(level);
@@ -261,6 +276,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     _self = this;
     int mpirank = getMPIRank();
 
+    double t0 = MPI_Wtime();
     // Delete of empty boxes
     DeleteEmptyBoxes(_boxvec.lclmap());
 
@@ -302,14 +318,19 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     // Form data maps needed.
     _level_prtns.FormMaps();
     ConstructLowFreqMap(ldmap);
-
+    double t1 = MPI_Wtime();
+    PrintParData(GatherParData(t0, t1), "Partitioning setup.");
+    
     // Main work of the algorithm
+    t0 = MPI_Wtime();
     std::set<BoxKey> reqboxset;
     LowFreqUpwardPass(ldmap, reqboxset);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     HighFreqPass();
     LowFreqDownwardComm(reqboxset);
     LowFreqDownwardPass(ldmap);
+    t1 = MPI_Wtime();
+    PrintParData(GatherParData(t0, t1), "Actual wave evaluation computation time.");
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
     // For all values that I have but don't own, add to the list.
