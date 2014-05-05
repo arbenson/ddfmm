@@ -144,7 +144,7 @@ Point3 Wave3d::BoxCenter(BoxKey& curkey) {
 }
 
 //-----------------------------------------------------------
-int Wave3d::P() {
+int Wave3d::AccLevel() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::P");
 #endif
@@ -178,8 +178,7 @@ bool MortonOrderGreater(Index3 lhs, Index3 rhs) {
 
 
 //-----------------------------------------------------------
-int serialize(const PtPrtn& val, std::ostream& os, const std::vector<int>& mask)
-{
+int serialize(const PtPrtn& val, std::ostream& os, const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
 #endif
