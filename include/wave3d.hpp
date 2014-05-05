@@ -480,7 +480,9 @@ private:
     bool SetupTreeAdjacent(BoxKey me, BoxKey yo);
     int RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
                            bool first_pass);
-    int P();
+    
+    // AccLevel returns log_2(1 / epsilon), where epsilon is the target accuracy.
+    int AccLevel();
     int SetupHighFreqCallLists();
     int GetExtPos();
     int GetHighFreqDirs();
@@ -513,17 +515,17 @@ private:
     int GatherDensities(ParVec<int,cpx,PtPrtn>& den);
     
     int UListCompute(BoxDat& trgdat);
+    int VListCompute(double W, BoxDat& trgdat, Point3& trgctr, DblNumMat& uep,
+		     DblNumMat& dcp, CpxNumVec& dnchkval,
+                     NumTns<CpxNumTns>& ue2dc);
+    int WListCompute(double W, BoxDat& trgdat, DblNumMat& uep);
     int XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
                      CpxNumVec& dnchkval);
-    int WListCompute(BoxDat& trgdat, double W, DblNumMat& uep);
-    int VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr,
-                     DblNumMat& uep, DblNumMat& dcp, CpxNumVec& dnchkval,
-                     NumTns<CpxNumTns>& ue2dc);
 
     int LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
                    DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
                    NumTns<CpxNumMat>& ue2uc);
-    int LowFreqM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
+    int LowFreqM2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
                    NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
                    NumVec<CpxNumMat>& dc2de);
     int LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
