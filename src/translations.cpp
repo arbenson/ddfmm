@@ -278,13 +278,12 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     return 0;
 }
 
-int Wave3d::LowFreqM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
+int Wave3d::LowFreqM2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
                        NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
                        NumVec<CpxNumMat>& dc2de) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqM2L");
 #endif
-    int _P = P();
     Point3 trgctr = BoxCenter(trgkey);
     CpxNumVec& dnchkval = trgdat.dnchkval();
     if (dnchkval.m() == 0) {
@@ -301,10 +300,11 @@ int Wave3d::LowFreqM2L(double W, BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
             dnchkpos(d, k) = dcp(d, k) + trgctr(d);
         }
     }
+    double W = BoxWidth(trgkey);
     // List computations
     SAFE_FUNC_EVAL( UListCompute(trgdat) );
-    SAFE_FUNC_EVAL( VListCompute(trgdat, W, _P, trgctr, uep, dcp, dnchkval, ue2dc) );
-    SAFE_FUNC_EVAL( WListCompute(trgdat, W, uep) );
+    SAFE_FUNC_EVAL( VListCompute(W, trgdat, trgctr, uep, dcp, dnchkval, ue2dc) );
+    SAFE_FUNC_EVAL( WListCompute(W, trgdat, uep) );
     SAFE_FUNC_EVAL( XListCompute(trgdat, dcp, dnchkpos, dnchkval) );
     
     // dnchkval to dneqnden
@@ -372,19 +372,21 @@ int Wave3d::UListCompute(BoxDat& trgdat) {
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
         CpxNumMat mat;
-        SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+        SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(),
+				       neidat.extpos(), mat) );
         SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
     }
     return 0;
 }
 
-int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNumMat& uep,
+int Wave3d::VListCompute(double W, BoxDat& trgdat, Point3& trgctr, DblNumMat& uep,
                          DblNumMat& dcp, CpxNumVec& dnchkval, NumTns<CpxNumTns>& ue2dc) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::VListCompute");
 #endif
-    double step = W / (_P - 1);
-    setvalue(_valfft,cpx(0, 0));
+    int acc_level = AccLevel();  // log2(1 / \epsilon)
+    double step = W / (acc_level - 1);
+    setvalue(_valfft, cpx(0, 0));
     for (BoxKey& neikey : trgdat.vndeidxvec()) {
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
@@ -398,9 +400,9 @@ int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNu
             setvalue(_denfft, cpx(0,0));
             CpxNumVec& neiden = neidat.upeqnden();
             for (int k = 0; k < uep.n(); ++k) {
-                int a = int( round((uep(0, k) + W / 2) / step) ) + _P;
-                int b = int( round((uep(1, k) + W / 2) / step) ) + _P;
-                int c = int( round((uep(2, k) + W / 2) / step) ) + _P;
+                int a = int( round((uep(0, k) + W / 2) / step) ) + acc_level;
+                int b = int( round((uep(1, k) + W / 2) / step) ) + acc_level;
+                int c = int( round((uep(2, k) + W / 2) / step) ) + acc_level;
                 _denfft(a,b,c) = neiden(k);
             }
             fftw_execute(_fplan);
@@ -408,9 +410,9 @@ int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNu
         }
         CpxNumTns& neidenfft = neidat.upeqnden_fft();
         CpxNumTns& interaction_tensor = ue2dc(idx[0] + 3, idx[1] + 3, idx[2] + 3);
-        for (int a = 0; a < 2 * _P; ++a) {
-            for (int b = 0; b < 2 * _P; ++b) {
-                for (int c = 0; c < 2 * _P; ++c) {
+        for (int a = 0; a < 2 * acc_level; ++a) {
+            for (int b = 0; b < 2 * acc_level; ++b) {
+                for (int c = 0; c < 2 * acc_level; ++c) {
                     _valfft(a, b, c) += (neidenfft(a, b, c) * interaction_tensor(a, b, c));
                 }
             }
@@ -424,11 +426,11 @@ int Wave3d::VListCompute(BoxDat& trgdat, double W, int _P, Point3& trgctr, DblNu
     }
     fftw_execute(_bplan);
     // add back
-    double coef = 1.0 / (2 * _P * 2 * _P * 2 * _P);
+    double coef = 1.0 / (2 * acc_level * 2 * acc_level * 2 * acc_level);
     for (int k = 0; k < dcp.n(); ++k) {
-        int a = int( round((dcp(0, k) + W / 2) / step) ) + _P;
-        int b = int( round((dcp(1, k) + W / 2) / step) ) + _P;
-        int c = int( round((dcp(2, k) + W / 2) / step) ) + _P;
+        int a = int( round((dcp(0, k) + W / 2) / step) ) + acc_level;
+        int b = int( round((dcp(1, k) + W / 2) / step) ) + acc_level;
+        int c = int( round((dcp(2, k) + W / 2) / step) ) + acc_level;
         dnchkval(k) += (_valfft(a, b, c) * coef);
     }
     return 0;
@@ -445,7 +447,8 @@ int Wave3d::XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
         Point3 neictr = BoxCenter(neikey);
         if (IsLeaf(trgdat) && trgdat.extpos().n() < dcp.n()) {
             CpxNumMat mat;
-            SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+            SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(),
+					   neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
             CpxNumMat mat;
@@ -456,7 +459,7 @@ int Wave3d::XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
     return 0;
 }
 
-int Wave3d::WListCompute(BoxDat& trgdat, double W, DblNumMat& uep) {
+int Wave3d::WListCompute(double W, BoxDat& trgdat, DblNumMat& uep) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::WListCompute");
 #endif
@@ -467,7 +470,8 @@ int Wave3d::WListCompute(BoxDat& trgdat, double W, DblNumMat& uep) {
         // upchkpos
         if (IsLeaf(neidat) && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
-            SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(), neidat.extpos(), mat) );
+            SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(),
+					   neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
             double coef = BoxWidth(neikey) / W; // LEXING: SUPER IMPORTANT
