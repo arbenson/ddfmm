@@ -75,31 +75,42 @@ int main(int argc, char** argv) {
         std::istringstream piss;
         SAFE_FUNC_EVAL( SeparateRead(opt, piss) );
         SAFE_FUNC_EVAL( deserialize(pos, piss, all) );
-        std::vector<int>& tmpinfo = pos.prtn().ownerinfo();
-        // LEXING: numpts CONTAINS THE TOTAL NUMBER OF POINTS
-        int numpts = tmpinfo[tmpinfo.size() - 1];
+        std::vector<int>& pos_breaks = pos.prtn().ownerinfo();
+	// numpts is the total number of discretization points.
+        int numpts = pos_breaks.back();
+	// If some processors were not assigned any data, we add them to the list.
+	while (pos_breaks.size() < mpisize) {
+	    pos_breaks.push_back(numpts + 1);
+	}
         if (mpirank == 0) {
             std::cerr << "Total number of points: " << numpts << std::endl;
             std::cerr << "Done reading pos " << pos.lclmap().size() << " "
                       << pos.prtn().ownerinfo().size() << std::endl;
         }
-        ParVec<int, cpx, PtPrtn> den;
 
+        ParVec<int, cpx, PtPrtn> den;
         opt = findOption(opts, "-denfile");
         if (opt.empty()) {
             return 0;
         }
-
         std::istringstream diss;
         SAFE_FUNC_EVAL( SeparateRead(opt, diss) );
         SAFE_FUNC_EVAL( deserialize(den, diss, all) );
+	// If some processors were not assigned any data, we add them to the list.
+	std::vector<int>& den_breaks = den.prtn().ownerinfo();
+	int last = den_breaks.back();
+	while (den_breaks.size() < mpisize) {
+	    den_breaks.push_back(last + 1);
+	}
+
         if (mpirank == 0) {
             std::cerr << "Done reading den " << den.lclmap().size() << " "
                  << den.prtn().ownerinfo().size() << std::endl;
         }
         ParVec<int, cpx, PtPrtn> val; // preset val to be the same as den
+
         val = den;
-        if (mpirank==0) {
+        if (mpirank == 0) {
             std::cerr << "Done setting val " << val.lclmap().size() << " "
                  << val.prtn().ownerinfo().size() << std::endl;
         }

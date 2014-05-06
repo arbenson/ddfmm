@@ -33,10 +33,11 @@ int SeparateRead(std::string name, std::istringstream& is) {
     sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);  
     std::ifstream fin(filename);
     if (fin.fail()) {
-	std::cerr << "failed to open input file stream: " << filename << std::endl;
-	return -1;
+	std::cout << "WARNING: failed to open input file stream: " << filename << std::endl;
+	return 0;
     }
-    is.str( std::string(std::istreambuf_iterator<char>(fin), std::istreambuf_iterator<char>()) );
+    is.str( std::string(std::istreambuf_iterator<char>(fin),
+			std::istreambuf_iterator<char>()) );
     fin.close();
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
@@ -55,7 +56,7 @@ int SeparateWrite(std::string name, std::ostringstream& os) {
     sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);
     std::ofstream fout(filename);
     if (fout.fail()) {
-	fprintf(stderr, "failed to open output file stream (%s)\n", filename);
+	std::cerr << "failed to open output file stream: " << filename << std::endl;
 	return -1;
     }
     fout<<os.str();
