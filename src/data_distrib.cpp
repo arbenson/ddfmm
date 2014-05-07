@@ -101,8 +101,8 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     }
 
     unsigned int total_size = 0;
-    for (int i = 0; i < static_cast<int>(sizes.size()); ++i) {
-        total_size += static_cast<unsigned int>(sizes[i]);
+    for (int size : sizes) {
+        total_size += static_cast<unsigned int>(size);
     }
     unsigned int avg_size = total_size / mpisize;
     if (mpirank == 0) {
@@ -161,15 +161,15 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     int key_ind = 0;
     std::vector< std::pair<int, int> >& my_sends = amt_to_send[mpirank];
     int num_sending = 0;
-    for (int i = 0; i < static_cast<int>(my_sends.size()); ++i) {
+    for (auto& send : my_sends) {
         reqs.emplace_back();
-        CHECK_TRUE_MSG(my_sends[i].first != mpirank,
+        CHECK_TRUE_MSG(send.first != mpirank,
                        "Trying to send data to myself.");
-        MPI_Isend(&keys[key_ind], my_sends[i].second, 
-                  par::Mpi_datatype<BoxAndDirKey>::value(), my_sends[i].first,
+        MPI_Isend(&keys[key_ind], send.second, 
+                  par::Mpi_datatype<BoxAndDirKey>::value(), send.first,
                   0, MPI_COMM_WORLD, &reqs.back());
-	num_sending += my_sends[i].first;
-        key_ind += my_sends[i].second;
+	num_sending += send.first;
+        key_ind += send.second;
     }
     //    std::cout << "(" << mpirank << ") Sending " << num_sending << " keys." << std::endl;
 
@@ -185,14 +185,14 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     keys.clear();  // all data has been handled 
     
     // Insert back into keys
-    for (int i = 0; i < mpisize; ++i) {
-        for (int j = 0; j < static_cast<int>(recv_bufs[i].size()); ++j) {
-            keys.push_back(recv_bufs[i][j]);
+    for (std::vector<BoxAndDirKey>& recv_buf : recv_bufs) {
+        for (BoxAndDirKey& key : recv_buf) {
+            keys.push_back(key);
         }
-        std::vector<BoxAndDirKey>().swap(recv_bufs[i]);
+        std::vector<BoxAndDirKey>().swap(recv_buf);
     }
-    for (int i = 0; i < static_cast<int>(keys_to_keep.size()); ++i) {
-        keys.push_back(keys_to_keep[i]);
+    for (BoxAndDirKey& key : keys_to_keep) {
+        keys.push_back(key);
     }
     std::vector<BoxAndDirKey>().swap(keys_to_keep);
 }
@@ -302,11 +302,11 @@ int Wave3d::PrtnUnitLevel() {
     // TODO(arbenson): Use morton ordering here.
     // Deal with just the set of boxes.
     std::set<BoxKey> boxes_set;
-    for (int i = 0; i < static_cast<int>(keys_out.size()); ++i) {
-        boxes_set.insert(keys_out[i]._boxkey);
+    for (BoxAndDirKey& key : keys_out) {
+        boxes_set.insert(key._boxkey);
     }
-    for (int i = 0; i < static_cast<int>(keys_inc.size()); ++i) {
-        boxes_set.insert(keys_inc[i]._boxkey);
+    for (BoxAndDirKey& key : keys_inc) {
+        boxes_set.insert(key._boxkey);
     }
     std::vector<BoxKey> boxes;
     boxes.insert(boxes.begin(), boxes_set.begin(), boxes_set.end());
@@ -487,12 +487,10 @@ void LevelPartitions::FormMaps() {
     }
     InsertIntoDirMap(_level_hdmap_inc[unit_level_], _unit_vec.lclmap());
     // Remove old data.
-    for (int i = 0; i < static_cast<int>(_hdkeys_out.size()); ++i) {
-        std::vector<BoxAndDirKey>& old_keys = _hdkeys_out[i];
+    for (std::vector<BoxAndDirKey>& old_keys : _hdkeys_out) {
         std::vector<BoxAndDirKey>().swap(old_keys);
     }
-    for (int i = 0; i < static_cast<int>(_hdkeys_inc.size()); ++i) {
-        std::vector<BoxAndDirKey>& old_keys = _hdkeys_inc[i];
+    for (std::vector<BoxAndDirKey>& old_keys : _hdkeys_inc) {
         std::vector<BoxAndDirKey>().swap(old_keys);
     }
 }
