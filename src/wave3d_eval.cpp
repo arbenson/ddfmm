@@ -311,6 +311,7 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     SAFE_FUNC_EVAL(_bndvec.getBegin(&Wave3d::TransferBoxAndDirData_wrapper, mask2));
     SAFE_FUNC_EVAL(_bndvec.getEnd(mask2));
     TransferDataToLevels();
+    _bndvec.lclmap().clear();
 
     // Compute extden on leaf nodes using ptidxvec
     GatherDensities(den);

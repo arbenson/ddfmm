@@ -295,7 +295,7 @@ public:
     std::vector<BoxAndDirKey> _interactionlist;
 
     BoxAndDirDat() {;}
-    ~BoxAndDirDat() {;}
+    ~BoxAndDirDat() { std::vector<BoxAndDirKey>().swap(_interactionlist); }
     // Directional upward equivalent density
     CpxNumVec& dirupeqnden() { return _dirupeqnden; }
     // Directional downward check value
