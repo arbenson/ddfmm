@@ -36,8 +36,8 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
 
     if (_type == KERNEL_HELM) {
         DblNumMat r2(M, N);
-        for (int i = 0; i < M; ++i) {
-            for (int j = 0; j < N; ++j) {
+	for (int j = 0; j < N; ++j) {
+            for (int i = 0; i < M; ++i) {
                 double x = trgpos(0, i) - srcpos(0, j);
                 double y = trgpos(1, i) - srcpos(1, j);
                 double z = trgpos(2, i) - srcpos(2, j);
@@ -46,7 +46,7 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
                 if (tmp < mindif2) {
                     r2(i, j) = 1;
                 }
-            }
+	  }
         }
 
         DblNumMat r(M, N);
@@ -62,15 +62,15 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         mat_dsincos(M, N, kr, skr, ckr);
     
         inter.resize(M, N);
-        for (int i = 0; i < M; ++i)     {
-            for (int j = 0; j < N; ++j) {
-                inter(i,j) = cpx( ckr(i, j) * ir(i, j), skr(i, j) * ir(i, j) );
+	for (int j = 0; j < N; ++j) {
+	    for (int i = 0; i < M; ++i) {
+                inter(i, j) = cpx( ckr(i, j) * ir(i, j), skr(i, j) * ir(i, j) );
             }
         }
     } else if (_type == KERNEL_EXPR) {
         DblNumMat r2(M, N);
-        for (int i = 0; i < M; ++i) {
-            for (int j = 0; j < N; ++j) {
+	for (int j = 0; j < N; ++j) {
+	    for (int i = 0; i < M; ++i) {
                 double x = trgpos(0, i) - srcpos(0, j);
                 double y = trgpos(1, i) - srcpos(1, j);
                 double z = trgpos(2, i) - srcpos(2, j);

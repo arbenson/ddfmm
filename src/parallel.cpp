@@ -30,7 +30,7 @@ int SeparateRead(std::string name, std::istringstream& is) {
     getMPIInfo(&mpirank, &mpisize);
 
     char filename[MAX_FILE_NAME_LENGTH];
-    sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);  
+    sprintf(filename, "data/%s_%d_%d", name.c_str(), mpirank, mpisize);
     std::ifstream fin(filename);
     if (fin.fail()) {
 	std::cout << "WARNING: failed to open input file stream: " << filename << std::endl;

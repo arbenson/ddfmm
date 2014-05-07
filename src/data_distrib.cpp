@@ -160,6 +160,7 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     // Make all send requests on this process.
     int key_ind = 0;
     std::vector< std::pair<int, int> >& my_sends = amt_to_send[mpirank];
+    int num_sending = 0;
     for (int i = 0; i < static_cast<int>(my_sends.size()); ++i) {
         reqs.emplace_back();
         CHECK_TRUE_MSG(my_sends[i].first != mpirank,
@@ -167,8 +168,10 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
         MPI_Isend(&keys[key_ind], my_sends[i].second, 
                   par::Mpi_datatype<BoxAndDirKey>::value(), my_sends[i].first,
                   0, MPI_COMM_WORLD, &reqs.back());
+	num_sending += my_sends[i].first;
         key_ind += my_sends[i].second;
     }
+    //    std::cout << "(" << mpirank << ") Sending " << num_sending << " keys." << std::endl;
 
     // Get the tail end of the keys that didn't get transferred.
     std::vector<BoxAndDirKey> keys_to_keep;
