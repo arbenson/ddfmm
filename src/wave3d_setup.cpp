@@ -15,9 +15,43 @@
 
     You should have received a copy of the GNU General Public License
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
+#include "DataCollection.hpp"
 #include "wave3d.hpp"
 
-//---------------------------------------------------------------------
+#include <vector>
+
+void Wave3d::ConstructLowFreqMap() {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::ConstructLowFreqMap");
+#endif
+    _ldmap.clear();
+    int mpirank = getMPIRank();
+    double eps = 1e-12;
+    for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
+        double W = BoxWidth(curkey);
+        if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
+            CHECK_TRUE(W < 1 - eps);
+            _ldmap[W].push_back(curkey);
+        }
+    }
+}
+
+void Wave3d::DeleteEmptyBoxes(std::map<BoxKey, BoxDat>& data) {
+    std::vector<BoxKey> to_delete;
+    for (auto& kv : data) {
+        BoxKey curkey = kv.first;
+        BoxDat& curdat = kv.second;
+        if (!HasPoints(curdat)) {
+            to_delete.push_back(curkey);
+        }
+    }
+    for (BoxKey& curkey : to_delete) {
+        data.erase(curkey);
+    }
+}
+
 int Wave3d::setup(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup");
@@ -69,7 +103,7 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
                   << _maxlevel
                   << std::endl;
     }
-    //
+
     //create the parvecs
     BoxPrtn bp;
     bp.ownerinfo() = _geomprtn;
@@ -77,9 +111,12 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     BoxAndDirPrtn tp;
     tp.ownerinfo() = _geomprtn;
     _bndvec.prtn() = tp;
+
     // Generate octree
     SAFE_FUNC_EVAL(SetupTree());
     int acc_level = AccLevel();
+
+    // Setup FFT stuff.
     _denfft.resize(2 * acc_level, 2 * acc_level, 2 * acc_level);
     _fplan = fftw_plan_dft_3d(2 * acc_level, 2 * acc_level, 2 * acc_level,
 			      (fftw_complex*) (_denfft.data()),
@@ -94,6 +131,48 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
 			      FFTW_BACKWARD, FFTW_ESTIMATE); 
     CHECK_TRUE(_bplan != NULL);
     setvalue(_valfft,cpx(0, 0));
+
+    double t0 = MPI_Wtime();
+    // Delete of empty boxes
+    DeleteEmptyBoxes(_boxvec.lclmap());
+
+    // Setup of low and high frequency maps
+    ldmap_t ldmap;
+    _level_prtns.Init(_K);
+    GatherLocalKeys();
+    PrtnDirections(_level_prtns._hdkeys_out, _level_prtns._hf_vecs_out);
+    PrtnDirections(_level_prtns._hdkeys_inc, _level_prtns._hf_vecs_inc);
+    PrtnUnitLevel();
+
+    // Gather box data at the unit level for the partitioning of the trees.
+    std::vector<int> mask1(BoxDat_Number, 0);
+    mask1[BoxDat_tag] = 1;
+    mask1[BoxDat_ptidxvec] = 1;
+    SAFE_FUNC_EVAL(_boxvec.getBegin(&Wave3d::TransferUnitLevelData_wrapper, mask1));
+    SAFE_FUNC_EVAL(_boxvec.getEnd(mask1));
+
+    // Now we have the unit level information, so we can setup our part of the tree.
+    SetupLowFreqOctree();
+    // Remove old boxvec data.
+    CleanBoxvec();
+
+    // Delete boxes without points
+    DeleteEmptyBoxes(_level_prtns._lf_boxvec.lclmap());
+    
+    // Gather the interaction lists.
+    std::vector<int> mask2(BoxAndDirDat_Number, 0);
+    mask2[BoxAndDirDat_interactionlist] = 1;
+    SAFE_FUNC_EVAL(_bndvec.getBegin(&Wave3d::TransferBoxAndDirData_wrapper, mask2));
+    SAFE_FUNC_EVAL(_bndvec.getEnd(mask2));
+    TransferDataToLevels();
+    _bndvec.lclmap().clear();
+
+    // Form data maps needed.
+    _level_prtns.FormMaps();
+    ConstructLowFreqMap();
+    double t1 = MPI_Wtime();
+    PrintParData(GatherParData(t0, t1), "Partitioning setup.");
+
     return 0;
 }
 

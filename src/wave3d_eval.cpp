@@ -25,7 +25,7 @@
 #include <sstream>
 #include <vector>
 
-int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset) {
+int Wave3d::LowFreqUpwardPass(std::set<BoxKey>& reqboxset) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqUpwardPass");
 #endif
@@ -37,7 +37,7 @@ int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset) {
     double t0 = MPI_Wtime();
     // For each box width in the low frequency regime that this processor
     // owns, evaluate upward.
-    for (auto& kv : ldmap) {
+    for (auto& kv : _ldmap) {
         SAFE_FUNC_EVAL( EvalUpwardLow(kv.first, kv.second, reqboxset) );
     }
     double t1 = MPI_Wtime();
@@ -45,13 +45,13 @@ int Wave3d::LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset) {
     return 0;
 }
 
-int Wave3d::LowFreqDownwardPass(ldmap_t& ldmap) {
+int Wave3d::LowFreqDownwardPass() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqDownwardPass");
 #endif
     double t0 = MPI_Wtime();
-    for (ldmap_t::reverse_iterator mi = ldmap.rbegin();
-        mi != ldmap.rend(); ++mi) {
+    for (ldmap_t::reverse_iterator mi = _ldmap.rbegin();
+        mi != _ldmap.rend(); ++mi) {
         SAFE_FUNC_EVAL( EvalDownwardLow(mi->first, mi->second) );
     }
     double t1 = MPI_Wtime();
@@ -234,41 +234,8 @@ int Wave3d::GatherLocalKeys() {
     return 0;
 }
 
-void Wave3d::ConstructLowFreqMap(ldmap_t& ldmap) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::ConstructLowFreqMap");
-#endif
-    ldmap.clear();
-    int mpirank = getMPIRank();
-    double eps = 1e-12;
-    for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
-        BoxKey curkey = kv.first;
-        BoxDat& curdat = kv.second;
-        double W = BoxWidth(curkey);
-        if (HasPoints(curdat) && _level_prtns.Owner(curkey) == mpirank) {
-            CHECK_TRUE(W < 1 - eps);
-            ldmap[W].push_back(curkey);
-        }
-    }
-}
-
-void Wave3d::DeleteEmptyBoxes(std::map<BoxKey, BoxDat>& data) {
-    std::list<BoxKey> to_delete;
-    for (auto& kv : data) {
-        BoxKey curkey = kv.first;
-        BoxDat& curdat = kv.second;
-        if (!HasPoints(curdat)) {
-            to_delete.push_back(curkey);
-        }
-    }
-    for (BoxKey& curkey : to_delete) {
-        data.erase(curkey);
-    }
-}
-
-
 //---------------------------------------------------------------------
-int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
+int Wave3d::eval(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::eval");
 #endif
@@ -276,66 +243,23 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
     _self = this;
     int mpirank = getMPIRank();
 
-    double t0 = MPI_Wtime();
-    // Delete of empty boxes
-    DeleteEmptyBoxes(_boxvec.lclmap());
-
-    // Setup of low and high frequency maps
-    ldmap_t ldmap;
-    _level_prtns.Init(_K);
-    GatherLocalKeys();
-    PrtnDirections(_level_prtns._hdkeys_out,
-                   _level_prtns._hf_vecs_out);
-    PrtnDirections(_level_prtns._hdkeys_inc,
-                   _level_prtns._hf_vecs_inc);
-    PrtnUnitLevel();
-
-    // Gather box data at the unit level for the partitioning of the trees.
-    std::vector<int> mask1(BoxDat_Number, 0);
-    mask1[BoxDat_tag] = 1;
-    mask1[BoxDat_ptidxvec] = 1;
-    SAFE_FUNC_EVAL(_boxvec.getBegin(&Wave3d::TransferUnitLevelData_wrapper, mask1));
-    SAFE_FUNC_EVAL(_boxvec.getEnd(mask1));
-
-    // Now we have the unit level information, so we can setup our part of the tree.
-    SetupLowFreqOctree();
-    // Remove old boxvec data.
-    CleanBoxvec();
-
-    // Delete boxes without points
-    DeleteEmptyBoxes(_level_prtns._lf_boxvec.lclmap());
-    
-    // Gather the interaction lists.
-    std::vector<int> mask2(BoxAndDirDat_Number, 0);
-    mask2[BoxAndDirDat_interactionlist] = 1;
-    SAFE_FUNC_EVAL(_bndvec.getBegin(&Wave3d::TransferBoxAndDirData_wrapper, mask2));
-    SAFE_FUNC_EVAL(_bndvec.getEnd(mask2));
-    TransferDataToLevels();
-    _bndvec.lclmap().clear();
-
     // Compute extden on leaf nodes using ptidxvec
     GatherDensities(den);
 
-    // Form data maps needed.
-    _level_prtns.FormMaps();
-    ConstructLowFreqMap(ldmap);
-    double t1 = MPI_Wtime();
-    PrintParData(GatherParData(t0, t1), "Partitioning setup.");
-    
     // Main work of the algorithm
-    t0 = MPI_Wtime();
+    double t0 = MPI_Wtime();
     std::set<BoxKey> reqboxset;
-    LowFreqUpwardPass(ldmap, reqboxset);
+    LowFreqUpwardPass(reqboxset);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     HighFreqPass();
     LowFreqDownwardComm(reqboxset);
-    LowFreqDownwardPass(ldmap);
-    t1 = MPI_Wtime();
+    LowFreqDownwardPass();
+    double t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "Actual wave evaluation computation time.");
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
     // For all values that I have but don't own, add to the list.
-    std::vector<int> wrtpts;
+    std::vector<int> write_pts;
     for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
         BoxKey curkey = kv.first;
         BoxDat& curdat = kv.second;
@@ -348,15 +272,15 @@ int Wave3d::eval(ParVec<int,cpx,PtPrtn>& den, ParVec<int,cpx,PtPrtn>& val) {
                 int poff = curpis[k];
                 val.lclmap()[poff] = extval(k);
 		if (val.prtn().owner(poff) != mpirank) {
-                    wrtpts.push_back(poff);
+                    write_pts.push_back(poff);
 		}
             }
         }
     }
     std::vector<int> all(1, 1);
-    val.putBegin(wrtpts, all);
+    val.putBegin(write_pts, all);
     val.putEnd(all);
-    val.discard(wrtpts);
+    val.discard(write_pts);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     return 0;
 }

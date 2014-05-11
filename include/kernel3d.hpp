@@ -23,7 +23,8 @@
 
 enum {
   KERNEL_HELM = 0,
-  KERNEL_EXPR = 1
+  KERNEL_EXPR = 1,
+  KERNEL_HELM_COMBINED = 2
 };
 
 class Kernel3d

@@ -418,6 +418,7 @@ public:
 private:
     LevelPartitions _level_prtns;
     int _starting_level;
+    ldmap_t _ldmap;
 
     double width() { return _K; }
     //access information from BoxKey
@@ -500,9 +501,9 @@ private:
                       std::set<BoxKey>& reqboxset);
 
     int EvalDownwardLow(double W, std::vector<BoxKey>& trgvec);
-    int LowFreqUpwardPass(ldmap_t& ldmap, std::set<BoxKey>& reqboxset);
+    int LowFreqUpwardPass(std::set<BoxKey>& reqboxset);
     int LowFreqDownwardComm(std::set<BoxKey>& reqboxset);
-    int LowFreqDownwardPass(ldmap_t& ldmap);
+    int LowFreqDownwardPass();
 
     int HighFreqPass();
 
@@ -511,7 +512,7 @@ private:
                          std::set<BoxAndDirKey>& affected_keys);
 
     int GatherLocalKeys();
-    void ConstructLowFreqMap(ldmap_t& ldmap);
+    void ConstructLowFreqMap();
     int GatherDensities(ParVec<int,cpx,PtPrtn>& den);
     
     int UListCompute(BoxDat& trgdat);

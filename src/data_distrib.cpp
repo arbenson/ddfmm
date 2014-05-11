@@ -16,6 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
 
+#include "DataCollection.hpp"
 #include "wave3d.hpp"
 #include "parvec.hpp"
 
@@ -93,13 +94,6 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     std::vector<int> sizes(mpisize);
     SAFE_FUNC_EVAL( MPI_Allgather(&my_size, 1, MPI_INT, &sizes[0], 1, MPI_INT,
                                   MPI_COMM_WORLD) );
-    if (mpirank == 0) {
-        std::cout << "sizes: " << std::endl;
-        for (int i = 0; i < static_cast<int>(sizes.size()); ++i) {
-            std::cout << i << ": " << sizes[i] << std::endl;
-        }
-    }
-
     unsigned int total_size = 0;
     for (int size : sizes) {
         total_size += static_cast<unsigned int>(size);
@@ -232,9 +226,12 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
         ScatterKeys(curr_level_keys, level);
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
         CHECK_TRUE_MSG(curr_level_keys.size() > 0, "Empty keys");
+	double t0 = MPI_Wtime();	
         bitonicSort(curr_level_keys, MPI_COMM_WORLD);
+	double t1 = MPI_Wtime();
         SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
+	double t2 = MPI_Wtime();
         // Communicate starting keys for each processor.
         std::vector<BoxAndDirKey> start_recv_buf(mpisize);
         SAFE_FUNC_EVAL(MPI_Allgather(&curr_level_keys[0], 1,
@@ -259,6 +256,9 @@ void Wave3d::PrtnDirections(level_hdkeys_t& level_hdkeys,
             BoxAndDirDat dummy;
             level_hf_vecs[level].insert(key, dummy);
         }
+	double t3 = MPI_Wtime();
+	PrintParData(GatherParData(t0, t1), "Sorting time");
+	PrintParData(GatherParData(t2, t3), "Handling time");
     }
 
 }
