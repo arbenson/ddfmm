@@ -30,7 +30,8 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
 #endif
     int M = trgpos.n();
     int N = srcpos.n();
-    double K = 2 * M_PI;
+    double TWO_PI = 2 * M_PI;
+    double FOUR_PI = 4 * M_PI;
     cpx I(0, 1);
     double mindif2 = _mindif * _mindif;
 
@@ -55,8 +56,8 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         DblNumMat& ir = r2;  // 1 / r
         mat_dinv(M, N, r, ir);
 
-        DblNumMat& kr = r;  // Kr
-        mat_dscale(M, N, kr, K);
+        DblNumMat& kr = r;  // 2pi * r
+        mat_dscale(M, N, kr, TWO_PI);
     
         DblNumMat skr(M, N), ckr(M, N);
         mat_dsincos(M, N, kr, skr, ckr);
@@ -85,8 +86,8 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         DblNumMat r(M, N);
         mat_dsqrt(M, N, r2, r);
     
-        DblNumMat& kr = r;  // Kr
-        mat_dscale(M, N, kr, K);
+        DblNumMat& kr = r;  // 2pi * r
+        mat_dscale(M, N, kr, TWO_PI);
     
         DblNumMat skr(M, N), ckr(M, N);
         mat_dsincos(M, N, kr, skr, ckr);
@@ -95,6 +96,60 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         for (int i = 0; i < M; ++i) {
             for (int j = 0; j < N; ++j) {
                 inter(i, j) = cpx(ckr(i, j), skr(i, j));
+            }
+        }
+    } else if (_type == KERNEL_HELM_COMBINED) {
+        // Combined single + double layer potential.
+        // D(x, y) = (1 / 4pi) * (exp^{i * 2pi * r} (1 - i * 2pi * r) / r^3) * (r \cdot n)
+        // S(x, y) = (1 / 4pi) * exp^{i * 2pi * r} / r
+        // Evaluate: D(x, y) - i * eta * S(x, y) 
+        //           = (1 / (4pi * r)) * exp^{i * 2pi * r} ((r \cdot n)(1 - i * 2pi * r) / r^2 - i * eta)
+        DblNumMat r2(M, N);  // r^2
+	DblNumMat rn(M, N);  // r \cdot n
+	for (int j = 0; j < N; ++j) {
+            for (int i = 0; i < M; ++i) {
+                double x = trgpos(0, i) - srcpos(0, j);
+                double y = trgpos(1, i) - srcpos(1, j);
+                double z = trgpos(2, i) - srcpos(2, j);
+		double n0 = srcnor(0, j);
+		double n1 = srcnor(1, j);
+		double n2 = srcnor(2, j);
+		rn(i, j) = x * n0 + y * n1 + z * n2;
+                r2(i, j) = x * x + y * y + z * z;
+                if (r2(i, j) < mindif2) {
+                    r2(i, j) = 1;
+		    rn(i, j) = 0;
+                }
+	    }
+        }
+
+        DblNumMat r(M, N);
+        mat_dsqrt(M, N, r2, r);
+    
+	DblNumMat ir2(M, N); // 1 / r^2
+        mat_dinv(M, N, r2, ir2);
+
+        DblNumMat& ir = r2;  // 1 / r
+        mat_dinv(M, N, r, ir);
+
+        DblNumMat& kr = r;  // 2pi * r
+        mat_dscale(M, N, kr, TWO_PI);
+
+	// sin and cos of 2pi * r
+        DblNumMat skr(M, N), ckr(M, N);
+        mat_dsincos(M, N, kr, skr, ckr);
+
+        inter.resize(M, N);
+	// TODO(arbenson): what should eta be here?
+	double eta = TWO_PI;
+	for (int j = 0; j < N; ++j) {
+	    for (int i = 0; i < M; ++i) {
+	        // exp^{i * 2pi * r} / (4 * pi * r)
+                cpx exp = cpx(ckr(i, j), skr(i, j)) * ir(i, j) / FOUR_PI;
+	        // (r \cdot n) * (1 - i * 2pi *r) / r^2
+	        cpx tmp1 = rn(i, j) * ir2(i, j) * cpx(1, -kr(i, j));
+	        cpx tmp2 = cpx(0, eta);
+	        inter(i, j) = exp * (tmp1 - tmp2);
             }
         }
     } else {
