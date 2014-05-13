@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
             std::cerr << "Done reading den " << den.lclmap().size() << " "
                  << den.prtn().ownerinfo().size() << std::endl;
         }
-        ParVec<int, cpx, PtPrtn> val; // preset val to be the same as den
+        ParVec<int, cpx, PtPrtn> val;  // preset val to be the same as den
 
         val = den;
         if (mpirank == 0) {

@@ -123,14 +123,14 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
                               (fftw_complex*)(_denfft.data()),
 			      FFTW_FORWARD, FFTW_MEASURE);
     CHECK_TRUE(_fplan != NULL);
-    setvalue(_denfft,cpx(0, 0));
+    setvalue(_denfft, cpx(0, 0));
     _valfft.resize(2 * acc_level, 2 * acc_level, 2 * acc_level);
     _bplan = fftw_plan_dft_3d(2 * acc_level, 2 * acc_level, 2 * acc_level,
                               (fftw_complex*) (_valfft.data()),
                               (fftw_complex*) (_valfft.data()),
 			      FFTW_BACKWARD, FFTW_ESTIMATE); 
     CHECK_TRUE(_bplan != NULL);
-    setvalue(_valfft,cpx(0, 0));
+    setvalue(_valfft, cpx(0, 0));
 
     double t0 = MPI_Wtime();
     // Delete of empty boxes
