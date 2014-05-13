@@ -21,7 +21,7 @@ MODE = optim
 #MODE = debug
 
 # compiler and linker variable 
-INCLUDES = -I$(TACC_FFTW3_INC) -I$(TACC_MKL_INC)
+INCLUDES = -I$(TACC_FFTW3_INC) -I$(TACC_MKL_INC) -Iinclude
 LIBS = -L$(TACC_FFTW3_LIB) -lfftw3 -L$(TACC_MKL_LIB) \
        -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group \
        -lm
