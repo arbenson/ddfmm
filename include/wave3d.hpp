@@ -50,7 +50,7 @@ public:
 #ifndef RELEASE
         CallStackEntry entry("PtPrtn::owner");
 #endif
-        CHECK_TRUE(key < _ownerinfo[_ownerinfo.size() - 1]);
+        CHECK_TRUE(key < _ownerinfo.back());
         // Get the process which owns the current point
         std::vector<int>::iterator vi = std::lower_bound(_ownerinfo.begin(),
 							 _ownerinfo.end(), key + 1);
