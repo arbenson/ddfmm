@@ -55,6 +55,8 @@ int main(int argc, char** argv) {
         int mpirank, mpisize;
         getMPIInfo(&mpirank, &mpisize);
 
+        Wave3d wave("wave3d_");
+
         //0. init and get options
         srand48(time(NULL));
         CHECK_TRUE(argc % 1 == 0);
@@ -66,7 +68,6 @@ int main(int argc, char** argv) {
         std::string opt;
 
         //1. read data
-        ParVec<int, Point3, PtPrtn> pos;
         opt = findOption(opts, "-posfile");
         if (opt.empty()) {
             return 0;
@@ -74,8 +75,8 @@ int main(int argc, char** argv) {
 
         std::istringstream piss;
         SAFE_FUNC_EVAL( SeparateRead(opt, piss) );
-        SAFE_FUNC_EVAL( deserialize(pos, piss, all) );
-        std::vector<int>& pos_breaks = pos.prtn().ownerinfo();
+        SAFE_FUNC_EVAL( deserialize(wave._positions, piss, all) );
+        std::vector<int>& pos_breaks = wave._positions.prtn().ownerinfo();
 	// numpts is the total number of discretization points.
         int numpts = pos_breaks.back();
 	// If some processors were not assigned any data, we add them to the list.
@@ -84,8 +85,8 @@ int main(int argc, char** argv) {
 	}
         if (mpirank == 0) {
             std::cerr << "Total number of points: " << numpts << std::endl;
-            std::cerr << "Done reading pos " << pos.lclmap().size() << " "
-                      << pos.prtn().ownerinfo().size() << std::endl;
+            std::cerr << "Done reading pos " << wave._positions.lclmap().size() << " "
+                      << wave._positions.prtn().ownerinfo().size() << std::endl;
         }
 
         ParVec<int, cpx, PtPrtn> den;
@@ -182,9 +183,6 @@ int main(int argc, char** argv) {
                       << geomprtn << std::endl;
         }
 #endif
-
-        Wave3d wave("wave3d_");
-        wave.posptr() = &pos;
         wave.kernel() = kernel;
         wave.mlibptr() = &mlib;
         wave.geomprtn() = geomprtn;

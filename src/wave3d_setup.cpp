@@ -182,7 +182,6 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
     CallStackEntry entry("Wave3d::RecursiveBoxInsert");
 #endif
     double eps = 1e-12;
-    ParVec<int, Point3, PtPrtn>& pos = *_posptr;
     while (!tmpq.empty()) {
         std::pair<BoxKey, BoxDat> curent = tmpq.front();
         tmpq.pop();
@@ -205,7 +204,7 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
             NumTns<BoxDat> chdboxtns(2, 2, 2);
             Point3 curctr = BoxCenter(curkey);
             for (int tmpidx : curdat.ptidxvec()) {
-                Point3 tmp = pos.access(tmpidx); // get position value
+                Point3 tmp = _positions.access(tmpidx); // get position value
                 Index3 idx;
                 for (int d = 0; d < 3; ++d) {
                     idx(d) = (tmp(d) >= curctr(d));
@@ -231,7 +230,7 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
             curdat.extpos().resize(3, curdat.ptidxvec().size());
             for (int g = 0; g < static_cast<int>(curdat.ptidxvec().size()); ++g) {
                 int tmpidx = curdat.ptidxvec()[g];
-                Point3 tmp = pos.access(tmpidx);
+                Point3 tmp = _positions.access(tmpidx);
                 for (int d = 0; d < 3; ++d) {
                     curdat.extpos()(d, g) = tmp(d);
                 }
@@ -261,13 +260,11 @@ int Wave3d::SetupTree() {
     double K = this->K();
 
     std::queue< std::pair<BoxKey, BoxDat> > tmpq;
-    // pos contains all data read by this processor
-    ParVec<int, Point3, PtPrtn>& pos = *_posptr;
     
     // Get all of the geometry information needed for this processor
     std::vector<int> all(1, 1);
-    SAFE_FUNC_EVAL( pos.getBegin(&(Wave3d::DistribCellPts_wrapper), all) );
-    SAFE_FUNC_EVAL( pos.getEnd(all) );
+    SAFE_FUNC_EVAL( _positions.getBegin(&(Wave3d::DistribCellPts_wrapper), all) );
+    SAFE_FUNC_EVAL( _positions.getEnd(all) );
     
     int numC = _geomprtn.m();
     int lvlC = CellLevel();
@@ -275,7 +272,7 @@ int Wave3d::SetupTree() {
     Point3 bctr = ctr();  // overall center of domain
     NumTns<BoxDat> cellboxtns(numC, numC, numC);
     // Fill boxes with points.
-    for (auto& kv : pos.lclmap()) {
+    for (auto& kv : _positions.lclmap()) {
         int key = kv.first;
         Point3 pos = kv.second;
         Index3 idx;
@@ -771,10 +768,9 @@ int Wave3d::SetupLowFreqOctree() {
     }
     
     // Get all of the point information needed.
-    ParVec<int, Point3, PtPrtn>& pos = *_posptr;
     std::vector<int> all(1, 1);
-    SAFE_FUNC_EVAL( pos.getBegin(&(Wave3d::DistribUnitPts_wrapper), all) );
-    SAFE_FUNC_EVAL( pos.getEnd(all) );
+    SAFE_FUNC_EVAL( _positions.getBegin(&(Wave3d::DistribUnitPts_wrapper), all) );
+    SAFE_FUNC_EVAL( _positions.getEnd(all) );
     RecursiveBoxInsert(lf_q, false);
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_tag] = 1;

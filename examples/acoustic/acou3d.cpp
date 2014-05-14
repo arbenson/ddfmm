@@ -33,8 +33,8 @@ int Acoustic3D::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
     std::cerr << "type " << _knlbie.type() <<std::endl;
     // Compute the diagonal scaling.
     TrMesh trmesh("");
-    SAFE_FUNC_EVAL( trmesh.setup(vertvec, facevec) );
-    SAFE_FUNC_EVAL( trmesh.compute_interior(_diavec) );
+    SAFE_FUNC_EVAL(trmesh.setup(vertvec, facevec));
+    SAFE_FUNC_EVAL(trmesh.compute_interior(_diavec));
     for(int k=0; k<_diavec.size(); k++) {
         _diavec[k] /= (4*M_PI);
     }
@@ -117,9 +117,10 @@ int Acoustic3D::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
       ownerinfo[i] = ownerinfo[i - 1] + num_own * numgau;
   }
   // Positions, densities, potentials, and normals all follow this partitioning.
-  ParVec<int, Point3, PtPrtn>& positions = *_wave.posptr();
+  ParVec<int, Point3, PtPrtn>& positions = _wave._positions;
+  ParVec<int, Point3, PtPrtn>& normal_vecs = _wave._normal_vecs;
   positions.prtn().ownerinfo() = ownerinfo;
-  _wave._normal_vecs.prtn().ownerinfo() = ownerinfo;
+  normal_vecs.prtn().ownerinfo() = ownerinfo;
 
   ParVec<int, cpx, PtPrtn> densities;
   densities.prtn().ownerinfo() = ownerinfo;
@@ -131,7 +132,7 @@ int Acoustic3D::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
       positions.insert(start_ind + i, _posvec[i]);
   }
   for (int i = 0; i < _norvec.size(); ++i) {
-      _wave._normal_vecs.insert(start_ind + i, _norvec[i]);
+      normal_vecs.insert(start_ind + i, _norvec[i]);
   }
   for (int i = 0; i < denvec.size(); ++i) {
       densities.insert(start_ind + i, denvec[i]);

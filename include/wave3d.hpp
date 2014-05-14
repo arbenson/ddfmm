@@ -370,7 +370,7 @@ private:
 //---------------------------------------------------------------------------
 class Wave3d : public ComObject {
 public:
-    ParVec<int, Point3, PtPrtn>* _posptr;
+    ParVec<int, Point3, PtPrtn> _positions; 
     Kernel3d _kernel;
     int _ACCU;
     int _NPQ;
@@ -393,7 +393,6 @@ public:
 
     Wave3d(const std::string& p);
     ~Wave3d();
-    ParVec<int, Point3, PtPrtn>*& posptr() { return _posptr; }
     Kernel3d& kernel() { return _kernel; }
     int& ACCU() { return _ACCU; }
     int& NPQ() { return _NPQ; }
