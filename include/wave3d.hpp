@@ -18,7 +18,6 @@
 #ifndef _WAVE3D_HPP_
 #define _WAVE3D_HPP_
 
-#include "comobject.hpp"
 #include "kernel3d.hpp"
 #include "mlib3d.hpp"
 #include "numtns.hpp"
@@ -367,8 +366,7 @@ private:
 };
 
 
-//---------------------------------------------------------------------------
-class Wave3d : public ComObject {
+class Wave3d {
 public:
     ParVec<int, Point3, PtPrtn> _positions; 
     Kernel3d _kernel;
@@ -391,7 +389,7 @@ public:
 
     static Wave3d* _self;
 
-    Wave3d(const std::string& p);
+    Wave3d();
     ~Wave3d();
     Kernel3d& kernel() { return _kernel; }
     int& ACCU() { return _ACCU; }

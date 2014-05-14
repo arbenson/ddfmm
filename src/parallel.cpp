@@ -16,7 +16,12 @@
     You should have received a copy of the GNU General Public License
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
 #include "parallel.hpp"
+
+#include "commoninc.hpp"
+
+#include <iostream>
 #include <sstream>
+#include <string>
 
 #define MAX_FILE_NAME_LENGTH 128
 

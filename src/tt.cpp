@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         int mpirank, mpisize;
         getMPIInfo(&mpirank, &mpisize);
 
-        Wave3d wave("wave3d_");
+        Wave3d wave;
 
         //0. init and get options
         srand48(time(NULL));
@@ -149,19 +149,21 @@ int main(int argc, char** argv) {
         std::istringstream ss2(opt);
         ss2 >> NPW;
 
+#if 0
         std::string geomfile;
         opt = findOption(opts, "-geomfile");
         if (opt.empty()) {
             return 0;
         }
         geomfile = opt;
+#endif
 
         IntNumTns geomprtn;
         opt = findOption(opts, "-geomprtn");
         if (opt.empty()) {
           return 0;
         }
-  
+
         std::istringstream giss;
         SAFE_FUNC_EVAL( SharedRead(opt, giss) );
         SAFE_FUNC_EVAL( deserialize(geomprtn, giss, all) );

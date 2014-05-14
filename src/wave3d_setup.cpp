@@ -61,34 +61,34 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     int mpirank = getMPIRank();
     // Read optional data
     std::map<std::string, std::string>::iterator mi;
-    mi = opts.find("-" + prefix() + "ACCU");
+    mi = opts.find("-wave3d_ACCU");
     if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _ACCU;
     }
-    mi = opts.find("-" + prefix() + "NPQ");
+    mi = opts.find("-wave3d_NPQ");
     if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _NPQ;
     }
-    mi = opts.find("-" + prefix() + "K");
+    mi = opts.find("-wave3d_K");
     if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _K;
     }
-    mi = opts.find("-" + prefix() + "ctr");
+    mi = opts.find("-wave3d_ctr");
     if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         double x, y, z;
         ss >> x >> y >> z;
         _ctr = Point3(x,y,z);
     }
-    mi = opts.find("-" + prefix() + "ptsmax");
+    mi = opts.find("-wave3d_ptsmax");
     if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _ptsmax;
     }
-    mi = opts.find("-" + prefix() + "maxlevel");
+    mi = opts.find("-wave3d_maxlevel");
     if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _maxlevel;

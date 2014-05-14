@@ -18,11 +18,13 @@
 #ifndef _MLIB3D_HPP_
 #define _MLIB3D_HPP_
 
-#include "comobject.hpp"
-#include "vec3t.hpp"
-#include "numtns.hpp"
 #include "kernel3d.hpp"
+#include "numtns.hpp"
+#include "vec3t.hpp"
 #include "vecmatop.hpp"
+
+#include <map>
+#include <string>
 
 class LowFreqEntry {
 public:
@@ -53,7 +55,7 @@ public:
 };
 
 //-----------------------------------
-class Mlib3d: public ComObject {
+class Mlib3d {
 public:
     //PARAM required
     Kernel3d _kernel;
@@ -61,8 +63,7 @@ public:
     std::string _ldname;
     std::string _hdname;
 
-    Mlib3d() : ComObject("mlib3d") {}
-    Mlib3d(const std::string& p): ComObject(p) {}
+    Mlib3d() {}
     ~Mlib3d() {}
   
     Kernel3d& kernel() { return _kernel; }

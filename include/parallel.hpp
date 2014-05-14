@@ -18,7 +18,8 @@
 #ifndef _PARALLEL_HPP_
 #define _PARALLEL_HPP_
 
-#include "comobject.hpp"
+#include <sstream>
+#include <string>
 
 int SeparateRead(std::string name, std::istringstream& is);
 int SeparateWrite(std::string name, std::ostringstream& os);
