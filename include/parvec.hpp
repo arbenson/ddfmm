@@ -184,7 +184,7 @@ int ParVec<Key,Data,Partition>::insert(Key key, Data& dat) {
     CallStackEntry entry("ParVec::insert");
 #endif
     int mpirank = getMPIRank();
-    CHECK_TRUE( _prtn.owner(key) == mpirank); //LEXING: VERY IMPORTANT
+    CHECK_TRUE(_prtn.owner(key) == mpirank); //LEXING: VERY IMPORTANT
     _lclmap[key] = dat;
     return 0;
 }
