@@ -46,8 +46,8 @@ public:
   std::vector<Point3> _posvec; //pos used in fmm
   std::vector<Point3> _norvec; //nor used in fmm
   Wave3d _wave;
-  map<int, DblNumMat> _gauwgts;
-  map<int, DblNumMat> _sigwgts;
+  std::map<int, DblNumMat> _gauwgts;
+  std::map<int, DblNumMat> _sigwgts;
   
   Acoustic3D(const std::string& p): ComObject(p), _wave(p+"_wave") {}
   ~Acoustic3D() {}

@@ -109,8 +109,6 @@ int Acoustic3D::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
   }
   // TODO (arbenson): put in check points?
 
-  // Insert local data into the parvecs.
-
   // Owners for the parvecs:
   std::vector<int> ownerinfo(mpisize + 1);
   ownerinfo[0] = 0;
@@ -119,8 +117,9 @@ int Acoustic3D::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
       ownerinfo[i] = ownerinfo[i - 1] + num_own * numgau;
   }
   // Positions, densities, potentials, and normals all follow this partitioning.
-  _wave3d.posptr->prtn().ownerinfo() = ownerinfo;
-  _wave3d._normal_vecs.prtn().ownerinfo() = ownerinfo;
+  ParVec<int, Point3, PtPrtn>& positions = *_wave.posptr();
+  positions.prtn().ownerinfo() = ownerinfo;
+  _wave._normal_vecs.prtn().ownerinfo() = ownerinfo;
 
   ParVec<int, cpx, PtPrtn> densities;
   densities.prtn().ownerinfo() = ownerinfo;
@@ -129,28 +128,26 @@ int Acoustic3D::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
 
   int start_ind = ownerinfo[mpirank];
   for (int i = 0; i < _posvec.size(); ++i) {
-      _wave3d.posptr->insert(start_ind + i, _posvec[i]);
+      positions.insert(start_ind + i, _posvec[i]);
   }
   for (int i = 0; i < _norvec.size(); ++i) {
-      _wave3d._normal_vecs.insert(start_ind + i, _norvec[i]);
+      _wave._normal_vecs.insert(start_ind + i, _norvec[i]);
   }
   for (int i = 0; i < denvec.size(); ++i) {
       densities.insert(start_ind + i, denvec[i]);
   }
 
-  _wave3d._ctr = _ctr;
-  _wave3d._ACCU = _accu;
+  // TODO(arbenson): Setup kernel in _wave.
+  _wave._ctr = _ctr;
+  _wave._ACCU = _accu;
 
   // TODO(arbenson): make these options.
-  _wave3d._K = 64;
-  _wave3d._ptsmax = 80;
-  _wave3d._maxlevel = 12;
-  _wave3d._NPQ = 4;
+  _wave._K = 64;
+  _wave._ptsmax = 80;
+  _wave._maxlevel = 12;
+  _wave._NPQ = 4;
 
-
-  SetupWave();
-  wave3d.eval(densities, potentials);
-  // TODO: Put stuff into output vector.
+  _wave.eval(densities, potentials);
+  // TODO(arbenson): Put stuff into output vector.
   return 0;
 }
-
