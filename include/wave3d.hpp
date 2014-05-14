@@ -374,7 +374,7 @@ public:
     Kernel3d _kernel;
     int _ACCU;
     int _NPQ;
-    Mlib3d* _mlibptr;
+    Mlib3d _mlib;
     IntNumTns _geomprtn;
     ParVec<int, Point3, PtPrtn> _normal_vecs;
 
@@ -396,7 +396,6 @@ public:
     Kernel3d& kernel() { return _kernel; }
     int& ACCU() { return _ACCU; }
     int& NPQ() { return _NPQ; }
-    Mlib3d*& mlibptr() { return _mlibptr; }
     IntNumTns& geomprtn() { return _geomprtn; }
     double& K() { return _K; }
     Point3& ctr() { return _ctr; }

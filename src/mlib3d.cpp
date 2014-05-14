@@ -67,30 +67,29 @@ int negate(DblNumMat& src) {
 }
 
 //-----------------------------------
-int Mlib3d::setup(std::map<std::string, std::string>& opts)
-{
+int Mlib3d::setup(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::setup");
 #endif
     //get params
     std::map<std::string, std::string>::iterator mi;
-    mi = opts.find("-" + prefix() + "NPQ");
+    mi = opts.find("-mlib3d_NPQ");
     if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _NPQ;
     }
-    mi = opts.find("-" + prefix() + "ldname");
+    mi = opts.find("-mlib3d_ldname");
     if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _ldname;
     }
-    mi = opts.find("-" + prefix() + "hdname");
+    mi = opts.find("-mlib3d_hdname");
     if (mi != opts.end()) {
         std::istringstream ss(mi->second);
         ss >> _hdname;
     }
-  
-    //LEXING: read data in a shared way
+
+    // Read data in a shared way
     std::vector<int> all(1,1);
     std::istringstream liss;
     SAFE_FUNC_EVAL( SharedRead(_ldname, liss) );

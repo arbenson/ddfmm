@@ -24,8 +24,7 @@
 #include "kernel3d.hpp"
 #include "vecmatop.hpp"
 
-class LowFreqEntry
-{
+class LowFreqEntry {
 public:
     DblNumMat _uep;
     DblNumMat _ucp;
@@ -40,8 +39,7 @@ public:
     NumTns<CpxNumTns>& ue2dc() { return _ue2dc; }
 };
 
-class HghFreqDirEntry
-{
+class HghFreqDirEntry {
 public:
     DblNumMat _uep;
     DblNumMat _ucp;
@@ -55,15 +53,15 @@ public:
 };
 
 //-----------------------------------
-class Mlib3d: public ComObject
-{
+class Mlib3d: public ComObject {
 public:
     //PARAM required
     Kernel3d _kernel;
     int _NPQ;
     std::string _ldname;
     std::string _hdname;
-  
+
+    Mlib3d() : ComObject("mlib3d") {}
     Mlib3d(const std::string& p): ComObject(p) {}
     ~Mlib3d() {}
   

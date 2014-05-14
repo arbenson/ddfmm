@@ -124,13 +124,13 @@ int main(int argc, char** argv) {
             ss >> type;
             kernel.type() = type;
         }
-        Mlib3d mlib("mlib3d_");
+        Mlib3d& mlib = wave._mlib;
         mlib.kernel() = kernel;
         mlib.NPQ() = 4;
         SAFE_FUNC_EVAL( mlib.setup(opts) );
         if (mpirank == 0) {
             std::cerr << "Done reading mlib " << mlib.w2ldmap().size() << " "
-                 << mlib.w2hdmap().size() << std::endl;
+		      << mlib.w2hdmap().size() << std::endl;
         }
 
         double K;
@@ -184,7 +184,6 @@ int main(int argc, char** argv) {
         }
 #endif
         wave.kernel() = kernel;
-        wave.mlibptr() = &mlib;
         wave.geomprtn() = geomprtn;
 
         //2. setup

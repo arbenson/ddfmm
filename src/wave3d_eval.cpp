@@ -295,7 +295,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
     DblNumMat ucp;
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
-    SAFE_FUNC_EVAL( _mlibptr->UpwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
+    SAFE_FUNC_EVAL( _mlib.UpwardLowFetch(W, uep, ucp, uc2ue, ue2uc) );
     for (BoxKey& srckey : srcvec) {
         BoxDat& srcdat = _level_prtns._lf_boxvec.access(srckey);
         LowFreqM2M(srckey, srcdat, uep, ucp, uc2ue, ue2uc);
@@ -321,7 +321,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
     NumTns<CpxNumMat> de2dc;
     NumTns<CpxNumTns> ue2dc;
     DblNumMat uep;
-    SAFE_FUNC_EVAL( _mlibptr->DownwardLowFetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
+    SAFE_FUNC_EVAL( _mlib.DownwardLowFetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
     //------------------
     for (BoxKey& trgkey : trgvec) {
         BoxDat& trgdat = _level_prtns._lf_boxvec.access(trgkey);
@@ -342,7 +342,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
     DblNumMat ucp;
     NumVec<CpxNumMat> uc2ue;
     NumTns<CpxNumMat> ue2uc;
-    SAFE_FUNC_EVAL( _mlibptr->UpwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
+    SAFE_FUNC_EVAL( _mlib.UpwardHighFetch(W, dir, uep, ucp, uc2ue, ue2uc) );
     for (BoxKey& srckey : srcvec) {
         Point3 srcctr = BoxCenter(srckey);
         BoxAndDirKey bndkey(srckey, dir);
@@ -363,7 +363,7 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
     NumVec<CpxNumMat> dc2de;
     NumTns<CpxNumMat> de2dc;
     DblNumMat uep;
-    SAFE_FUNC_EVAL( _mlibptr->DownwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
+    SAFE_FUNC_EVAL( _mlib.DownwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     for (BoxKey& trgkey : trgvec) {
         SAFE_FUNC_EVAL( HighFreqM2L(dir, trgkey, dcp, uep) );
         SAFE_FUNC_EVAL( HighFreqL2L(dir, trgkey, dc2de, de2dc, affected_keys) );

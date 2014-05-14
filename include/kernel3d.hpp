@@ -27,8 +27,7 @@ enum {
   KERNEL_HELM_COMBINED = 2
 };
 
-class Kernel3d
-{
+class Kernel3d {
 protected:
   static double _mindif;
   int _type;
