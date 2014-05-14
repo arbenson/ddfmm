@@ -5,8 +5,8 @@ using namespace std;
 
 int optionsCreate(int argc, char** argv, map<string,string>& options) {
   options.clear();
-  for(int k=1; k<argc; k=k+2) {
-    options[ string(argv[k]) ] = string(argv[k+1]);
+  for(int k = 1; k < argc; k = k + 2) {
+    options[string(argv[k])] = string(argv[k+1]);
   }
   return 0;
 }
@@ -50,7 +50,8 @@ int main(int argc, char** argv) {
   //
   Point3 ctr(0,0,0);
   //
-  mi = opts.find("-accu");  assert(mi!=opts.end());
+  mi = opts.find("-accu");
+  assert(mi != opts.end());
   int accu;
   {
     istringstream ss((*mi).second);
@@ -71,7 +72,7 @@ int main(int argc, char** argv) {
   std::cout << "vertvec size: " << vertvec.size() << std::endl;
   
   //2. scattering
-  Acou3d acou("acou3d");
+  Acoustic3D acou("acou3d");
   std::cout << "setting up..." << std::endl;
   SAFE_FUNC_EVAL( acou.setup(vertvec, facevec, ctr, accu, knlbie) );
   std::cout << "done setting up..." << std::endl;
@@ -107,7 +108,8 @@ int main(int argc, char** argv) {
   SAFE_FUNC_EVAL( acou.eval(chkvec, denvec, valvec) );
   std::cout << "done evaling..." << std::endl;
   //
-  mi = opts.find("-valfile");  assert(mi!=opts.end());
+  mi = opts.find("-valfile");
+  assert(mi != opts.end());
   char valfile[100];
   {
     istringstream ss((*mi).second);
@@ -120,8 +122,3 @@ int main(int argc, char** argv) {
   //
   return 0;
 }
-
-
-
-
-

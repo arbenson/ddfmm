@@ -5,7 +5,7 @@
 #include <fstream>
 
 //-----------------------------------
-int Acou3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
+int Acoustic3D::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
 		  Point3 ctr, int accu, Kernel3d knlbie) {
     _vertvec = vertvec;
     _facevec = facevec;
@@ -15,31 +15,25 @@ int Acou3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
     std::cerr << "type " << _knlbie.type() <<std::endl;
     // Compute the diagonal scaling.
     TrMesh trmesh("");
-    std::cout << "setting up trmesh" << std::endl;
     SAFE_FUNC_EVAL( trmesh.setup(vertvec, facevec) );
-    std::cout << "done setting up trmesh" << std::endl;
-    std::cout << "computing interior" << std::endl;
     SAFE_FUNC_EVAL( trmesh.compute_interior(_diavec) );
-    std::cout << "done computing interior" << std::endl;
     for(int k=0; k<_diavec.size(); k++) {
         _diavec[k] /= (4*M_PI);
     }
-    std::cout << "computing area" << std::endl;
     SAFE_FUNC_EVAL( trmesh.compute_area(_arevec) );
-    std::cout << "done computing area" << std::endl;
     // Load the quadrature weights
     vector<int> all(1,1);
     std::ifstream gin("gauwgts.bin");
     SAFE_FUNC_EVAL( deserialize(_gauwgts, gin, all) );
-    std::cerr<<"gauwgts size "<<_gauwgts.size()<< std::endl;
+    std::cerr << "gauwgts size " << _gauwgts.size() << std::endl;
     std::ifstream lin("sigwgts.bin");
     SAFE_FUNC_EVAL( deserialize(_sigwgts, lin, all) );
-    std::cerr<<"sigwgts size "<<_sigwgts.size()<< std::endl;
+    std::cerr << "sigwgts size " << _sigwgts.size() << std::endl;
     return 0;
 }
 
 //-----------------------------------
-int Acou3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
+int Acoustic3D::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
   DblNumMat& gauwgt = _gauwgts[5];
   //
   int numgau = gauwgt.m();
@@ -49,7 +43,27 @@ int Acou3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
   vector<cpx> denvec;
   vector<cpx> valvec;
 
+  int mpirank, mpisize;
+  getMPIInfo(&mpirank, &mpisize);
+
+  // Determine distribution of face vectors.
+  int avg_faces = _facevec.size() / mpisize;
+  int extra = _facevec.size() - avg_faces * mpisize;
+  std::vector<int> dist(mpisize + 1);
+  dist.resize(mpisize + 1);
+  dist[0] = 0;
+  for (int i = 1; i < dist.size(); ++i) {
+      dist[i] = dist[i - 1] + avg_faces;
+      if (i - 1 < extra) {
+          dist[i] += 1;
+      }
+  }
+
   for (int fi = 0; fi < _facevec.size(); ++fi) {
+      // Only read if this face is owned by this process.
+      if (!(fi >= dist[mpirank] && fi < dist[mpirank + 1])) {
+          continue;
+      }
       Index3& face = _facevec[fi];
       // Get the three vertices of the face.
       Point3 pos0 = _vertvec[face(0)];
@@ -75,22 +89,50 @@ int Acou3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
 	  denvec.push_back((loc0 * den0 + loc1 * den1 + loc2 * den2) * (are * wgt));
       }
   }
-  for (Point3& point : chk) {
-      _posvec.push_back(point);
-      _norvec.push_back(point);
-      denvec.push_back(cpx(0, 0));
+  // TODO (arbenson): put in check points?
+
+  // Insert local data into the parvecs.
+
+  // Owners for the parvecs:
+  std::vector<int> ownerinfo(mpisize + 1);
+  ownerinfo[0] = 0;
+  for (int i = 1; i < ownerinfo.size(); ++i) {
+      int num_own = dist[mpirank + 1] - dist[mpirank];
+      ownerinfo[i] = ownerinfo[i - 1] + num_own * numgau;
   }
-#if 0
-  SAFE_FUNC_EVAL( _wave.setup(_posvec,_norvec, _ctr, _accu, _knlbie) );
-#endif
-  valvec.resize(denvec.size(), cpx(0, 0));
-#if 0
-  SAFE_FUNC_EVAL( _wave.eval(denvec, valvec) );
-#endif
-  //double relerr;    SAFE_FUNC_EVAL( _wave.check(denvec,valvec,4,relerr) );    std::cerr<<"relative error "<<relerr<< std::endl;
-  val.resize(chk.size());
-  for(int ci=0; ci<chk.size(); ci++) {
-    val[ci] = valvec[ numgau*NF + ci ];
+  // Positions, densities, potentials, and normals all follow this partitioning.
+  _wave3d.posptr->prtn().ownerinfo() = ownerinfo;
+  _wave3d._normal_vecs.prtn().ownerinfo() = ownerinfo;
+
+  ParVec<int, cpx, PtPrtn> densities;
+  densities.prtn().ownerinfo() = ownerinfo;
+  ParVec<int, cpx, PtPrtn> potentials;
+  potentials.prtn().ownerinfo() = ownerinfo;
+
+  int start_ind = ownerinfo[mpirank];
+  for (int i = 0; i < _posvec.size(); ++i) {
+      _wave3d.posptr->insert(start_ind + i, _posvec[i]);
   }
+  for (int i = 0; i < _norvec.size(); ++i) {
+      _wave3d._normal_vecs.insert(start_ind + i, _norvec[i]);
+  }
+  for (int i = 0; i < denvec.size(); ++i) {
+      densities.insert(start_ind + i, denvec[i]);
+  }
+
+  _wave3d._ctr = _ctr;
+  _wave3d._ACCU = _accu;
+
+  // TODO(arbenson): make these options.
+  _wave3d._K = 64;
+  _wave3d._ptsmax = 80;
+  _wave3d._maxlevel = 12;
+  _wave3d._NPQ = 4;
+
+
+  SetupWave();
+  wave3d.eval(densities, potentials);
+  // TODO: Put stuff into output vector.
   return 0;
 }
+

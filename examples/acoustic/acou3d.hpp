@@ -9,44 +9,34 @@
 
 #include <string>
 
-using std::vector;
-using std::pair;
-using std::map;
-using std::set;
-using std::cerr;
-using std::cout;
-using std::ostream;
-using std::istream;
-
 class VertexData {
   Point3 pos;  // vertex position
   cpx den;     // density
 };
 
 //---------------------------------------------------------------------------
-class Acou3d: public ComObject {
+class Acoustic3D: public ComObject {
 public:
   //input
-  vector<Point3> _vertvec;
-  vector<Index3> _facevec; // all triangle faces
-  ParVec<int, VertexData, PtPrtn> _vertex_vec;
+  std::vector<Point3> _vertvec;
+  std::vector<Index3> _facevec; // all triangle faces
   Point3 _ctr;
   int _accu;
   Kernel3d _knlbie; // what bie kernel to use
   //local
-  vector<double> _diavec; //diagonal (solid angle/4pi)
-  vector<double> _arevec; //length of each segment
-  vector<Point3> _posvec; //pos used in fmm
-  vector<Point3> _norvec; //nor used in fmm
+  std::vector<double> _diavec; //diagonal (solid angle/4pi)
+  std::vector<double> _arevec; //length of each segment
+  std::vector<Point3> _posvec; //pos used in fmm
+  std::vector<Point3> _norvec; //nor used in fmm
   Wave3d _wave;
-  map<int,DblNumMat> _gauwgts;
-  map<int,DblNumMat> _sigwgts;
+  map<int, DblNumMat> _gauwgts;
+  map<int, DblNumMat> _sigwgts;
   
-  Acou3d(const std::string& p): ComObject(p), _wave(p+"_wave") {}
-  ~Acou3d() {}
-  int setup(vector<Point3>& vertvec, vector<Index3>& facevec,
+  Acoustic3D(const std::string& p): ComObject(p), _wave(p+"_wave") {}
+  ~Acoustic3D() {}
+  int setup(std::vector<Point3>& vertvec, std::vector<Index3>& facevec,
 	    Point3 ctr, int accu, Kernel3d knlbie);
-  int eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val);
+  int eval(std::vector<Point3>& chk, std::vector<cpx>& den, std::vector<cpx>& val);
 };
 
 #endif
