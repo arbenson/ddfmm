@@ -74,24 +74,15 @@ int main(int argc, char** argv) {
     istringstream ss((*mi).second);
     ss>>accu;
   }
-  CHECK_TRUE( accu>=1 && accu<=3 );
-  mi = opts.find("-kt");
-  CHECK_TRUE(mi != opts.end());
-  int kt;
-  {
-    istringstream ss((*mi).second);
-    ss>>kt;
-  } 
-  //CHECK_TRUE( kt==KNL_HELM_DOUB || kt==KNL_HELM_COMB);
-  Kernel3d knlbie(kt);
+  CHECK_TRUE(accu >= 1 && accu <= 3);
 
   std::cout << "facevec size: " << facevec.size() << std::endl;
   std::cout << "vertvec size: " << vertvec.size() << std::endl;
   
   //2. scattering
-  Acoustic3D acou("acou3d");
+  Acoustic3d acou;
   std::cout << "setting up..." << std::endl;
-  SAFE_FUNC_EVAL( acou.setup(vertvec, facevec, ctr, accu, knlbie) );
+  SAFE_FUNC_EVAL( acou.setup(vertvec, facevec, ctr, accu) );
   std::cout << "done setting up..." << std::endl;
   //
   //load den
@@ -99,7 +90,7 @@ int main(int argc, char** argv) {
   char denfile[100];
   {
     istringstream ss((*mi).second);
-    ss>>denfile;
+    ss >> denfile;
   }
   vector<cpx> denvec;
   {
@@ -122,7 +113,7 @@ int main(int argc, char** argv) {
   //
   vector<cpx> valvec(C, cpx(0,0));
   std::cout << "evaling..." << std::endl;
-  SAFE_FUNC_EVAL( acou.eval(chkvec, denvec, valvec) );
+  SAFE_FUNC_EVAL( acou.eval(chkvec, denvec, valvec, opts) );
   std::cout << "done evaling..." << std::endl;
   //
   mi = opts.find("-valfile");

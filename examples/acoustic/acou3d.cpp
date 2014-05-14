@@ -24,18 +24,16 @@
 
 //-----------------------------------
 int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
-		      Point3 ctr, int accu, Kernel3d knlbie) {
+		      Point3 ctr, int accu) {
     _vertvec = vertvec;
     _facevec = facevec;
     _ctr = ctr;
     _accu = accu;
-    _knlbie = knlbie;
-    std::cerr << "type " << _knlbie.type() <<std::endl;
     // Compute the diagonal scaling.
     TrMesh trmesh;
     SAFE_FUNC_EVAL(trmesh.setup(vertvec, facevec));
     SAFE_FUNC_EVAL(trmesh.compute_interior(_diavec));
-    for(int k=0; k<_diavec.size(); k++) {
+    for (int k = 0; k < _diavec.size(); ++k) {
         _diavec[k] /= (4*M_PI);
     }
     SAFE_FUNC_EVAL( trmesh.compute_area(_arevec) );
@@ -51,15 +49,15 @@ int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
 }
 
 //-----------------------------------
-int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
+int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
+		     std::map<std::string, std::string>& opts) {
   DblNumMat& gauwgt = _gauwgts[5];
   //
-  int numgau = gauwgt.m();
-  int NF = _facevec.size();
-  _posvec.clear();
-  _norvec.clear();
-  vector<cpx> denvec;
-  vector<cpx> valvec;
+  int num_quad_points = gauwgt.m();
+  std::vector<Point3> posvec;
+  std::vector<Point3> norvec;
+  std::vector<cpx> denvec;
+  std::vector<cpx> valvec;
 
   int mpirank, mpisize;
   getMPIInfo(&mpirank, &mpisize);
@@ -97,13 +95,13 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
       cpx den1 = den[face(1)];
       cpx den2 = den[face(2)];
 
-      for (int gi = 0; gi < numgau; ++gi) {
+      for (int gi = 0; gi < num_quad_points; ++gi) {
           double loc0 = gauwgt(gi, 0);
 	  double loc1 = gauwgt(gi, 1);
 	  double loc2 = gauwgt(gi, 2);
 	  double wgt  = gauwgt(gi, 3);
-	  _posvec.push_back(loc0 * pos0 + loc1 * pos1 + loc2 * pos2);
-	  _norvec.push_back(nor);
+	  posvec.push_back(loc0 * pos0 + loc1 * pos1 + loc2 * pos2);
+	  norvec.push_back(nor);
 	  denvec.push_back((loc0 * den0 + loc1 * den1 + loc2 * den2) * (are * wgt));
       }
   }
@@ -114,7 +112,7 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
   ownerinfo[0] = 0;
   for (int i = 1; i < ownerinfo.size(); ++i) {
       int num_own = dist[mpirank + 1] - dist[mpirank];
-      ownerinfo[i] = ownerinfo[i - 1] + num_own * numgau;
+      ownerinfo[i] = ownerinfo[i - 1] + num_own * num_quad_points;
   }
   // Positions, densities, potentials, and normals all follow this partitioning.
   ParVec<int, Point3, PtPrtn>& positions = _wave._positions;
@@ -128,11 +126,11 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
   potentials.prtn().ownerinfo() = ownerinfo;
 
   int start_ind = ownerinfo[mpirank];
-  for (int i = 0; i < _posvec.size(); ++i) {
-      positions.insert(start_ind + i, _posvec[i]);
+  for (int i = 0; i < posvec.size(); ++i) {
+      positions.insert(start_ind + i, posvec[i]);
   }
-  for (int i = 0; i < _norvec.size(); ++i) {
-      normal_vecs.insert(start_ind + i, _norvec[i]);
+  for (int i = 0; i < norvec.size(); ++i) {
+      normal_vecs.insert(start_ind + i, norvec[i]);
   }
   for (int i = 0; i < denvec.size(); ++i) {
       densities.insert(start_ind + i, denvec[i]);
@@ -141,19 +139,16 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
   // TODO(arbenson): Setup kernel in _wave.
   _wave._ctr = _ctr;
   _wave._ACCU = _accu;
+  _wave._kernel = Kernel3d(KERNEL_HELM_MIXED);
+  _wave._equiv_kernel = Kernel3d(KERNEL_HELM);
 
-
-  // TODO(arbenson): make these options.
-  _wave._K = 64;
-  _wave._ptsmax = 80;
-  _wave._maxlevel = 12;
-  _wave._NPQ = 4;
-  
   Mlib3d& mlib = _wave._mlib;
   mlib._NPQ = _wave._NPQ;
   mlib._kernel = Kernel3d(KERNEL_HELM);
-  
-  
+
+  std::cout << "Setting up the wave..." << std::endl;
+  _wave.setup(opts);
+
   _wave.eval(densities, potentials);
   // TODO(arbenson): Put stuff into output vector.
   return 0;

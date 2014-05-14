@@ -38,12 +38,8 @@ public:
   std::vector<Index3> _facevec; // all triangle faces
   Point3 _ctr;
   int _accu;
-  Kernel3d _knlbie; // what bie kernel to use
-  //local
   std::vector<double> _diavec; //diagonal (solid angle/4pi)
   std::vector<double> _arevec; //length of each segment
-  std::vector<Point3> _posvec; //pos used in fmm
-  std::vector<Point3> _norvec; //nor used in fmm
   Wave3d _wave;
   std::map<int, DblNumMat> _gauwgts;
   std::map<int, DblNumMat> _sigwgts;
@@ -51,8 +47,9 @@ public:
   Acoustic3d() {}
   ~Acoustic3d() {}
   int setup(std::vector<Point3>& vertvec, std::vector<Index3>& facevec,
-	    Point3 ctr, int accu, Kernel3d knlbie);
-  int eval(std::vector<Point3>& chk, std::vector<cpx>& den, std::vector<cpx>& val);
+	    Point3 ctr, int accu);
+  int eval(std::vector<Point3>& chk, std::vector<cpx>& den, std::vector<cpx>& val,
+	   std::map<std::string, std::string>& opts);
 };
 
 #endif
