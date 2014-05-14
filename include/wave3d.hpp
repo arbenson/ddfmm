@@ -368,14 +368,15 @@ private:
 
 
 //---------------------------------------------------------------------------
-class Wave3d: public ComObject {
+class Wave3d : public ComObject {
 public:
     ParVec<int, Point3, PtPrtn>* _posptr;
     Kernel3d _kernel;
     int _ACCU;
     int _NPQ;
-    Mlib3d* _mlibptr;  // Read data in parallel and then send to other processors
+    Mlib3d* _mlibptr;
     IntNumTns _geomprtn;
+    ParVec<int, Point3, PtPrtn> _normal_vecs;
 
     double _K;
     Point3 _ctr;
@@ -409,7 +410,7 @@ public:
     bool IsLeaf(BoxDat& dat) const { return dat.tag() & WAVE3D_LEAF; }
 
     // Compute the potentials at the target points.
-    int eval( ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val);
+    int eval(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val);
 
     // Compute the true solution at a few points and return the relative error.
     double check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
