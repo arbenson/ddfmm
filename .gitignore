@@ -6,4 +6,3 @@ data/*.wrl_*_*_*
 data/*.bin
 tt
 file_io_test
-acoustic
