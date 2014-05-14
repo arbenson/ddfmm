@@ -23,7 +23,7 @@
 #include <fstream>
 
 //-----------------------------------
-int Acoustic3D::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
+int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
 		  Point3 ctr, int accu, Kernel3d knlbie) {
     _vertvec = vertvec;
     _facevec = facevec;
@@ -51,7 +51,7 @@ int Acoustic3D::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
 }
 
 //-----------------------------------
-int Acoustic3D::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
+int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
   DblNumMat& gauwgt = _gauwgts[5];
   //
   int numgau = gauwgt.m();
@@ -142,12 +142,18 @@ int Acoustic3D::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val) {
   _wave._ctr = _ctr;
   _wave._ACCU = _accu;
 
+
   // TODO(arbenson): make these options.
   _wave._K = 64;
   _wave._ptsmax = 80;
   _wave._maxlevel = 12;
   _wave._NPQ = 4;
-
+  
+  Mlib3d& mlib = _wave._mlib;
+  mlib._NPQ = _wave._NPQ;
+  mlib._kernel = Kernel3d(KERNEL_HELM);
+  
+  
   _wave.eval(densities, potentials);
   // TODO(arbenson): Put stuff into output vector.
   return 0;

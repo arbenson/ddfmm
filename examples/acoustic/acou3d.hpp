@@ -32,7 +32,7 @@ class VertexData {
 };
 
 //---------------------------------------------------------------------------
-class Acoustic3D: public ComObject {
+class Acoustic3d: public ComObject {
 public:
   //input
   std::vector<Point3> _vertvec;
@@ -49,8 +49,8 @@ public:
   std::map<int, DblNumMat> _gauwgts;
   std::map<int, DblNumMat> _sigwgts;
   
-  Acoustic3D(const std::string& p): ComObject(p), _wave(p+"_wave") {}
-  ~Acoustic3D() {}
+  Acoustic3d(const std::string& p): ComObject(p), _wave(p+"_wave") {}
+  ~Acoustic3d() {}
   int setup(std::vector<Point3>& vertvec, std::vector<Index3>& facevec,
 	    Point3 ctr, int accu, Kernel3d knlbie);
   int eval(std::vector<Point3>& chk, std::vector<cpx>& den, std::vector<cpx>& val);
