@@ -24,7 +24,7 @@
 
 //-----------------------------------
 int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
-		  Point3 ctr, int accu, Kernel3d knlbie) {
+		      Point3 ctr, int accu, Kernel3d knlbie) {
     _vertvec = vertvec;
     _facevec = facevec;
     _ctr = ctr;
@@ -32,7 +32,7 @@ int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
     _knlbie = knlbie;
     std::cerr << "type " << _knlbie.type() <<std::endl;
     // Compute the diagonal scaling.
-    TrMesh trmesh("");
+    TrMesh trmesh;
     SAFE_FUNC_EVAL(trmesh.setup(vertvec, facevec));
     SAFE_FUNC_EVAL(trmesh.compute_interior(_diavec));
     for(int k=0; k<_diavec.size(); k++) {

@@ -18,7 +18,6 @@
 #ifndef _TRMESH_HPP_
 #define _TRMESH_HPP_
 
-#include "comobject.hpp"
 #include "vec3t.hpp"
 
 #include <string>
@@ -29,8 +28,7 @@ using std::pair;
 //----------------------
 //triangle mesh
 //----------------------
-class TrMesh: public ComObject
-{
+class TrMesh {
 public:
   typedef pair<int,int> intpair;
   //-----------
@@ -56,8 +54,8 @@ public:
   // points
   vector<Point3> _points;
 public:
-  TrMesh(const std::string& p): ComObject(p) {;}
-  ~TrMesh() {;}
+  TrMesh() {}
+  ~TrMesh() {}
   //
   vector<Edge>& edges() { return _edges; }
   vector<Vert>& verts() { return _verts; }
