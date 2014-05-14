@@ -59,7 +59,7 @@ int Wave3d::HighFreqM2L(Index3 dir, BoxKey trgkey, DblNumMat& dcp,
         CHECK_TRUE_MSG(_level_prtns.Contains(key, true), "Missing outgoing data");
         CpxNumVec& ued = _level_prtns.Access(key, true).dirupeqnden();
         CpxNumMat Mts;
-        SAFE_FUNC_EVAL( _kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
+        SAFE_FUNC_EVAL( _equiv_kernel.kernel(tmpdcp, tmpuep, tmpuep, Mts) );
         // allocate space if necessary
         if (dcv.m() == 0) {
             dcv.resize(Mts.m());
@@ -245,7 +245,8 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
             }
         }
         CpxNumMat mat;
-        SAFE_FUNC_EVAL( _kernel.kernel(upchkpos, srcdat.extpos(), srcdat.extpos(), mat) );
+        SAFE_FUNC_EVAL( _kernel.kernel(upchkpos, srcdat.extpos(),
+				       srcdat.extnor(), mat) );
         SAFE_FUNC_EVAL( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
     } else {
         for (int ind = 0; ind < NUM_CHILDREN; ++ind) {
@@ -256,7 +257,8 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
             if (_level_prtns._lf_boxvec.contains(key)) {
                 BoxDat& chddat = _level_prtns._lf_boxvec.access(key);
 		CHECK_TRUE(HasPoints(chddat));
-                SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(), 1.0, upchkval) );
+                SAFE_FUNC_EVAL( zgemv(1.0, ue2uc(a, b, c), chddat.upeqnden(),
+				      1.0, upchkval) );
             }
         }
     }
@@ -277,6 +279,7 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
 
     return 0;
 }
+
 
 int Wave3d::LowFreqM2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
                        NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
@@ -340,7 +343,7 @@ int Wave3d::LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
             }
         }
         CpxNumMat mat;
-        SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
+        SAFE_FUNC_EVAL( _equiv_kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
         SAFE_FUNC_EVAL( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
     } else {
         // put stuff to children
@@ -372,7 +375,7 @@ int Wave3d::UListCompute(BoxDat& trgdat) {
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
         CHECK_TRUE(HasPoints(neidat));
         CpxNumMat mat;
-        SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(),
+        SAFE_FUNC_EVAL( _equiv_kernel.kernel(trgdat.extpos(), neidat.extpos(),
 				       neidat.extpos(), mat) );
         SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
     }
@@ -447,12 +450,12 @@ int Wave3d::XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
         Point3 neictr = BoxCenter(neikey);
         if (IsLeaf(trgdat) && trgdat.extpos().n() < dcp.n()) {
             CpxNumMat mat;
-            SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(),
+            SAFE_FUNC_EVAL( _equiv_kernel.kernel(trgdat.extpos(), neidat.extpos(),
 					   neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
             CpxNumMat mat;
-            SAFE_FUNC_EVAL( _kernel.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
+            SAFE_FUNC_EVAL( _equiv_kernel.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, dnchkval) );
         }
     }
@@ -470,7 +473,7 @@ int Wave3d::WListCompute(double W, BoxDat& trgdat, DblNumMat& uep) {
         // upchkpos
         if (IsLeaf(neidat) && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
-            SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), neidat.extpos(),
+            SAFE_FUNC_EVAL( _equiv_kernel.kernel(trgdat.extpos(), neidat.extpos(),
 					   neidat.extpos(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
@@ -482,7 +485,7 @@ int Wave3d::WListCompute(double W, BoxDat& trgdat, DblNumMat& uep) {
                 }
             }
             CpxNumMat mat;
-            SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), upeqnpos, upeqnpos, mat) );
+            SAFE_FUNC_EVAL( _equiv_kernel.kernel(trgdat.extpos(), upeqnpos, upeqnpos, mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.upeqnden(), 1.0, trgdat.extval()) );
         }
     }

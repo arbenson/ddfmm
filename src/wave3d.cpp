@@ -210,6 +210,7 @@ int serialize(const BoxDat& val, std::ostream& os, const std::vector<int>& mask)
     if (mask[i] == 1) serialize(val._fndeidxvec, os, mask);  i++;
   
     if (mask[i] == 1) serialize(val._extpos, os, mask);  i++;
+    if (mask[i] == 1) serialize(val._extnor, os, mask);  i++;
     if (mask[i] == 1) serialize(val._extden, os, mask);  i++;
     if (mask[i] == 1) serialize(val._upeqnden, os, mask);  i++;
     if (mask[i] == 1) serialize(val._extval, os, mask);  i++;
@@ -244,6 +245,7 @@ int deserialize(BoxDat& val, std::istream& is, const std::vector<int>& mask) {
     if (mask[i] == 1) deserialize(val._fndeidxvec, is, mask);  i++;
 
     if (mask[i] == 1) deserialize(val._extpos, is, mask);  i++;
+    if (mask[i] == 1) deserialize(val._extnor, is, mask);  i++;
     if (mask[i] == 1) deserialize(val._extden, is, mask);  i++;
     if (mask[i] == 1) deserialize(val._upeqnden, is, mask);  i++;
     if (mask[i] == 1) deserialize(val._extval, is, mask);  i++;

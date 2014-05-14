@@ -104,7 +104,7 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
                   << std::endl;
     }
 
-    //create the parvecs
+    // Create the parvecs
     BoxPrtn bp;
     bp.ownerinfo() = _geomprtn;
     _boxvec.prtn() = bp;
@@ -172,9 +172,9 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     ConstructLowFreqMap();
     double t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "Partitioning setup.");
-
     return 0;
 }
+
 
 int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
                                bool first_pass) {

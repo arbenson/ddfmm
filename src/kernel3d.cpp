@@ -98,12 +98,13 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
                 inter(i, j) = cpx(ckr(i, j), skr(i, j));
             }
         }
-    } else if (_type == KERNEL_HELM_COMBINED) {
-        // Combined single + double layer potential.
+    } else if (_type == KERNEL_HELM_MIXED) {
+        // Mixed single + double layer potential.
         // D(x, y) = (1 / 4pi) * (exp^{i * 2pi * r} (1 - i * 2pi * r) / r^3) * (r \cdot n)
         // S(x, y) = (1 / 4pi) * exp^{i * 2pi * r} / r
         // Evaluate: D(x, y) - i * eta * S(x, y) 
-        //           = (1 / (4pi * r)) * exp^{i * 2pi * r} ((r \cdot n)(1 - i * 2pi * r) / r^2 - i * eta)
+        //           = (1 / (4pi * r)) * exp^{i * 2pi * r} * 
+        //             ((r \cdot n)(1 - i * 2pi * r) / r^2 - i * eta)
         DblNumMat r2(M, N);  // r^2
 	DblNumMat rn(M, N);  // r \cdot n
 	for (int j = 0; j < N; ++j) {

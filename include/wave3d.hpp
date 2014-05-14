@@ -114,11 +114,12 @@ public:
     int _fftnum;
     int _fftcnt;
 
-    DblNumMat _extpos;   // positions of exact points (leaf level)
-    CpxNumVec _extden;   // Exact densities  
-    CpxNumVec _upeqnden; // Upward equivalent density
-    CpxNumVec _extval;   // Exact potential value
-    CpxNumVec _dnchkval; // Downward check potential
+    DblNumMat _extpos;    // positions of exact points (leaf level)
+    DblNumMat _extnor;    // Normal vectors
+    CpxNumVec _extden;    // Exact densities
+    CpxNumVec _upeqnden;  // Upward equivalent density
+    CpxNumVec _extval;    // Exact potential value
+    CpxNumVec _dnchkval;  // Downward check potential
 
     int _tag;
     std::vector<int> _ptidxvec;
@@ -148,6 +149,7 @@ public:
     std::map< Index3, std::vector<BoxKey> >& fndeidxvec() { return _fndeidxvec; }
 
     DblNumMat& extpos() { return _extpos; }
+    DblNumMat& extnor() { return _extnor; }
     CpxNumVec& extden() { return _extden; }
     CpxNumVec& upeqnden() { return _upeqnden; }
     CpxNumVec& extval() { return _extval; }
@@ -161,7 +163,7 @@ public:
 };
 
 
-#define BoxDat_Number 18
+#define BoxDat_Number 19
 enum {
     BoxDat_tag = 0,
     BoxDat_ptidxvec = 1,
@@ -174,16 +176,17 @@ enum {
     BoxDat_fndeidxvec = 7,
     //
     BoxDat_extpos = 8,
-    BoxDat_extden = 9,
-    BoxDat_upeqnden = 10,
-    BoxDat_extval = 11,
-    BoxDat_dnchkval = 12,
+    BoxDat_extnor = 9,
+    BoxDat_extden = 10,
+    BoxDat_upeqnden = 11,
+    BoxDat_extval = 12,
+    BoxDat_dnchkval = 13,
     //
-    BoxDat_upeqnden_fft = 13,
-    BoxDat_incdirset = 14,
-    BoxDat_outdirset = 15,
-    BoxDat_fftnum = 16,
-    BoxDat_fftcnt = 17,
+    BoxDat_upeqnden_fft = 14,
+    BoxDat_incdirset = 15,
+    BoxDat_outdirset = 16,
+    BoxDat_fftnum = 17,
+    BoxDat_fftcnt = 18,
 };
 
 class BoxPrtn {
@@ -370,6 +373,7 @@ class Wave3d {
 public:
     ParVec<int, Point3, PtPrtn> _positions; 
     Kernel3d _kernel;
+    Kernel3d _equiv_kernel;
     int _ACCU;
     int _NPQ;
     Mlib3d _mlib;

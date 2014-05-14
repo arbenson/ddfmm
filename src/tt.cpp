@@ -124,8 +124,15 @@ int main(int argc, char** argv) {
             ss >> type;
             kernel.type() = type;
         }
+	Kernel3d equiv_kernel(KERNEL_HELM);
+	if (kernel.type() == KERNEL_EXPR) {
+	  equiv_kernel = Kernel3d(KERNEL_EXPR);
+	}
+        wave._kernel = kernel;
+        wave._equiv_kernel = equiv_kernel;
+
         Mlib3d& mlib = wave._mlib;
-        mlib.kernel() = kernel;
+        mlib.kernel() = equiv_kernel;
         mlib.NPQ() = 4;
         SAFE_FUNC_EVAL( mlib.setup(opts) );
         if (mpirank == 0) {
@@ -185,7 +192,6 @@ int main(int argc, char** argv) {
                       << geomprtn << std::endl;
         }
 #endif
-        wave.kernel() = kernel;
         wave.geomprtn() = geomprtn;
 
         //2. setup
