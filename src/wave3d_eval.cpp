@@ -365,8 +365,9 @@ int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
     DblNumMat uep;
     SAFE_FUNC_EVAL( _mlib.DownwardHighFetch(W, dir, dep, dcp, dc2de, de2dc, uep) );
     for (BoxKey& trgkey : trgvec) {
-        SAFE_FUNC_EVAL( HighFreqM2L(dir, trgkey, dcp, uep) );
-        SAFE_FUNC_EVAL( HighFreqL2L(dir, trgkey, dc2de, de2dc, affected_keys) );
+        BoxAndDirKey bndkey(trgkey, dir);
+        SAFE_FUNC_EVAL( HighFreqM2L(bndkey, dcp, uep) );
+        SAFE_FUNC_EVAL( HighFreqL2L(bndkey, dc2de, de2dc, affected_keys) );
     }
     return 0;
 }

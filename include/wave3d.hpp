@@ -52,7 +52,7 @@ public:
         CHECK_TRUE(key < _ownerinfo.back());
         // Get the process which owns the current point
         std::vector<int>::iterator vi = std::lower_bound(_ownerinfo.begin(),
-							 _ownerinfo.end(), key + 1);
+                                                         _ownerinfo.end(), key + 1);
         return (vi - _ownerinfo.begin()) - 1;
     }
 };
@@ -518,11 +518,39 @@ private:
     
     int UListCompute(BoxDat& trgdat);
     int VListCompute(double W, BoxDat& trgdat, Point3& trgctr, DblNumMat& uep,
-		     DblNumMat& dcp, CpxNumVec& dnchkval,
+                     DblNumMat& dcp, CpxNumVec& dnchkval,
                      NumTns<CpxNumTns>& ue2dc);
     int WListCompute(double W, BoxDat& trgdat, DblNumMat& uep);
     int XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
                      CpxNumVec& dnchkval);
+
+    // High frequency multipole-to-multipole (M2M) translation.
+    // For the box and direction specified by bndkey, translate outgoing directional
+    // equivalent densities from the outgoing equivalent densities of the children.
+    // ue2uc contains the upward equivalent to upward check translation matrices
+    // for all of the children.
+    // uc2ue is the upward check to upward equivalency interaction matrices.
+    int HighFreqM2M(BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
+                    NumTns<CpxNumMat>& ue2uc);
+
+    // High-frequency multipole-to-local (M2L) translation.
+    // For the box and direction specified by bndkey, translate densities at the
+    // upward equivalent points (uep) of box and directions in the interaction
+    // list to the potentials at the downward check points (dcp).
+    int HighFreqM2L(BoxAndDirKey bndkey, DblNumMat& dcp, DblNumMat& uep);
+
+    // High-frequency local-to-local (L2L) translation.
+    // For the box and direction specified by bndkey, translate incoming direction
+    // check points to the children.
+    // dc2de contains the downward check to downward equivalent translation matrices.
+    // de2dc contains the downward equivalent to downward check translation matrices
+    // of the children.
+    // affected_keys is a list of all box and directions that get updated.  This list
+    // is used for communicating these updates after the L2L translations at a given
+    // level have been completed.
+    int HighFreqL2L(BoxAndDirKey bndkey, NumVec<CpxNumMat>& dc2de,
+                    NumTns<CpxNumMat>& de2dc, 
+                    std::set<BoxAndDirKey>& affected_keys);
 
     int LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
                    DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
@@ -532,14 +560,6 @@ private:
                    NumVec<CpxNumMat>& dc2de);
     int LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
                    NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden);
-
-    int HighFreqM2M(BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
-                    NumTns<CpxNumMat>& ue2uc);
-    int HighFreqM2L(Index3 dir, BoxKey trgkey, DblNumMat& dcp, DblNumMat& uep);
-    int HighFreqL2L(Index3 dir, BoxKey trgkey, NumVec<CpxNumMat>& dc2de,
-		    NumTns<CpxNumMat>& de2dc,
-                    std::set<BoxAndDirKey>& affected_keys);
-
 
     // Routines for communication
     int HighFreqInteractionListKeys(int level,
