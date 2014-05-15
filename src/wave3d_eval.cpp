@@ -45,6 +45,7 @@ int Wave3d::LowFreqUpwardPass(std::set<BoxKey>& reqboxset) {
     return 0;
 }
 
+
 int Wave3d::LowFreqDownwardPass() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqDownwardPass");
@@ -58,6 +59,7 @@ int Wave3d::LowFreqDownwardPass() {
     PrintParData(GatherParData(t0, t1), "Low frequency downward pass");
     return 0;
 }
+
 
 int Wave3d::HighFreqPass() {
 #ifndef RELEASE
@@ -173,6 +175,7 @@ int Wave3d::HighFreqPass() {
     return 0;
 }
 
+
 int Wave3d::GatherLocalKeys() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::GatherLocalKeys");
@@ -234,7 +237,7 @@ int Wave3d::GatherLocalKeys() {
     return 0;
 }
 
-//---------------------------------------------------------------------
+
 int Wave3d::eval(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::eval");
@@ -285,7 +288,7 @@ int Wave3d::eval(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val) {
     return 0;
 }
 
-//---------------------------------------------------------------------
+
 int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
                           std::set<BoxKey>& reqboxset) {
 #ifndef RELEASE
@@ -310,7 +313,7 @@ int Wave3d::EvalUpwardLow(double W, std::vector<BoxKey>& srcvec,
     return 0;
 }
 
-//---------------------------------------------------------------------
+
 int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalDownwardLow");
@@ -322,7 +325,6 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
     NumTns<CpxNumTns> ue2dc;
     DblNumMat uep;
     SAFE_FUNC_EVAL( _mlib.DownwardLowFetch(W, dep, dcp, dc2de, de2dc, ue2dc, uep) );
-    //------------------
     for (BoxKey& trgkey : trgvec) {
         BoxDat& trgdat = _level_prtns._lf_boxvec.access(trgkey);
         CHECK_TRUE(HasPoints(trgdat));  // should have points
@@ -333,7 +335,7 @@ int Wave3d::EvalDownwardLow(double W, std::vector<BoxKey>& trgvec) {
     return 0;
 }
 
-//---------------------------------------------------------------------
+
 int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::EvalUpwardHigh");
@@ -352,7 +354,7 @@ int Wave3d::EvalUpwardHigh(double W, Index3 dir, std::vector<BoxKey>& srcvec) {
     return 0;
 }
 
-//---------------------------------------------------------------------
+
 int Wave3d::EvalDownwardHigh(double W, Index3 dir, std::vector<BoxKey>& trgvec,
                              std::set<BoxAndDirKey>& affected_keys) {
 #ifndef RELEASE
