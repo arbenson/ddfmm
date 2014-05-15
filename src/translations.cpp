@@ -226,13 +226,10 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqM2M");
 #endif
-    // TODO(arbenson): What was this being used for before?
-    int tdof = 1;
-
     CHECK_TRUE(HasPoints(srcdat));  // should have points
     Point3 srcctr = BoxCenter(srckey);
     // get array
-    CpxNumVec upchkval(tdof * ucp.n());
+    CpxNumVec upchkval(ucp.n());
     setvalue(upchkval, cpx(0, 0));
     CpxNumVec& upeqnden = srcdat.upeqnden();
     // ue2dc
@@ -262,7 +259,7 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
         }
     }
     
-    // uc2ue
+    // upward check to upward equivalency
     CpxNumMat& v  = uc2ue(0);
     CpxNumMat& is = uc2ue(1);
     CpxNumMat& up = uc2ue(2);
@@ -281,8 +278,8 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
 
 
 int Wave3d::LowFreqM2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
-                       NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
-                       NumVec<CpxNumMat>& dc2de) {
+                       NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden,
+		       DblNumMat& uep, NumVec<CpxNumMat>& dc2de) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::LowFreqM2L");
 #endif
