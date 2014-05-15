@@ -24,7 +24,7 @@
 
 //-----------------------------------
 int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
-		      Point3 ctr, int accu) {
+                      Point3 ctr, int accu) {
     _vertvec = vertvec;
     _facevec = facevec;
     _ctr = ctr;
@@ -50,7 +50,7 @@ int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
 
 //-----------------------------------
 int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
-		     std::map<std::string, std::string>& opts) {
+                     std::map<std::string, std::string>& opts) {
   DblNumMat& gauwgt = _gauwgts[5];
   //
   int num_quad_points = gauwgt.m();
@@ -97,12 +97,12 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
 
       for (int gi = 0; gi < num_quad_points; ++gi) {
           double loc0 = gauwgt(gi, 0);
-	  double loc1 = gauwgt(gi, 1);
-	  double loc2 = gauwgt(gi, 2);
-	  double wgt  = gauwgt(gi, 3);
-	  posvec.push_back(loc0 * pos0 + loc1 * pos1 + loc2 * pos2);
-	  norvec.push_back(nor);
-	  denvec.push_back((loc0 * den0 + loc1 * den1 + loc2 * den2) * (are * wgt));
+          double loc1 = gauwgt(gi, 1);
+          double loc2 = gauwgt(gi, 2);
+          double wgt  = gauwgt(gi, 3);
+          posvec.push_back(loc0 * pos0 + loc1 * pos1 + loc2 * pos2);
+          norvec.push_back(nor);
+          denvec.push_back((loc0 * den0 + loc1 * den1 + loc2 * den2) * (are * wgt));
       }
   }
   // TODO (arbenson): put in check points?
@@ -136,15 +136,30 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
       densities.insert(start_ind + i, denvec[i]);
   }
 
-  // TODO(arbenson): Setup kernel in _wave.
   _wave._ctr = _ctr;
   _wave._ACCU = _accu;
   _wave._kernel = Kernel3d(KERNEL_HELM_MIXED);
   _wave._equiv_kernel = Kernel3d(KERNEL_HELM);
 
+  // Deal with geometry partition.  For now, we just do a cyclic partition.
+  // TODO(arbenson): be more clever about the partition.
+  int num_levels = ceil(log(sqrt(K)) / log(2));
+  int num_cells = pow2(num_levels);
+  _wave.geomprtn.resize(num_cells, num_cells, num_cells);
+  curr_proc = 0;
+  for (int k = 0; k < num_cells; ++k) {
+      for (int j = 0; j < num_cells; ++j) {
+          for (int i = 0; i < num_cells; ++i) {
+              _wave.geom.prtn(i, j, k) = curr_proc;
+              curr_proc = (curr_proc + 1) % mpisize;
+          }
+      }
+  }
+
   Mlib3d& mlib = _wave._mlib;
   mlib._NPQ = _wave._NPQ;
   mlib._kernel = Kernel3d(KERNEL_HELM);
+  mlib.setup(opts);
 
   std::cout << "Setting up the wave..." << std::endl;
   _wave.setup(opts);
