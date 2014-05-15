@@ -29,6 +29,7 @@ Point3 ShiftedPoint(int dir_ind, double W) {
     return Point3((a - 0.5) * W / 2, (b - 0.5) * W / 2, (c - 0.5) * W / 2);
 }
 
+
 int Transpose(CpxNumMat& trg, CpxNumMat& src) {
 #ifndef RELEASE
     CallStackEntry entry("Transpose");
@@ -41,6 +42,7 @@ int Transpose(CpxNumMat& trg, CpxNumMat& src) {
     }
     return 0;
 }
+
 
 int ApplyShift(DblNumMat& trg, DblNumMat& src, Point3 shift) {
 #ifndef RELEASE
@@ -278,7 +280,7 @@ int Mlib3d::DownwardHighFetch(double W, Index3 dir, DblNumMat& dep, DblNumMat& d
     return 0;
 }
 
-//-----------------------------------
+
 Index3 Mlib3d::predir(Index3 dir) {
 #ifndef RELEASE
     CallStackEntry entry("Mlib3d::predir");
@@ -302,8 +304,6 @@ Index3 Mlib3d::predir(Index3 dir) {
 }
 
 
-
-//---------------------------------------------------------------------
 int Mlib3d::HighFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp,
                              DblNumMat& res) {
 #ifndef RELEASE
@@ -323,7 +323,7 @@ int Mlib3d::HighFetchShuffle(Index3 prm, Index3 sgn, DblNumMat& tmp,
     return 0;
 }
 
-//---------------------------------------------------------------------
+
 int Mlib3d::HighFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn,
                                 Index3& prm) {
 #ifndef RELEASE
@@ -356,7 +356,6 @@ int Mlib3d::HighFetchIndex3Sort(Index3 val, Index3& srt, Index3& sgn,
 }
 
 
-//-------------------
 int serialize(const LowFreqEntry& le, std::ostream& os,
               const std::vector<int>& mask) {
 #ifndef RELEASE
@@ -368,6 +367,8 @@ int serialize(const LowFreqEntry& le, std::ostream& os,
     SAFE_FUNC_EVAL( serialize(le._ue2dc, os, mask) );
     return 0;
 }
+
+
 int deserialize(LowFreqEntry& le, std::istream& is,
                 const std::vector<int>& mask) {
 #ifndef RELEASE
@@ -380,7 +381,7 @@ int deserialize(LowFreqEntry& le, std::istream& is,
     return 0;
 }
 
-//-------------------
+
 int serialize(const HghFreqDirEntry& he, std::ostream& os,
               const std::vector<int>& mask) {
 #ifndef RELEASE
@@ -392,8 +393,9 @@ int serialize(const HghFreqDirEntry& he, std::ostream& os,
     return 0;
 }
 
-int deserialize(HghFreqDirEntry& he, std::istream& is, const std::vector<int>& mask)
-{
+
+int deserialize(HghFreqDirEntry& he, std::istream& is,
+		const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
 #endif
