@@ -524,7 +524,7 @@ private:
     int XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
                      CpxNumVec& dnchkval);
 
-    // High frequency multipole-to-multipole (M2M) translation.
+    // High frequency multipole-to-multipole (HF-M2M) translation.
     // For the box and direction specified by bndkey, translate outgoing directional
     // equivalent densities from the outgoing equivalent densities of the children.
     // ue2uc contains the upward equivalent to upward check translation matrices
@@ -533,13 +533,13 @@ private:
     int HighFreqM2M(BoxAndDirKey& bndkey, NumVec<CpxNumMat>& uc2ue,
                     NumTns<CpxNumMat>& ue2uc);
 
-    // High-frequency multipole-to-local (M2L) translation.
+    // High-frequency multipole-to-local (HF-M2L) translation.
     // For the box and direction specified by bndkey, translate densities at the
     // upward equivalent points (uep) of box and directions in the interaction
     // list to the potentials at the downward check points (dcp).
     int HighFreqM2L(BoxAndDirKey bndkey, DblNumMat& dcp, DblNumMat& uep);
 
-    // High-frequency local-to-local (L2L) translation.
+    // High-frequency local-to-local (HF-L2L) translation.
     // For the box and direction specified by bndkey, translate incoming direction
     // check points to the children.
     // dc2de contains the downward check to downward equivalent translation matrices.
@@ -552,21 +552,40 @@ private:
                     NumTns<CpxNumMat>& de2dc, 
                     std::set<BoxAndDirKey>& affected_keys);
 
+    // Low-frequency multipole-to-multipole (LF-M2M) translation.
+    // Translate the upward equivalent densities from the children boxes
+    // to the parent box, srcdat.
+    // uep contains the upward equivalent points.
+    // ucp contains the upward check points.
+    //  uc2ue contains the upward check to upward equivalent equivalence
+    // translation matrices.
+    // ue2uc contains the upward equivalency to upward check translation matrices
+    // for each of the children of boxes.
     int LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
                    DblNumMat& ucp, NumVec<CpxNumMat>& uc2ue,
                    NumTns<CpxNumMat>& ue2uc);
+
+    // Low-frequency multipole-to-local (LF-M2L) translation.
+    // For the box specified by trgkey and trgdat, translate the upward equivalent
+    // densities of boxes in the interaction list to downward equivalent densities.
+    // This computation involves the U-, V-, W-, and X-lists.
     int LowFreqM2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dcp,
                    NumTns<CpxNumTns>& ue2dc, CpxNumVec& dneqnden, DblNumMat& uep,
                    NumVec<CpxNumMat>& dc2de);
+
+    // Low-frequency local-to-local (LF-L2L) translation.
+    // For the box specified by trgkey and trgdat, translate the downward
+    // equivalent density to its children.
+    // dep contains the downward equivalent points.
+    // de2dc contains the downward equivalent to downward check translation matrices
+    // for each of the children.
+    // dneqnden contains the downward equivalent densities.
     int LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
                    NumTns<CpxNumMat>& de2dc, CpxNumVec& dneqnden);
 
     // Routines for communication
     int HighFreqInteractionListKeys(int level,
                                     std::set<BoxAndDirKey>& request_keys);
-
-    int AllChildrenKeys(LevelBoxAndDirVec& vec,
-                        std::vector<BoxAndDirKey>& req_keys);
     int HighFreqM2MLevelComm(int level);
     int HighFreqL2LLevelCommPre(int level);
     int HighFreqL2LLevelCommPost(int level, std::set<BoxAndDirKey>& affected_keys);
