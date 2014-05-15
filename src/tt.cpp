@@ -147,23 +147,6 @@ int main(int argc, char** argv) {
         }
         std::istringstream ss(opt);
         ss >> K;
-        
-        double NPW;
-        opt = findOption(opts, "-wave3d_NPW");
-        if (opt.empty()) {
-            return 0;
-        }
-        std::istringstream ss2(opt);
-        ss2 >> NPW;
-
-#if 0
-        std::string geomfile;
-        opt = findOption(opts, "-geomfile");
-        if (opt.empty()) {
-            return 0;
-        }
-        geomfile = opt;
-#endif
 
         IntNumTns geomprtn;
         opt = findOption(opts, "-geomprtn");
@@ -179,19 +162,6 @@ int main(int argc, char** argv) {
                     << geomprtn.n() << " " << geomprtn.p() << std::endl
                     << geomprtn << std::endl;
         }
-
-#if 0
-        IntNumTns geomprtn;
-        NewData(geomfile, K, NPW, mpisize, geomprtn);
-
-        if (mpirank == 0) {
-            std::cerr << "Done reading geomprtn "
-                      << geomprtn.m() << " "
-                      << geomprtn.n() << " " 
-                      << geomprtn.p() << std::endl
-                      << geomprtn << std::endl;
-        }
-#endif
         wave.geomprtn() = geomprtn;
 
         //2. setup
