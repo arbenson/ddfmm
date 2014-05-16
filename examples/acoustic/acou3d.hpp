@@ -33,23 +33,26 @@ class VertexData {
 //---------------------------------------------------------------------------
 class Acoustic3d {
 public:
-  //input
-  std::vector<Point3> _vertvec;
-  std::vector<Index3> _facevec; // all triangle faces
-  Point3 _ctr;
-  int _accu;
-  std::vector<double> _diavec; //diagonal (solid angle/4pi)
-  std::vector<double> _arevec; //length of each segment
-  Wave3d _wave;
-  std::map<int, DblNumMat> _gauwgts;
-  std::map<int, DblNumMat> _sigwgts;
-  double _K;
-  
-  Acoustic3d() {}
-  ~Acoustic3d() {}
-  int setup(std::vector<Point3>& vertvec, std::vector<Index3>& facevec,
-	    Point3 ctr, int accu);
-  int eval(std::vector<cpx>& val, std::map<std::string, std::string>& opts);
+    std::vector<Point3> _vertvec;
+    std::vector<Index3> _facevec; // all triangle faces
+    Point3 _ctr;
+    int _accu;
+    std::vector<double> _diavec; //diagonal (solid angle/4pi)
+    std::vector<double> _arevec; //length of each segment
+    Wave3d _wave;
+    std::map<int, DblNumMat> _gauwgts;
+    std::map<int, DblNumMat> _sigwgts;
+    double _K;
+    std::vector<int> _dist;
+    
+    Acoustic3d() {}
+    ~Acoustic3d() {}
+    int setup(std::vector<Point3>& vertvec, std::vector<Index3>& facevec,
+              Point3 ctr, int accu);
+    int eval(std::vector<cpx>& val, std::map<std::string, std::string>& opts);
+
+private:
+    bool Own(int index, int mpirank);
 };
 
 #endif
