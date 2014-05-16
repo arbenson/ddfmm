@@ -36,7 +36,7 @@ int optionsCreate(int argc, char** argv, std::map<std::string,
 }
 
 std::string findOption(std::map<std::string, std::string>& opts,
-                  std::string option) {
+		       std::string option) {
     std::map<std::string, std::string>::iterator mi = opts.find(option);
     if (mi == opts.end()) {
         std::cerr << "Missing option " << option << std::endl;
