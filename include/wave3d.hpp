@@ -37,7 +37,7 @@ enum {
     WAVE3D_LEAF = 2,
 };
 
-//---------------------------------------------------------------------------
+
 class PtPrtn {
 public:
     std::vector<int> _ownerinfo;
@@ -57,10 +57,11 @@ public:
     }
 };
 
+
 // Returns true if and only if lhs > rhs in the z-order curve.
 bool MortonOrderGreater(Index3 lhs, Index3 rhs);
 
-//---------------------------------------------------------------------------
+
 class BoxKey {
 public:
     BoxKey() {;}
@@ -97,6 +98,7 @@ public:
         return operator<(rhs) || operator==(rhs);
     }
 };
+
 
 #define BoxKey_Number 2
 enum {
@@ -189,6 +191,7 @@ enum {
     BoxDat_fftcnt = 18,
 };
 
+
 class BoxPrtn {
 public:
     IntNumTns _ownerinfo;
@@ -207,6 +210,7 @@ public:
         return _ownerinfo(idx(0), idx(1), idx(2));
     }
 };
+
 
 class BoxAndDirKey {
 public:
@@ -244,6 +248,7 @@ public:
     }
 };
 
+
 #define BoxAndDirKey_Number 2
 enum {
     BoxAndDirKey_boxkey = 0,
@@ -251,7 +256,6 @@ enum {
 };
 
 
-//---------------------------------------------------------------------------
 class BoxAndDirLevelPrtn {
 public:
     BoxAndDirLevelPrtn() {}
@@ -264,6 +268,7 @@ public:
     int owner(BoxAndDirKey& key);
 };
 
+
 class UnitLevelBoxPrtn {
 public:
     UnitLevelBoxPrtn() {}
@@ -274,6 +279,7 @@ public:
     // Return process that owns the key.
     int owner(BoxAndDirKey& key);
 };
+
 
 class LowFreqBoxPrtn {
 public:
@@ -288,7 +294,6 @@ public:
 };
 
 
-//---------------------------------------------------------------------------
 // Boundary data
 class BoxAndDirDat {
 public:
@@ -306,12 +311,14 @@ public:
     std::vector<BoxAndDirKey>& interactionlist() { return _interactionlist; }
 };
 
+
 #define BoxAndDirDat_Number 3
 enum {
     BoxAndDirDat_dirupeqnden = 0,
     BoxAndDirDat_dirdnchkval = 1,
     BoxAndDirDat_interactionlist = 2,
 };
+
 
 class BoxAndDirPrtn {
 public:
@@ -337,7 +344,7 @@ typedef std::map< double, std::vector<BoxKey> > ldmap_t;
 typedef std::vector< std::vector<BoxAndDirKey> > level_hdkeys_t;
 typedef std::vector< std::map<Index3, std::vector<BoxKey> > > level_hdkeys_map_t;
 
-//---------------------------------------------------------------------------
+
 // Handler of all partitions
 class LevelPartitions {
 public:
