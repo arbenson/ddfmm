@@ -22,7 +22,6 @@
 
 #include <fstream>
 
-//-----------------------------------
 int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
                       Point3 ctr, int accu) {
     _vertvec = vertvec;
@@ -40,27 +39,39 @@ int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
     // Load the quadrature weights
     vector<int> all(1,1);
     std::ifstream gin("gauwgts.bin");
+    CHECK_TRUE_MSG(!gin.fail(), "Could not open gauwgts.bin");
     SAFE_FUNC_EVAL( deserialize(_gauwgts, gin, all) );
-    std::cerr << "gauwgts size " << _gauwgts.size() << std::endl;
+    int mpirank = getMPIRank();
+    if (mpirank == 0) {
+      std::cerr << "gauwgts size " << _gauwgts.size() << std::endl;
+    }
     std::ifstream lin("sigwgts.bin");
+    CHECK_TRUE_MSG(!lin.fail(), "Could not open sigwgts.bin");
     SAFE_FUNC_EVAL( deserialize(_sigwgts, lin, all) );
-    std::cerr << "sigwgts size " << _sigwgts.size() << std::endl;
+    if (mpirank == 0) {
+      std::cerr << "sigwgts size " << _sigwgts.size() << std::endl;
+    }
     return 0;
 }
 
-//-----------------------------------
+
 int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
                      std::map<std::string, std::string>& opts) {
+  int mpirank, mpisize;
+  getMPIInfo(&mpirank, &mpisize);
+
+  CHECK_TRUE_MSG(_gauwgts.size() > 5, "Problem with quadrature weights");
   DblNumMat& gauwgt = _gauwgts[5];
-  //
+  if (mpirank == 0) {
+    std::cout << "---" << std::endl;
+    std::cout << gauwgt.m() << std::endl;
+    std::cout << gauwgt << std::endl;
+  }
   int num_quad_points = gauwgt.m();
   std::vector<Point3> posvec;
   std::vector<Point3> norvec;
   std::vector<cpx> denvec;
   std::vector<cpx> valvec;
-
-  int mpirank, mpisize;
-  getMPIInfo(&mpirank, &mpisize);
 
   // Determine distribution of face vectors.
   int avg_faces = _facevec.size() / mpisize;
@@ -105,6 +116,10 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
           denvec.push_back((loc0 * den0 + loc1 * den1 + loc2 * den2) * (are * wgt));
       }
   }
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (mpirank == 0) {
+    std::cout << "putting in ownerinfo" << std::endl;
+  }
   // TODO (arbenson): put in check points?
 
   // Owners for the parvecs:
@@ -143,14 +158,14 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
 
   // Deal with geometry partition.  For now, we just do a cyclic partition.
   // TODO(arbenson): be more clever about the partition.
-  int num_levels = ceil(log(sqrt(K)) / log(2));
+  int num_levels = ceil(log(sqrt(_K)) / log(2));
   int num_cells = pow2(num_levels);
-  _wave.geomprtn.resize(num_cells, num_cells, num_cells);
-  curr_proc = 0;
+  _wave._geomprtn.resize(num_cells, num_cells, num_cells);
+  int curr_proc = 0;
   for (int k = 0; k < num_cells; ++k) {
       for (int j = 0; j < num_cells; ++j) {
           for (int i = 0; i < num_cells; ++i) {
-              _wave.geom.prtn(i, j, k) = curr_proc;
+              _wave._geomprtn(i, j, k) = curr_proc;
               curr_proc = (curr_proc + 1) % mpisize;
           }
       }

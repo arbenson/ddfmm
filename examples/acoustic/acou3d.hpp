@@ -43,6 +43,7 @@ public:
   Wave3d _wave;
   std::map<int, DblNumMat> _gauwgts;
   std::map<int, DblNumMat> _sigwgts;
+  double _K;
   
   Acoustic3d() {}
   ~Acoustic3d() {}
