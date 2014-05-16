@@ -60,13 +60,8 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
   int mpirank, mpisize;
   getMPIInfo(&mpirank, &mpisize);
 
-  CHECK_TRUE_MSG(_gauwgts.size() > 5, "Problem with quadrature weights");
+  CHECK_TRUE_MSG(_gauwgts.find(5) != _gauwgts.end(), "Problem with quadrature weights");
   DblNumMat& gauwgt = _gauwgts[5];
-  if (mpirank == 0) {
-    std::cout << "---" << std::endl;
-    std::cout << gauwgt.m() << std::endl;
-    std::cout << gauwgt << std::endl;
-  }
   int num_quad_points = gauwgt.m();
   std::vector<Point3> posvec;
   std::vector<Point3> norvec;
@@ -85,6 +80,9 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
           dist[i] += 1;
       }
   }
+
+  // USE ZERO DENSITY FOR NOW
+  den.resize(_vertvec.size(), 0);
 
   for (int fi = 0; fi < _facevec.size(); ++fi) {
       // Only read if this face is owned by this process.
