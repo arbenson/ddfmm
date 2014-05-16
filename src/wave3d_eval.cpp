@@ -261,7 +261,7 @@ int Wave3d::eval(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val) {
     PrintParData(GatherParData(t0, t1), "Actual wave evaluation computation time.");
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
 
-    // For all values that I have but don't own, add to the list.
+    // For all values that I have computed but do not own, send to the owner.
     std::vector<int> write_pts;
     for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
         BoxKey curkey = kv.first;
