@@ -24,6 +24,9 @@
 
 int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
                       Point3 ctr, int accu) {
+#ifndef RELEASE
+    CallStackEntry entry("Acoustic3d::setup");
+#endif
     _vertvec = vertvec;
     _facevec = facevec;
     _ctr = ctr;
@@ -45,18 +48,22 @@ int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
     if (mpirank == 0) {
       std::cerr << "gauwgts size " << _gauwgts.size() << std::endl;
     }
+#if 0
     std::ifstream lin("sigwgts.bin");
     CHECK_TRUE_MSG(!lin.fail(), "Could not open sigwgts.bin");
     SAFE_FUNC_EVAL( deserialize(_sigwgts, lin, all) );
     if (mpirank == 0) {
       std::cerr << "sigwgts size " << _sigwgts.size() << std::endl;
     }
+#endif
     return 0;
 }
 
 
-int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
-                     std::map<std::string, std::string>& opts) {
+int Acoustic3d::eval(vector<cpx>& val, std::map<std::string, std::string>& opts) {
+#ifndef RELEASE
+    CallStackEntry entry("Acoustic3d::eval");
+#endif
   int mpirank, mpisize;
   getMPIInfo(&mpirank, &mpisize);
 
@@ -82,7 +89,7 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
   }
 
   // USE ZERO DENSITY FOR NOW
-  den.resize(_vertvec.size(), 0);
+  vector<cpx> den(_vertvec.size(), 0);
 
   for (int fi = 0; fi < _facevec.size(); ++fi) {
       // Only read if this face is owned by this process.
@@ -147,6 +154,10 @@ int Acoustic3d::eval(vector<Point3>& chk, vector<cpx>& den, vector<cpx>& val,
   }
   for (int i = 0; i < denvec.size(); ++i) {
       densities.insert(start_ind + i, denvec[i]);
+  }
+  cpx dummy_val(0, 0);
+  for (int i = 0; i < denvec.size(); ++i) {
+      potentials.insert(start_ind + i, dummy_val);
   }
 
   _wave._ctr = _ctr;

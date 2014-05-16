@@ -49,8 +49,7 @@ public:
   ~Acoustic3d() {}
   int setup(std::vector<Point3>& vertvec, std::vector<Index3>& facevec,
 	    Point3 ctr, int accu);
-  int eval(std::vector<Point3>& chk, std::vector<cpx>& den, std::vector<cpx>& val,
-	   std::map<std::string, std::string>& opts);
+  int eval(std::vector<cpx>& val, std::map<std::string, std::string>& opts);
 };
 
 #endif

@@ -39,132 +39,101 @@ std::string findOption(std::map<std::string, std::string>& opts,
 }
 
 int main(int argc, char** argv) {
-  MPI_Init(&argc, &argv);
-  int mpirank, mpisize;
-  getMPIInfo(&mpirank, &mpisize);
-
-  if (mpirank == 0) {
-    std::cout << "starting!" << std::endl;
-  }
-  //
-  srand48(time(NULL));
-  map<string,string> opts;
-  optionsCreate(argc, argv, opts);
-  if (mpirank == 0) {
-    for (auto& kv : opts) {
-      std::cout << kv.first << ": " << kv.second << std::endl;
-    }
-  }
-
-  map<string,string>::iterator mi;
-  vector<int> all(1,1);
-  std::string vertfile = findOption(opts, "-vertfile");
-  if (vertfile.empty()) {
-    return -1;
-  }
-
-  // Read the vertex file
-  vector<Point3> vertvec;
-  {
-    ifstream fin(vertfile);
-    if (fin.fail()) {
-      std::cerr << "Failed to open vertfile!" << std::endl;
-      return -1;
-    }
-    SAFE_FUNC_EVAL( deserialize(vertvec, fin, all) );
-  }
-
-  std::string facefile = findOption(opts, "-facefile");
-  if (facefile.empty()) {
-    return -1;
-  }
-  vector<Index3> facevec;
-  {
-    ifstream fin(facefile);
-    if (fin.fail()) {
-      std::cerr << "Failed to open vertfile!" << std::endl;
-      return -1;
-    }
-    SAFE_FUNC_EVAL( deserialize(facevec, fin, all) );
-  }
-
-  if (mpirank == 0) {
-    std::cout << "facevec size: " << facevec.size() << std::endl;
-    std::cout << "vertvec size: " << vertvec.size() << std::endl;
-  }
-  
-  Point3 ctr(0, 0, 0);
-  std::string opt = findOption(opts, "-wave3d_ACCU");
-  if (opt.empty()) {
-    return -1;
-  }
-  int accuracy = 0;
-  {
-    istringstream ss(opt);
-    ss >> accuracy;
-  }
-  CHECK_TRUE(accuracy >= 1 && accuracy <= 3);
-
-  //2. scattering
-  Acoustic3d acou;
-  SAFE_FUNC_EVAL( acou.setup(vertvec, facevec, ctr, accuracy) );
-  //
-  //load den
-  mi = opts.find("-denfile");  assert(mi!=opts.end());
-  char denfile[100];
-  {
-    istringstream ss((*mi).second);
-    ss >> denfile;
-  }
-  vector<cpx> denvec;
-  {
-    ifstream fin(denfile);
-    SAFE_FUNC_EVAL( deserialize(denvec, fin, all) );
-  }
-
-  mi = opts.find("-chkfile");  assert(mi!=opts.end());
-  char chkfile[100];
-  {
-    istringstream ss((*mi).second);
-    ss>>chkfile;
-  }
-
-  opt = findOption(opts, "-wave3d_K");
-  if (opt.empty()) {
-    return -1;
-  }
-  std::istringstream ss(opt);
-  ss >> acou._K;
-
-  vector<Point3> chkvec;
-  vector<cpx> valvec;
-#if 0
-  {
-    ifstream fin(chkfile);
-    SAFE_FUNC_EVAL( deserialize(chkvec, fin, all) );
-  }
-  int C = chkvec.size();
-
-  vector<cpx> valvec(C, cpx(0,0));
+#ifndef RELEASE
+    // When not in release mode, we catch all errors so that we can print the
+    // manual call stack.
+    try {
 #endif
-  if (mpirank == 0) {
-    std::cout << "evaling..." << std::endl;
-  }
-  SAFE_FUNC_EVAL( acou.eval(chkvec, denvec, valvec, opts) );
-  if (mpirank == 0) {
-    std::cout << "done evaling..." << std::endl;
-  }
-  mi = opts.find("-valfile");
-  assert(mi != opts.end());
-  char valfile[100];
-  {
-    istringstream ss((*mi).second);
-    ss>>valfile;
-  }
-  {
-    ofstream fot(valfile);
-    SAFE_FUNC_EVAL( serialize(valvec, fot, all) );
-  }
+    MPI_Init(&argc, &argv);
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
 
-  return 0;
+    srand48(time(NULL));
+    map<string,string> opts;
+    optionsCreate(argc, argv, opts);
+    if (mpirank == 0) {
+        for (auto& kv : opts) {
+            std::cout << kv.first << ": " << kv.second << std::endl;
+	}
+    }
+
+    map<string,string>::iterator mi;
+    vector<int> all(1,1);
+    std::string vertfile = findOption(opts, "-vertfile");
+    if (vertfile.empty()) {
+        return -1;
+    }
+
+    // Read the vertex file
+    vector<Point3> vertvec;
+    ifstream vert_input(vertfile);
+    if (vert_input.fail()) {
+        std::cerr << "Failed to open vertfile!" << std::endl;
+        return -1;
+    }
+    SAFE_FUNC_EVAL( deserialize(vertvec, vert_input, all) );
+
+    std::string facefile = findOption(opts, "-facefile");
+    if (facefile.empty()) {
+        return -1;
+    }
+    vector<Index3> facevec;
+    ifstream face_input(facefile);
+    if (face_input.fail()) {
+        std::cerr << "Failed to open vertfile!" << std::endl;
+        return -1;
+    }
+    SAFE_FUNC_EVAL( deserialize(facevec, face_input, all) );
+
+    if (mpirank == 0) {
+        std::cout << "facevec size: " << facevec.size() << std::endl;
+	std::cout << "vertvec size: " << vertvec.size() << std::endl;
+    }
+  
+    Point3 ctr(0, 0, 0);
+    std::string opt = findOption(opts, "-wave3d_ACCU");
+    if (opt.empty()) {
+        return -1;
+    }
+    
+    int accuracy = 0;
+    istringstream acc_input(opt);
+    acc_input >> accuracy;
+    CHECK_TRUE(accuracy >= 1 && accuracy <= 3);
+
+    Acoustic3d acou;
+    SAFE_FUNC_EVAL( acou.setup(vertvec, facevec, ctr, accuracy) );
+
+    opt = findOption(opts, "-wave3d_K");
+    if (opt.empty()) {
+        return -1;
+    }
+    std::istringstream K_input(opt);
+    K_input >> acou._K;
+
+    vector<Point3> chkvec;
+    vector<cpx> valvec;
+    if (mpirank == 0) {
+        std::cout << "evaling..." << std::endl;
+    }
+    SAFE_FUNC_EVAL( acou.eval(valvec, opts) );
+    if (mpirank == 0) {
+        std::cout << "done evaling..." << std::endl;
+    }
+    std::string valfile = findOption(opts, "-valfile");
+    if (valfile.empty()) {
+        return -1;
+    }
+    ofstream output(valfile);
+    SAFE_FUNC_EVAL( serialize(valvec, output, all) );
+#ifndef RELEASE
+    } catch( ... ) {
+        int mpirank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
+        std::cerr << "Process " << mpirank << " caught error." << std::endl;
+        DumpCallStack();
+    }
+#endif
+    MPI_Finalize();
+    return 0;
 }
