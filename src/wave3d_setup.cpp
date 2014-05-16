@@ -93,7 +93,7 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
         std::istringstream ss(mi->second);
         ss >> _maxlevel;
     }
-    //
+
     if (mpirank == 0) {
         std::cout << _K <<      " | "
                   << _ACCU <<   " | "
