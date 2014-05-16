@@ -43,7 +43,7 @@ LIB_SRC = src/wave3d.cpp \
           src/data_distrib.cpp \
 
 ACOUSTIC_SRC = examples/acoustic/trmesh.cpp \
-           examples/acoustic/acou3d.cpp
+           examples/acoustic/acou3d.cpp \
 
 ACOUSTIC_OBJ = $(ACOUSTIC_SRC:.cpp=.o)
 LIB_OBJ = $(LIB_SRC:.cpp=.o)
@@ -59,7 +59,7 @@ libacoustic.a: ${ACOUSTIC_OBJ}
 tt: src/tt.o libwave.a
 	${CXX} -o $@ $^ ${LDFLAGS}
 
-acoustic: examples/acoustic/main.o libwave.a libacoustic.a
+acoustic: examples/acoustic/main.o libacoustic.a libwave.a
 	${CXX} -o acoustic3d $^ ${LDFLAGS}
 
 file_io_test: src/file_io_test.o libwave.a
@@ -67,7 +67,7 @@ file_io_test: src/file_io_test.o libwave.a
 
 #------------------------------------------------------
 clean:
-	rm -rf *~ src/*.d src/*.o *.a tt
+	rm -rf *~ src/*.d src/*.o *.a tt examples/acoustic/*.d examples/acoustic/*.o
 
 tags:
 	etags include/*.hpp src/*.cpp
