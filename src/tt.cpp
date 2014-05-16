@@ -230,5 +230,6 @@ int main(int argc, char** argv) {
         DumpCallStack();
     }
 #endif
+    MPI_Finalize();
     return 0;
 }
