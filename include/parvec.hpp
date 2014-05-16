@@ -495,7 +495,7 @@ int ParVec<Key,Data,Partition>::expand(std::vector<Key>& keyvec) {
     return 0;
 }
 
-//--------------------------------------------
+
 template <class Key, class Data, class Partition>
 int ParVec<Key,Data,Partition>::discard(std::vector<Key>& keyvec) {
 #ifndef RELEASE
@@ -510,7 +510,7 @@ int ParVec<Key,Data,Partition>::discard(std::vector<Key>& keyvec) {
     return 0;
 }
 
-//-------------------
+
 template<class Key, class Data, class Partition>
 int serialize(const ParVec<Key,Data,Partition>& pv, std::ostream& os,
               const std::vector<int>& mask) {
@@ -521,6 +521,7 @@ int serialize(const ParVec<Key,Data,Partition>& pv, std::ostream& os,
     serialize(pv._prtn, os, mask);
     return 0;
 }
+
 
 template<class Key, class Data, class Partition>
 int deserialize(ParVec<Key,Data,Partition>& pv, std::istream& is,
