@@ -52,6 +52,8 @@ public:
     int eval(std::map<std::string, std::string>& opts);
     int Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
     void SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
+    void RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
+		      ParVec<int, cpx, PtPrtn>& potentials);
     void Run();
 
 private:

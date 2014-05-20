@@ -288,33 +288,98 @@ int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& ou
         }
     }
 
-#if 0
-  // 4. Remove nearby from the output
-  // TODO(arbenson): what is this doing?
-  for (int fi = 0; fi < _facevec.size(); fi++) {
-      Index3& ind = _facevec[fi];
-      DblNumMat srcpos(3, num_quad_points, false, (double*)(&(_posvec[fi * num_quad_points])));
-      DblNumMat srcnor(3, num_quad_points, false, (double*)(&(_norvec[fi * num_quad_points])));
-      vector<Point3> trgpostmp;
-      trgpostmp.push_back( _vertvec[ ind(0) ] );
-      trgpostmp.push_back( _vertvec[ ind(1) ] );
-      trgpostmp.push_back( _vertvec[ ind(2) ] );
-      DblNumMat trgpos(3,3,false,(double*)(&(trgpostmp[0])));
-      CpxNumVec srcden(num_quad_points,false,(cpx*)(&(tmp[fi*num_quad_points])));
-      CpxNumVec trgval(3);
-      CpxNumMat mat;
-      iC( _knlbie.kernel(trgpos, srcpos, srcnor, mat) );
-      iC( zgemv(1.0, mat, srcden, 0.0, trgval) );
-      
-      out[ind(0)] -= trgval(0);
-      out[ind(1)] -= trgval(1);
-      out[ind(2)] -= trgval(2);
-  }
-#endif
-  // 5. Visit faces and add singularity correction.
-  SingularityCorrection(in, out);
+    // 4. Remove nearby from the output
+    RemoveNearby(in, out, potentials);
+
+    // 5. Visit faces and add singularity correction.
+    SingularityCorrection(in, out);
 
     return 0;
+}
+
+void Acoustic3d::RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
+			      ParVec<int, cpx, PtPrtn>& potentials) {
+#ifndef RELEASE
+    CallStackEntry entry("Acoustic3d::RemoveNearby");
+#endif
+    int mpirank = getMPIRank();
+    DblNumMat& gauwgt = _gauwgts[5];
+    CHECK_TRUE_MSG(_sigwgts.find(5) != _gauwgts.end(),
+                   "Problem with singularity weights");
+    int num_quad_points = gauwgt.m();
+
+    // Communicate data
+    std::vector<int> req_keys;
+    for (int fi = 0; fi < _facevec.size(); fi++) {
+        Index3& ind = _facevec[fi];
+        if (out.prtn().owner(ind(0)) == mpirank || 
+            out.prtn().owner(ind(1)) == mpirank || 
+            out.prtn().owner(ind(2)) == mpirank) {
+            for (int i = 0; i < num_quad_points; ++i) {
+                req_keys.push_back(fi * num_quad_points + i);
+	    }
+	}
+    }
+    std::vector<int> all(1, 1);
+    potentials.getBegin(req_keys, all);
+    potentials.getEnd(req_keys);
+
+    // TODO(arbenson): what is this doing?
+    for (int fi = 0; fi < _facevec.size(); fi++) {
+        Index3& ind = _facevec[fi];
+        if (out.prtn().owner(ind(0)) != mpirank &&
+            out.prtn().owner(ind(1)) != mpirank && 
+            out.prtn().owner(ind(2)) != mpirank) {
+            continue;
+        }
+        // Get the three vertices of the face.
+        Point3 pos0 = _vertvec[ind(0)];
+        Point3 pos1 = _vertvec[ind(1)];
+        Point3 pos2 = _vertvec[ind(2)];
+
+	Point3 nor = cross(pos1 - pos0, pos2 - pos0);
+	nor = nor / nor.l2();
+
+	// Positions at this face
+	DblNumMat srcpos(3, num_quad_points);
+	// Normal vectors at this face
+	DblNumMat srcnor(3, num_quad_points);
+
+	for (int gi = 0; gi < num_quad_points; ++gi) {
+            double loc0 = gauwgt(gi, 0);
+            double loc1 = gauwgt(gi, 1);
+            double loc2 = gauwgt(gi, 2);
+            double wgt  = gauwgt(gi, 3);
+	    Point3 pos = loc0 * pos0 + loc1 * pos1 + loc2 * pos2;
+	    for (int i = 0; i < 3; ++i) {
+                srcpos(i, gi) = pos(i);
+		srcnor(i, gi) = nor(i);
+	    }
+	}
+
+	// Positions at the vertices.
+	vector<Point3> trgpostmp;
+	trgpostmp.push_back(_vertvec[ind(0)]);
+	trgpostmp.push_back(_vertvec[ind(1)]);
+	trgpostmp.push_back(_vertvec[ind(2)]);
+	DblNumMat trgpos(3, 3, false, (double*)(&(trgpostmp[0])));
+	// Values at this face from FMM.
+	CpxNumVec srcden(num_quad_points);
+	for (int i = 0; i < num_quad_points; ++i) {
+            srcden(i) = potentials.access(fi * num_quad_points + i);
+	}
+	CpxNumVec trgval(3);
+	CpxNumMat mat;
+	_wave._kernel.kernel(trgpos, srcpos, srcnor, mat);
+	zgemv(1.0, mat, srcden, 0.0, trgval);
+      
+	for (int i = 0; i < 3; ++i) {
+	    if (out.prtn().owner(ind(i)) == mpirank) {
+		cpx val = out.access(ind(i)) - trgval(i);
+	        out.insert(ind(i), val);
+	    }
+	}
+    }
 }
 
 void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out) {
@@ -401,7 +466,10 @@ void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int,
             CpxNumMat mat;
             _wave._kernel.kernel(trgpos, srcpos, srcnor, mat);
             zgemv(1.0, mat, srcden, 0.0, trgval);
-            out.lclmap()[ind(corner)] += trgval(0);
+	    if (out.prtn().owner(ind(corner)) == mpirank) {
+                cpx val = out.access(ind(corner)) + trgval(0);
+		out.insert(ind(corner), val);
+	    }
         }
     }
 }
