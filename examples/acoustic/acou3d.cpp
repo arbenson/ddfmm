@@ -19,6 +19,7 @@
 #include "acou3d.hpp"
 #include "serialize.hpp"
 #include "trmesh.hpp"
+#include "vecmatop.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -178,9 +179,7 @@ int Acoustic3d::InitializeData(std::map<std::string, std::string>& opts) {
   mlib._kernel = Kernel3d(KERNEL_HELM);
   mlib.setup(opts);
 
-  std::cout << "Setting up the wave..." << std::endl;
   _wave.setup(opts);
-
   return 0;
 }
 
@@ -382,7 +381,8 @@ void Acoustic3d::RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtP
     }
 }
 
-void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out) {
+void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in,
+				       ParVec<int, cpx, PtPrtn>& out) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::SingularityCorrection");
 #endif
@@ -474,26 +474,60 @@ void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int,
     }
 }
 
+// Apply the operator to x and store the result in y
+void Acoustic3d::Apply(CpxNumVec&x, CpxNumVec& y) {
+    int mpirank = getMPIRank();
+
+    // Set up the parvec structures.
+    ParVec<int, cpx, PtPrtn> in, out;
+    in.prtn().ownerinfo() = _vert_distrib;
+    out.prtn().ownerinfo() = _vert_distrib;
+    
+    int start_index = _vert_distrib[mpirank];
+    CHECK_TRUE(start_index + x.m() == _vert_distrib[mpirank + 1]);
+    
+    for (int i = 0; i < x.m(); ++i) {
+	cpx val = x(i);
+        in.insert(i + start_index, val);
+        out.insert(i + start_index, val);  // dummy
+    }
+
+    // Call the function.
+    Apply(in, out);
+
+    // Store the result in y
+    CHECK_TRUE(x.m() == y.m());
+    for (int i = 0; i < y.m(); ++i) {
+	y(i) = out.access(i + start_index);
+    }
+}
+
 void Acoustic3d::Run(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::Run");
 #endif
     InitializeData(opts);
-    ParVec<int, cpx, PtPrtn> in, out;
-    std::vector<int> distrib;
-    SetupDistrib(_vertvec.size(), distrib);
-    in.prtn().ownerinfo() = distrib;
-    out.prtn().ownerinfo() = distrib;
+    SetupDistrib(_vertvec.size(), _vert_distrib);
 
     // Random entries for now.
     // TODO (arbenson): change this when real input is taken.
     int mpirank = getMPIRank();
-    for (int i = distrib[mpirank]; i < distrib[mpirank + 1]; ++i) {
+
+    int m = _vert_distrib[mpirank + 1] - _vert_distrib[mpirank];
+    // Initialize starting guess to 0.
+    CpxNumVec x0(m);
+    setvalue(x0, cpx(0.0));
+
+    // Initialize right-hand-side (random for now)
+    CpxNumVec b(m);
+    for (int i = 0; i < b.m(); ++i) {
         double real = static_cast<double>(rand()) / RAND_MAX;
         double imag = static_cast<double>(rand()) / RAND_MAX;
         cpx val(real, imag);
-        in.insert(i, val);
-        out.insert(i, val);  // dummy
+        b(i) = val;
     }
-    Apply(in, out);
+    double tol = 1e-6;
+    int max_iter = 2;
+    auto apply_func = [this] (CpxNumVec& x, CpxNumVec& y) { Apply(x, y); };
+    GMRES(b, x0, apply_func, tol, max_iter);
 }
