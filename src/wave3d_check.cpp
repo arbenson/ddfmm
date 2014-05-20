@@ -20,7 +20,6 @@
 
 #include <vector>
 
-//---------------------------------------------------------------------
 double Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val,
                      IntNumVec& chkkeys) {
 #ifndef RELEASE
