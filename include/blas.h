@@ -35,6 +35,7 @@ extern "C" {
     void zgemv_(char *trans, int *m, int *n, cpx16 *alpha, cpx16 *a, int *lda,
 		cpx16 *x, int *incx, cpx16 *beta, cpx16 *y, int *incy);
     void dscal_(int* n, double* alpha, double* X, int* incr);
+    void zdotc_(cpx16* result, int* n, cpx16 *x, int* incx, cpx16* y, int* incy);
 }
 
 #endif  // _BLAS_H_
