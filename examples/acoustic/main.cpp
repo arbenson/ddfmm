@@ -93,14 +93,16 @@ int main(int argc, char** argv) {
     std::istringstream K_input(opt);
     K_input >> acou._K;
 
-    vector<Point3> chkvec;
-    SAFE_FUNC_EVAL(acou.eval(opts));
-    acou.Run();
-    std::string valfile = FindOption(opts, "-valfile");
-    if (valfile.empty()) {
-        return -1;
+    // Get right-hand-side.
+    std::string boundary_file = FindOption(opts, "-bcnfile");
+    if (boundary_file.empty()) {
+	return -1;
     }
-    ofstream output(valfile);
+    ifstream boundary_data(boundary_file);
+    SAFE_FUNC_EVAL( deserialize(acou._boundary, boundary_data, all) );
+
+    acou.Run(opts);
+
 #ifndef RELEASE
     } catch( ... ) {
         int mpirank;

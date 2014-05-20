@@ -44,20 +44,21 @@ public:
     std::map<int, DblNumMat> _sigwgts;
     double _K;
     std::vector<int> _dist;
+    std::vector<cpx> _boundary;
     
     Acoustic3d() {}
     ~Acoustic3d() {}
     int setup(std::vector<Point3>& vertvec, std::vector<Index3>& facevec,
               Point3 ctr, int accu);
-    int eval(std::map<std::string, std::string>& opts);
     int Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
     void SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
     void RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
 		      ParVec<int, cpx, PtPrtn>& potentials);
-    void Run();
+    void Run(std::map<std::string, std::string>& opts);
 
 private:
     bool Own(int index, int mpirank);
+    int InitializeData(std::map<std::string, std::string>& opts);
 };
 
 #endif

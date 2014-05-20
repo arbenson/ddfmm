@@ -42,7 +42,7 @@ void SetupDistrib(int total_points, std::vector<int>& distrib) {
 }
 
 int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
-                      Point3 ctr, int accu) {
+		      Point3 ctr, int accu) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::setup");
 #endif
@@ -83,7 +83,7 @@ bool Acoustic3d::Own(int index, int mpirank) {
     return index >= _dist[mpirank] && index < _dist[mpirank + 1];
 }
 
-int Acoustic3d::eval(std::map<std::string, std::string>& opts) {
+int Acoustic3d::InitializeData(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::eval");
 #endif
@@ -474,10 +474,11 @@ void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int,
     }
 }
 
-void Acoustic3d::Run() {
+void Acoustic3d::Run(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::Run");
 #endif
+    InitializeData(opts);
     ParVec<int, cpx, PtPrtn> in, out;
     std::vector<int> distrib;
     SetupDistrib(_vertvec.size(), distrib);
