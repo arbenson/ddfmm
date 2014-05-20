@@ -20,24 +20,6 @@
 
 using namespace std;
 
-int optionsCreate(int argc, char** argv, map<string,string>& options) {
-  options.clear();
-  for(int k = 1; k < argc; k = k + 2) {
-    options[string(argv[k])] = string(argv[k+1]);
-  }
-  return 0;
-}
-
-std::string findOption(std::map<std::string, std::string>& opts,
-		       std::string option) {
-    std::map<std::string, std::string>::iterator mi = opts.find(option);
-    if (mi == opts.end()) {
-        std::cerr << "Missing option " << option << std::endl;
-        return "";
-    }
-    return mi->second;
-}
-
 int main(int argc, char** argv) {
 #ifndef RELEASE
     // When not in release mode, we catch all errors so that we can print the
@@ -49,8 +31,8 @@ int main(int argc, char** argv) {
     getMPIInfo(&mpirank, &mpisize);
 
     srand48(time(NULL));
-    map<string,string> opts;
-    optionsCreate(argc, argv, opts);
+    std::map<std::string, std::string> opts;
+    CreateOptions(argc, argv, opts);
     if (mpirank == 0) {
         for (auto& kv : opts) {
             std::cout << kv.first << ": " << kv.second << std::endl;
@@ -59,7 +41,7 @@ int main(int argc, char** argv) {
 
     map<string,string>::iterator mi;
     vector<int> all(1,1);
-    std::string vertfile = findOption(opts, "-vertfile");
+    std::string vertfile = FindOption(opts, "-vertfile");
     if (vertfile.empty()) {
         return -1;
     }
@@ -73,7 +55,7 @@ int main(int argc, char** argv) {
     }
     SAFE_FUNC_EVAL( deserialize(vertvec, vert_input, all) );
 
-    std::string facefile = findOption(opts, "-facefile");
+    std::string facefile = FindOption(opts, "-facefile");
     if (facefile.empty()) {
         return -1;
     }
@@ -91,7 +73,7 @@ int main(int argc, char** argv) {
     }
   
     Point3 ctr(0, 0, 0);
-    std::string opt = findOption(opts, "-wave3d_ACCU");
+    std::string opt = FindOption(opts, "-wave3d_ACCU");
     if (opt.empty()) {
         return -1;
     }
@@ -104,7 +86,7 @@ int main(int argc, char** argv) {
     Acoustic3d acou;
     SAFE_FUNC_EVAL( acou.setup(vertvec, facevec, ctr, accuracy) );
 
-    opt = findOption(opts, "-wave3d_K");
+    opt = FindOption(opts, "-wave3d_K");
     if (opt.empty()) {
         return -1;
     }
@@ -114,7 +96,7 @@ int main(int argc, char** argv) {
     vector<Point3> chkvec;
     SAFE_FUNC_EVAL(acou.eval(opts));
     acou.Run();
-    std::string valfile = findOption(opts, "-valfile");
+    std::string valfile = FindOption(opts, "-valfile");
     if (valfile.empty()) {
         return -1;
     }

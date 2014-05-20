@@ -26,25 +26,6 @@
 #include <sstream>
 #include <string>
 
-int optionsCreate(int argc, char** argv, std::map<std::string,
-                  std::string>& options) {
-    options.clear();
-    for (int k = 1; k < argc; k += 2) {
-      options[ std::string(argv[k]) ] = std::string(argv[k + 1]);
-    }
-    return 0;
-}
-
-std::string findOption(std::map<std::string, std::string>& opts,
-		       std::string option) {
-    std::map<std::string, std::string>::iterator mi = opts.find(option);
-    if (mi == opts.end()) {
-        std::cerr << "Missing option " << option << std::endl;
-        return "";
-    }
-    return mi->second;
-}
-
 int main(int argc, char** argv) {
 #ifndef RELEASE
     // When not in release mode, we catch all errors so that we can print the
@@ -63,12 +44,12 @@ int main(int argc, char** argv) {
         double t0, t1;
         std::vector<int> all(1,1);
         std::map<std::string, std::string> opts;
-        optionsCreate(argc, argv, opts);
+        CreateOptions(argc, argv, opts);
         std::map<std::string, std::string>::iterator mi;
         std::string opt;
 
         //1. read data
-        opt = findOption(opts, "-posfile");
+        opt = FindOption(opts, "-posfile");
         if (opt.empty()) {
             return 0;
         }
@@ -90,7 +71,7 @@ int main(int argc, char** argv) {
         }
 
         ParVec<int, cpx, PtPrtn> den;
-        opt = findOption(opts, "-denfile");
+        opt = FindOption(opts, "-denfile");
         if (opt.empty()) {
             return 0;
         }
@@ -141,7 +122,7 @@ int main(int argc, char** argv) {
         }
 
         double K;
-        opt = findOption(opts, "-wave3d_K");
+        opt = FindOption(opts, "-wave3d_K");
         if (opt.empty()) {
             return 0;
         }
@@ -149,7 +130,7 @@ int main(int argc, char** argv) {
         ss >> K;
 
         IntNumTns geomprtn;
-        opt = findOption(opts, "-geomprtn");
+        opt = FindOption(opts, "-geomprtn");
         if (opt.empty()) {
           return 0;
         }
@@ -185,7 +166,7 @@ int main(int argc, char** argv) {
         std::ostringstream oss;
         SAFE_FUNC_EVAL( serialize(val, oss, all) );
 
-        opt = findOption(opts, "-valfile");
+        opt = FindOption(opts, "-valfile");
         if (opt.empty()) {
             return 0;
         }
@@ -193,7 +174,7 @@ int main(int argc, char** argv) {
 
         // 4. check
         IntNumVec chkkeyvec;
-        opt = findOption(opts, "-chkfile");
+        opt = FindOption(opts, "-chkfile");
         if (opt.empty()) {
             return 0;
         }

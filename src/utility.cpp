@@ -43,3 +43,22 @@ int getMPIInfo(int *mpirank, int *mpisize) {
     *mpisize = getMPISize();
     return 0;
 }
+
+int CreateOptions(int argc, char** argv, std::map<std::string,
+                  std::string>& options) {
+    options.clear();
+    for (int k = 1; k < argc; k += 2) {
+      options[ std::string(argv[k]) ] = std::string(argv[k + 1]);
+    }
+    return 0;
+}
+
+std::string FindOption(std::map<std::string, std::string>& opts,
+		       std::string option) {
+    std::map<std::string, std::string>::iterator mi = opts.find(option);
+    if (mi == opts.end()) {
+        std::cerr << "Missing option " << option << std::endl;
+        return "";
+    }
+    return mi->second;
+}

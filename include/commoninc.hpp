@@ -66,6 +66,11 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T, S>& a) {
   return os;
 }
 
+int CreateOptions(int argc, char** argv, std::map<std::string,
+                  std::string>& options);
+std::string FindOption(std::map<std::string, std::string>& opts,
+		       std::string option);
+
 int getMPIRank();
 int getMPISize();
 int getMPIInfo(int *mpirank, int *mpisize);
