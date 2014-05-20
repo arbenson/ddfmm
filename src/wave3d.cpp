@@ -17,10 +17,10 @@
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
 #include "wave3d.hpp"
 
-//---------------------------------------------------------------------------
+
 Wave3d* Wave3d::_self = NULL;
 
-//-----------------------------------
+
 Wave3d::Wave3d(): _ACCU(1), _NPQ(4), _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100),
 		  _fplan(NULL), _bplan(NULL), _starting_level(0) {
 #ifndef RELEASE
@@ -28,7 +28,8 @@ Wave3d::Wave3d(): _ACCU(1), _NPQ(4), _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100)
 #endif
     _self = this;
 }
-//-----------------------------------
+
+
 Wave3d::~Wave3d() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::~Wave3d");
@@ -38,7 +39,7 @@ Wave3d::~Wave3d() {
     if (_bplan != NULL) { fftw_destroy_plan(_bplan); }
 }
 
-//-----------------------------------
+
 Index3 Wave3d::nml2dir(Point3 n, double W) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::nml2dir");
@@ -69,7 +70,7 @@ Index3 Wave3d::nml2dir(Point3 n, double W) {
     return res;
 }
 
-//-----------------------------------
+
 Index3 Wave3d::ParentDir(Index3 dir) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::ParentDir");
@@ -93,7 +94,7 @@ Index3 Wave3d::ParentDir(Index3 dir) {
     return res;
 }
 
-//-----------------------------------
+
 std::vector<Index3> Wave3d::ChildDir(Index3 dir) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::ChildDir");
@@ -117,7 +118,7 @@ std::vector<Index3> Wave3d::ChildDir(Index3 dir) {
     return res;
 }
 
-//-----------------------------------
+
 double Wave3d::Dir2Width(Index3 dir) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::dir2width");
@@ -126,7 +127,7 @@ double Wave3d::Dir2Width(Index3 dir) {
     return double(C / _NPQ);
 }
 
-//-----------------------------------------------------------
+
 Point3 Wave3d::BoxCenter(BoxKey& curkey) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::center");
@@ -140,7 +141,7 @@ Point3 Wave3d::BoxCenter(BoxKey& curkey) {
     return t;
 }
 
-//-----------------------------------------------------------
+
 int Wave3d::AccLevel() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::P");
@@ -156,7 +157,7 @@ int Wave3d::AccLevel() {
     }
 }
 
-//-----------------------------------------------------------
+
 bool MortonOrderGreater(Index3 lhs, Index3 rhs) {
     // Following: http://en.wikipedia.org/wiki/Z-order_curve
     int j = 0;
@@ -174,7 +175,7 @@ bool MortonOrderGreater(Index3 lhs, Index3 rhs) {
 }
 
 
-//-----------------------------------------------------------
+
 int serialize(const PtPrtn& val, std::ostream& os, const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -183,7 +184,7 @@ int serialize(const PtPrtn& val, std::ostream& os, const std::vector<int>& mask)
     return 0;
 }
 
-//-----------------------------------------------------------
+
 int deserialize(PtPrtn& val, std::istream& is, const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -192,7 +193,7 @@ int deserialize(PtPrtn& val, std::istream& is, const std::vector<int>& mask) {
     return 0;
 }
 
-//-----------------------------------------------------------
+
 int serialize(const BoxDat& val, std::ostream& os, const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("serialize");
@@ -227,7 +228,7 @@ int serialize(const BoxDat& val, std::ostream& os, const std::vector<int>& mask)
     return 0;
 }
 
-//-----------------------------------------------------------
+
 int deserialize(BoxDat& val, std::istream& is, const std::vector<int>& mask) {
 #ifndef RELEASE
     CallStackEntry entry("deserialize");
@@ -262,7 +263,7 @@ int deserialize(BoxDat& val, std::istream& is, const std::vector<int>& mask) {
     return 0;
 }
 
-//-----------------------------------------------------------
+
 int serialize(const BoxAndDirDat& val, std::ostream& os,
               const std::vector<int>& mask) {
 #ifndef RELEASE
@@ -275,7 +276,8 @@ int serialize(const BoxAndDirDat& val, std::ostream& os,
     CHECK_TRUE(i == BoxAndDirDat_Number);
     return 0;
 }
-//-----------------------------------------------------------
+
+
 int deserialize(BoxAndDirDat& val, std::istream& is,
                 const std::vector<int>& mask) {
 #ifndef RELEASE
@@ -317,6 +319,7 @@ int serialize(const BoxAndDirKey& key, std::ostream& os,
   return 0;
 }
 
+
 int deserialize(BoxAndDirKey& key, std::istream& is,
                 const std::vector<int>& mask) {
 #ifndef RELEASE
@@ -329,6 +332,7 @@ int deserialize(BoxAndDirKey& key, std::istream& is,
   return 0;
 }
 
+
 int serialize(const BoxKey& key, std::ostream& os,
               const std::vector<int>& mask) {
 #ifndef RELEASE
@@ -340,6 +344,7 @@ int serialize(const BoxKey& key, std::ostream& os,
     CHECK_TRUE(i == BoxKey_Number);
     return 0;
 }
+
 
 int deserialize(BoxKey& key, std::istream& is, const std::vector<int>& mask) {
 #ifndef RELEASE
