@@ -20,7 +20,26 @@
 #include "serialize.hpp"
 #include "trmesh.hpp"
 
+#include <algorithm>
+#include <cstdlib>
 #include <fstream>
+
+void SetupDistrib(int total_points, std::vector<int>& distrib) {
+#ifndef RELEASE
+    CallStackEntry entry("SetupDistrib");
+#endif
+    int mpisize = getMPISize();
+    distrib.resize(mpisize + 1);
+    int avg_points = total_points / mpisize;
+    int extra = total_points - avg_points * mpisize;
+    distrib[0] = 0;
+    for (int i = 1; i < distrib.size(); ++i) {
+        distrib[i] = distrib[i - 1] + avg_points;
+        if (i - 1 < extra) {
+            distrib[i] += 1;
+        }
+    }
+}
 
 int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
                       Point3 ctr, int accu) {
@@ -58,39 +77,28 @@ int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
 }
 
 bool Acoustic3d::Own(int index, int mpirank) {
+#ifndef RELEASE
+    CallStackEntry entry("Acoustic3d::Own");
+#endif
     return index >= _dist[mpirank] && index < _dist[mpirank + 1];
 }
 
-int Acoustic3d::eval(vector<cpx>& val, std::map<std::string, std::string>& opts) {
+int Acoustic3d::eval(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::eval");
 #endif
   int mpirank, mpisize;
   getMPIInfo(&mpirank, &mpisize);
 
-  CHECK_TRUE_MSG(_gauwgts.find(5) != _gauwgts.end(), "Problem with quadrature weights");
+  CHECK_TRUE_MSG(_gauwgts.find(5) != _gauwgts.end(),
+                 "Problem with quadrature weights");
   DblNumMat& gauwgt = _gauwgts[5];
   int num_quad_points = gauwgt.m();
   std::vector<Point3> posvec;
   std::vector<Point3> norvec;
-  std::vector<cpx> denvec;
-  std::vector<cpx> valvec;
 
-  // Determine distribution of face vectors.
-  int total_points = _facevec.size() * num_quad_points + _vertvec.size();
-  int avg_points = total_points / mpisize;
-  int extra = total_points - avg_points * mpisize;
-  _dist.resize(mpisize + 1);
-  _dist[0] = 0;
-  for (int i = 1; i < _dist.size(); ++i) {
-      _dist[i] = _dist[i - 1] + avg_points;
-      if (i - 1 < extra) {
-          _dist[i] += 1;
-      }
-  }
-
-  // USE ZERO DENSITY FOR NOW
-  std::vector<cpx> den(_vertvec.size(), 0);
+  // Setup the distribution of points.
+  SetupDistrib(_facevec.size() * num_quad_points + _vertvec.size(), _dist);
 
   for (int fi = 0; fi < _facevec.size(); ++fi) {
       // Only read if there is a chance this process will own.
@@ -105,22 +113,16 @@ int Acoustic3d::eval(vector<cpx>& val, std::map<std::string, std::string>& opts)
       Point3 nor = cross(pos1 - pos0, pos2 - pos0);
       nor = nor / nor.l2();
 
-      // Current density at the corners.
-      cpx den0 = den[face(0)];
-      cpx den1 = den[face(1)];
-      cpx den2 = den[face(2)];
-
       for (int gi = 0; gi < num_quad_points; ++gi) {
           if (!Own(fi * num_quad_points + gi, mpirank)) {
-	      continue;
-	  }
+              continue;
+          }
           double loc0 = gauwgt(gi, 0);
           double loc1 = gauwgt(gi, 1);
           double loc2 = gauwgt(gi, 2);
           double wgt  = gauwgt(gi, 3);
           posvec.push_back(loc0 * pos0 + loc1 * pos1 + loc2 * pos2);
           norvec.push_back(nor);
-          denvec.push_back((loc0 * den0 + loc1 * den1 + loc2 * den2) * (are * wgt));
       }
   }
   int num_faces = _facevec.size();
@@ -130,7 +132,6 @@ int Acoustic3d::eval(vector<cpx>& val, std::map<std::string, std::string>& opts)
       }
       posvec.push_back(_vertvec[vi]);
       norvec.push_back(_vertvec[vi]);  // dummy
-      denvec.push_back(cpx(0, 0));
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -144,24 +145,12 @@ int Acoustic3d::eval(vector<cpx>& val, std::map<std::string, std::string>& opts)
   positions.prtn().ownerinfo() = _dist;
   normal_vecs.prtn().ownerinfo() = _dist;
 
-  ParVec<int, cpx, PtPrtn> densities;
-  densities.prtn().ownerinfo() = _dist;
-  ParVec<int, cpx, PtPrtn> potentials;
-  potentials.prtn().ownerinfo() = _dist;
-
   int start_ind = _dist[mpirank];
   for (int i = 0; i < posvec.size(); ++i) {
       positions.insert(start_ind + i, posvec[i]);
   }
   for (int i = 0; i < norvec.size(); ++i) {
       normal_vecs.insert(start_ind + i, norvec[i]);
-  }
-  for (int i = 0; i < denvec.size(); ++i) {
-      densities.insert(start_ind + i, denvec[i]);
-  }
-  cpx dummy_val(0, 0);
-  for (int i = 0; i < denvec.size(); ++i) {
-      potentials.insert(start_ind + i, dummy_val);
   }
 
   _wave._ctr = _ctr;
@@ -192,179 +181,250 @@ int Acoustic3d::eval(vector<cpx>& val, std::map<std::string, std::string>& opts)
   std::cout << "Setting up the wave..." << std::endl;
   _wave.setup(opts);
 
-  _wave.eval(densities, potentials);
-  // TODO(arbenson): Put stuff into output vector.
   return 0;
 }
 
+int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out) {
+#ifndef RELEASE
+    CallStackEntry entry("Acoustic3d::Apply");
+#endif
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
+    CHECK_TRUE_MSG(_gauwgts.find(5) != _gauwgts.end(),
+                   "Problem with quadrature weights");
+    DblNumMat& gauwgt = _gauwgts[5];
+    CHECK_TRUE_MSG(_sigwgts.find(5) != _gauwgts.end(),
+                   "Problem with singularity weights");
+
+    int num_quad_points = gauwgt.m();
+    int num_faces = _facevec.size();
+    int num_vertices = _vertvec.size();
+    std::vector<cpx> denvec;
+
+    int start_face_ind = _dist[mpirank] / num_quad_points;
+    int end_face_ind = std::min(_dist[mpirank + 1] / num_quad_points + 1,
+                                static_cast<int>(_facevec.size()));
+    std::vector<int> req_keys;
+    for (int fi = start_face_ind; fi < end_face_ind; ++fi) {
+        Index3& ind = _facevec[fi];
+        req_keys.push_back(ind(0));
+        req_keys.push_back(ind(1));
+        req_keys.push_back(ind(2));
+    }
+    std::vector<int> all(1, 1);
+    in.getBegin(req_keys, all);
+    in.getEnd(req_keys);
+
+    // 1. Scale input with gaussian quadrature.
+    for (int fi = start_face_ind; fi < end_face_ind; ++fi) {
+        // Only handle if this process needs this data.
+        Index3& ind = _facevec[fi];
+        double are = _arevec[fi];
+        cpx den0 = in.access(ind(0));
+        cpx den1 = in.access(ind(1));
+        cpx den2 = in.access(ind(2));
+        for (int gi = 0; gi < num_quad_points; ++gi) {
+            if (!Own(fi * num_quad_points + gi, mpirank)) {
+                continue;
+            }
+            double loc0 = gauwgt(gi, 0);
+            double loc1 = gauwgt(gi, 1);
+            double loc2 = gauwgt(gi, 2);
+            double wgt  = gauwgt(gi, 3);
+            denvec.push_back((loc0 * den0 + loc1 * den1 + loc2 * den2) * (are * wgt));
+        }
+    }
+    // Add zero densities at the vertices.
+    for (int vi = 0; vi < _vertvec.size(); ++vi) {
+        if (!Own(num_faces * num_quad_points + vi, mpirank)) {
+            continue;
+        }
+        denvec.push_back(cpx(0, 0));
+    }
+
+    ParVec<int, cpx, PtPrtn> densities;
+    densities.prtn().ownerinfo() = _dist;
+    ParVec<int, cpx, PtPrtn> potentials;
+    potentials.prtn().ownerinfo() = _dist;
+    int start_ind = _dist[mpirank];
+    for (int i = 0; i < denvec.size(); ++i) {
+        densities.insert(start_ind + i, denvec[i]);
+    }
+    cpx dummy_val(0, 0);
+    for (int i = 0; i < denvec.size(); ++i) {
+        potentials.insert(start_ind + i, dummy_val);
+    }
+
+    // 2. Call directional FMM
+    SAFE_FUNC_EVAL(_wave.eval(densities, potentials));
+    IntNumVec check_keys(mpisize);
+    for (int i = 0; i < mpisize; ++i) {
+        int ind = (_dist[i] + _dist[i + 1]) / 2;
+        check_keys(i) = ind;
+    }
+    _wave.check(densities, potentials, check_keys);
+
+    // 3. Handle angle
+    // First, communicate data.
+    std::vector<int> in_reqs, potential_reqs;
+    for (int i = 0; i < _vertvec.size(); ++i) {
+        if (out.prtn().owner(i) == mpirank) {
+            in_reqs.push_back(i);
+            potential_reqs.push_back(num_faces * num_quad_points + i);
+        }
+    }
+    in.getBegin(in_reqs, all);
+    potentials.getBegin(potential_reqs, all);
+    in.getEnd(in_reqs);
+    potentials.getEnd(potential_reqs);
+    
+    for (int i = 0; i < _vertvec.size(); ++i) {
+        // TODO(arbenson): what is this doing?
+        if (out.prtn().owner(i) == mpirank) {
+            cpx diag = _diavec[i] * in.access(i);
+            cpx potential = potentials.access(num_faces * num_quad_points + i);
+            cpx val = diag + potential;
+            out.insert(i, val);
+        }
+    }
 
 #if 0
-int Acou3d::ApplyMatrix(vector<cpx>& in, vector<cpx>& out) {
-  CHECK_TRUE_MSG(_gauwgts.find(5) != _gauwgts.end(), "Problem with quadrature weights");
-  DblNumMat& gauwgt = _gauwgts[5];
-  CHECK_TRUE_MSG(_sigwgts.find(5) != _gauwgts.end(), "Problem with quadrature weights");
-  DblNumMat& sigwgt = _sigwgts[5];
-
-  int numgau = gauwgt.m();
-  int numsig = sigwgt.m();
-  int num_faces = _facevec.size();
-  int num_vertices = _vertvec.size();
-
-  // 1. Scale input with gaussian quadrature.
-  std::vector<cpx> densities;
-  for (int fi = 0; fi < _facevec.size(); fi++) {
-      // Only handle if this face is owned by this process.
-      if (!(fi >= _dist[mpirank] && fi < _dist[mpirank + 1])) {
-          continue;
-      }
-      Index3& ind = _facevec[fi];
-      double are = _arevec[fi];
-      cpx den0 = in[ind(0)];
-      cpx den1 = in[ind(1)];
-      cpx den2 = in[ind(2)];
-      for (int gi = 0; gi < numgau; ++gi) {
-          double loc0 = gauwgt(gi,0);
-	  double loc1 = gauwgt(gi,1);
-	  double loc2 = gauwgt(gi,2);
-	  double wgt  = gauwgt(gi,3);
-	  densities.push_back((loc0*den0 + loc1*den1 + loc2*den2) * (are*wgt));
-      }
-  }
-  iA( cnt==num_faces*numgau );
-
-  // 2. Call directional FMM
-  vector<cpx> aux(num_faces*numgau + num_vertices, cpx(0,0));
-  time_t t0, t1;
-  iC( _wave.eval(tmp,aux) );
-
-  // 3. angle
-  // TODO(arbenson): what is this doing?
-  for (int vi = 0; vi < _vertvec.size(); ++vi) {
-    ot[vi] = _diavec[vi]*in[vi] + aux[cnt];
-    cnt++;
-  }
-  iA( cnt==num_faces*numgau+num_vertices );
-
   // 4. Remove nearby from the output
   // TODO(arbenson): what is this doing?
   for (int fi = 0; fi < _facevec.size(); fi++) {
       Index3& ind = _facevec[fi];
-      DblNumMat srcpos(3, numgau, false, (double*)(&(_posvec[fi*numgau])));
-      DblNumMat srcnor(3, numgau, false, (double*)(&(_norvec[fi*numgau])));
+      DblNumMat srcpos(3, num_quad_points, false, (double*)(&(_posvec[fi * num_quad_points])));
+      DblNumMat srcnor(3, num_quad_points, false, (double*)(&(_norvec[fi * num_quad_points])));
       vector<Point3> trgpostmp;
       trgpostmp.push_back( _vertvec[ ind(0) ] );
       trgpostmp.push_back( _vertvec[ ind(1) ] );
       trgpostmp.push_back( _vertvec[ ind(2) ] );
       DblNumMat trgpos(3,3,false,(double*)(&(trgpostmp[0])));
-      CpxNumVec srcden(numgau,false,(cpx*)(&(tmp[fi*numgau])));
+      CpxNumVec srcden(num_quad_points,false,(cpx*)(&(tmp[fi*num_quad_points])));
       CpxNumVec trgval(3);
       CpxNumMat mat;
       iC( _knlbie.kernel(trgpos, srcpos, srcnor, mat) );
       iC( zgemv(1.0, mat, srcden, 0.0, trgval) );
       
-      ot[ ind(0) ] -= trgval(0);
-      ot[ ind(1) ] -= trgval(1);
-      ot[ ind(2) ] -= trgval(2);
+      out[ind(0)] -= trgval(0);
+      out[ind(1)] -= trgval(1);
+      out[ind(2)] -= trgval(2);
   }
-
+#endif
   // 5. Visit faces and add singularity correction.
-  for (int fi = 0; fi < _facevec.size(); ++fi) {
-      Index3& ind = _facevec[fi];
-      Point3 pos0 = _vertvec[ind(0)];
-      Point3 pos1 = _vertvec[ind(1)];
-      Point3 pos2 = _vertvec[ind(2)];
-      double are = _arevec[fi];
-      Point3 nor = cross(pos1-pos0, pos2-pos0); 
-      nor = nor / nor.l2();
-      cpx den0 = in[ind(0)];
-      cpx den1 = in[ind(1)];
-      cpx den2 = in[ind(2)];
-      //
-      //0
-      {
-	vector<Point3> srcpostmp;
-	vector<Point3> srcnortmp;
-	vector<Point3> trgpostmp;
-	vector<cpx> srcdentmp;
-	for (int li = 0; li < numsig; ++li) {
-	  double loc0 = sigwgt(li,0);
-	  double loc1 = sigwgt(li,1);
-	  double loc2 = sigwgt(li,2);
-	  double wgt  = sigwgt(li,3);
-	  Point3 pos = loc0*pos0 + loc1*pos1 + loc2*pos2;
-	  cpx    den = (loc0*den0 + loc1*den1 + loc2*den2)*(are*wgt);
-	  srcpostmp.push_back( pos );
-	  srcnortmp.push_back( nor );
-	  srcdentmp.push_back( den );
-	}
-	trgpostmp.push_back( pos0 );
-	DblNumMat srcpos(3,numsig,false,(double*)(&(srcpostmp[0])));
-	DblNumMat srcnor(3,numsig,false,(double*)(&(srcnortmp[0])));
-	DblNumMat trgpos(3,1,false,(double*)(&(trgpostmp[0])));
-	CpxNumVec srcden(numsig,false,(cpx*)(&(srcdentmp[0])));
-	CpxNumVec trgval(1);
-	CpxNumMat mat;
-	iC( _knlbie.kernel(trgpos, srcpos, srcnor, mat) );
-	iC( zgemv(1.0, mat, srcden, 0.0, trgval) );
-	ot[ ind(0) ] += trgval(0);
-      }
-      //1
-      {
-	vector<Point3> srcpostmp;
-	vector<Point3> srcnortmp;
-	vector<Point3> trgpostmp;
-	vector<cpx> srcdentmp;
-	for(int li = 0; li < numsig; ++li) {
-	  double loc0 = sigwgt(li,0);
-	  double loc1 = sigwgt(li,1);
-	  double loc2 = sigwgt(li,2);
-	  double wgt  = sigwgt(li,3);
-	  Point3 pos = loc0*pos1 + loc1*pos2 + loc2*pos0;
-	  cpx    den = (loc0*den1 + loc1*den2 + loc2*den0)*(are*wgt);
-	  srcpostmp.push_back( pos );
-	  srcnortmp.push_back( nor );
-	  srcdentmp.push_back( den );
-	}
-	trgpostmp.push_back( pos1 );
-	DblNumMat srcpos(3,numsig,false,(double*)(&(srcpostmp[0])));
-	DblNumMat srcnor(3,numsig,false,(double*)(&(srcnortmp[0])));
-	DblNumMat trgpos(3,1,false,(double*)(&(trgpostmp[0])));
-	CpxNumVec srcden(numsig,false,(cpx*)(&(srcdentmp[0])));
-	CpxNumVec trgval(1);
-	CpxNumMat mat;
-	iC( _knlbie.kernel(trgpos, srcpos, srcnor, mat) );
-	iC( zgemv(1.0, mat, srcden, 0.0, trgval) );
-	ot[ ind(1) ] += trgval(0);
-      }
-      //2
-      {
-	vector<Point3> srcpostmp;
-	vector<Point3> srcnortmp;
-	vector<Point3> trgpostmp;
-	vector<cpx> srcdentmp;
-	for(int li = 0; li < numsig; ++li) {
-	  double loc0 = sigwgt(li,0);
-	  double loc1 = sigwgt(li,1);
-	  double loc2 = sigwgt(li,2);
-	  double wgt  = sigwgt(li,3);
-	  Point3 pos = loc0*pos2 + loc1*pos0 + loc2*pos1;
-	  cpx    den = (loc0*den2 + loc1*den0 + loc2*den1)*(are*wgt);
-	  srcpostmp.push_back( pos );
-	  srcnortmp.push_back( nor );
-	  srcdentmp.push_back( den );
-	}
-	trgpostmp.push_back( pos2 );
-	DblNumMat srcpos(3,numsig,false,(double*)(&(srcpostmp[0])));
-	DblNumMat srcnor(3,numsig,false,(double*)(&(srcnortmp[0])));
-	DblNumMat trgpos(3,1,false,(double*)(&(trgpostmp[0])));
-	CpxNumVec srcden(numsig,false,(cpx*)(&(srcdentmp[0])));
-	CpxNumVec trgval(1);
-	CpxNumMat mat;
-	iC( _knlbie.kernel(trgpos, srcpos, srcnor, mat) );
-	iC( zgemv(1.0, mat, srcden, 0.0, trgval) );
-	ot[ind(2)] += trgval(0);
-      }
-    }
+  SingularityCorrection(in, out);
+
     return 0;
 }
+
+void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out) {
+#ifndef RELEASE
+    CallStackEntry entry("Acoustic3d::SingularityCorrection");
 #endif
+    int mpirank = getMPIRank();
+    DblNumMat& sigwgt = _sigwgts[5];
+    int numsig = sigwgt.m();
+
+    // Communicate the data that we need.
+    std::vector<int> req_keys;
+    for (int fi = 0; fi < _facevec.size(); ++fi) {
+        Index3& ind = _facevec[fi];
+        // If we own any of the three indices, then we need them all.
+        if (out.prtn().owner(ind(0)) == mpirank || 
+            out.prtn().owner(ind(1)) == mpirank || 
+            out.prtn().owner(ind(2)) == mpirank) {
+            req_keys.push_back(ind(0));
+            req_keys.push_back(ind(1));
+            req_keys.push_back(ind(2));
+        }
+    }
+    std::vector<int> all(1, 1);
+    in.getBegin(req_keys, all);
+    in.getEnd(req_keys);
+      
+    for (int fi = 0; fi < _facevec.size(); ++fi) {
+        Index3& ind = _facevec[fi];
+        // If I do not own any part of the face, then we skip.
+        if (out.prtn().owner(ind(0)) != mpirank &&
+            out.prtn().owner(ind(1)) != mpirank && 
+            out.prtn().owner(ind(2)) != mpirank) {
+            continue;
+        }
+        Point3 pos0 = _vertvec[ind(0)];
+        Point3 pos1 = _vertvec[ind(1)];
+        Point3 pos2 = _vertvec[ind(2)];
+        double are = _arevec[fi];
+        Point3 nor = cross(pos1 - pos0, pos2 - pos0); 
+        nor = nor / nor.l2();
+        cpx den0 = in.access(ind(0));
+        cpx den1 = in.access(ind(1));
+        cpx den2 = in.access(ind(2));
+
+        for (int corner = 0; corner < 3; ++corner) {
+            vector<Point3> srcpostmp;
+            vector<Point3> srcnortmp;
+            vector<Point3> trgpostmp;
+            vector<cpx> srcdentmp;
+            for (int li = 0; li < numsig; ++li) {
+                double loc0 = sigwgt(li,0);
+                double loc1 = sigwgt(li,1);
+                double loc2 = sigwgt(li,2);
+                double wgt  = sigwgt(li,3);
+		Point3 pos;
+		cpx den;
+                if (corner == 0) {
+                    Point3 pos = loc0 * pos0 + loc1 * pos1 + loc2 * pos2;
+                    cpx den = (loc0 * den0 + loc1 * den1 + loc2 * den2) * (are * wgt);
+                } else if (corner == 1) {
+                    Point3 pos = loc0 * pos1 + loc1 * pos2 + loc2 * pos0;
+                    cpx den = (loc0 * den1 + loc1 * den2 + loc2 * den0) * (are * wgt);
+                } else if (corner == 2) {
+                    Point3 pos = loc0 * pos2 + loc1 * pos0 + loc2 * pos1;
+                    cpx den = (loc0 * den2 + loc1 * den0 + loc2 * den1) * (are * wgt);
+                }
+                srcpostmp.push_back(pos);
+                srcnortmp.push_back(nor);
+                srcdentmp.push_back(den);
+            }
+            if (corner == 0) {
+                trgpostmp.push_back(pos0);
+            } else if (corner == 1) {
+                trgpostmp.push_back(pos1);
+            } else if (corner == 2) {
+                trgpostmp.push_back(pos2);
+            }
+            DblNumMat srcpos(3,numsig,false,(double*)(&(srcpostmp[0])));
+            DblNumMat srcnor(3,numsig,false,(double*)(&(srcnortmp[0])));
+            DblNumMat trgpos(3,1,false,(double*)(&(trgpostmp[0])));
+            CpxNumVec srcden(numsig,false,(cpx*)(&(srcdentmp[0])));
+            CpxNumVec trgval(1);
+            CpxNumMat mat;
+            _wave._kernel.kernel(trgpos, srcpos, srcnor, mat);
+            zgemv(1.0, mat, srcden, 0.0, trgval);
+            out.lclmap()[ind(corner)] += trgval(0);
+        }
+    }
+}
+
+void Acoustic3d::Run() {
+#ifndef RELEASE
+    CallStackEntry entry("Acoustic3d::Run");
+#endif
+    ParVec<int, cpx, PtPrtn> in, out;
+    std::vector<int> distrib;
+    SetupDistrib(_vertvec.size(), distrib);
+    in.prtn().ownerinfo() = distrib;
+    out.prtn().ownerinfo() = distrib;
+
+    // Random entries for now.
+    // TODO (arbenson): change this when real input is taken.
+    int mpirank = getMPIRank();
+    for (int i = distrib[mpirank]; i < distrib[mpirank + 1]; ++i) {
+        double real = static_cast<double>(rand()) / RAND_MAX;
+        double imag = static_cast<double>(rand()) / RAND_MAX;
+        cpx val(real, imag);
+        in.insert(i, val);
+        out.insert(i, val);  // dummy
+    }
+    Apply(in, out);
+}

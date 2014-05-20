@@ -49,7 +49,10 @@ public:
     ~Acoustic3d() {}
     int setup(std::vector<Point3>& vertvec, std::vector<Index3>& facevec,
               Point3 ctr, int accu);
-    int eval(std::vector<cpx>& val, std::map<std::string, std::string>& opts);
+    int eval(std::map<std::string, std::string>& opts);
+    int Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
+    void SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
+    void Run();
 
 private:
     bool Own(int index, int mpirank);

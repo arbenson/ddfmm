@@ -112,20 +112,13 @@ int main(int argc, char** argv) {
     K_input >> acou._K;
 
     vector<Point3> chkvec;
-    vector<cpx> valvec;
-    if (mpirank == 0) {
-        std::cout << "evaling..." << std::endl;
-    }
-    SAFE_FUNC_EVAL( acou.eval(valvec, opts) );
-    if (mpirank == 0) {
-        std::cout << "done evaling..." << std::endl;
-    }
+    SAFE_FUNC_EVAL(acou.eval(opts));
+    acou.Run();
     std::string valfile = findOption(opts, "-valfile");
     if (valfile.empty()) {
         return -1;
     }
     ofstream output(valfile);
-    SAFE_FUNC_EVAL( serialize(valvec, output, all) );
 #ifndef RELEASE
     } catch( ... ) {
         int mpirank;
