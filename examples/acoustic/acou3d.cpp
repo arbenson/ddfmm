@@ -43,7 +43,7 @@ void SetupDistrib(int total_points, std::vector<int>& distrib) {
 }
 
 int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
-		      Point3 ctr, int accu) {
+                      Point3 ctr, int accu) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::setup");
 #endif
@@ -88,99 +88,98 @@ int Acoustic3d::InitializeData(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::eval");
 #endif
-  int mpirank, mpisize;
-  getMPIInfo(&mpirank, &mpisize);
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
 
-  CHECK_TRUE_MSG(_gauwgts.find(5) != _gauwgts.end(),
-                 "Problem with quadrature weights");
-  DblNumMat& gauwgt = _gauwgts[5];
-  int num_quad_points = gauwgt.m();
-  std::vector<Point3> posvec;
-  std::vector<Point3> norvec;
+    CHECK_TRUE_MSG(_gauwgts.find(5) != _gauwgts.end(),
+		   "Problem with quadrature weights");
+    DblNumMat& gauwgt = _gauwgts[5];
+    int num_quad_points = gauwgt.m();
+    std::vector<Point3> posvec;
+    std::vector<Point3> norvec;
+    
+    // Setup the distribution of points.
+    SetupDistrib(_facevec.size() * num_quad_points + _vertvec.size(), _dist);
 
-  // Setup the distribution of points.
-  SetupDistrib(_facevec.size() * num_quad_points + _vertvec.size(), _dist);
+    for (int fi = 0; fi < _facevec.size(); ++fi) {
+        // Only read if there is a chance this process will own.
+	// TODO(arbenson): add a check here.
+	Index3& face = _facevec[fi];
+	// Get the three vertices of the face.
+	Point3 pos0 = _vertvec[face(0)];
+	Point3 pos1 = _vertvec[face(1)];
+	Point3 pos2 = _vertvec[face(2)];
+	
+	Point3 nor = cross(pos1 - pos0, pos2 - pos0);
+	nor = nor / nor.l2();
+	
+	for (int gi = 0; gi < num_quad_points; ++gi) {
+            if (!Own(fi * num_quad_points + gi, mpirank)) {
+                continue;
+	    }
+	    double loc0 = gauwgt(gi, 0);
+	    double loc1 = gauwgt(gi, 1);
+	    double loc2 = gauwgt(gi, 2);
+	    double wgt  = gauwgt(gi, 3);
+	    posvec.push_back(loc0 * pos0 + loc1 * pos1 + loc2 * pos2);
+	    norvec.push_back(nor);
+	}
+    }
+    int num_faces = _facevec.size();
+    for (int vi = 0; vi < _vertvec.size(); ++vi) {
+        if (!Own(num_faces * num_quad_points + vi, mpirank)) {
+            continue;
+	}
+	posvec.push_back(_vertvec[vi]);
+	norvec.push_back(_vertvec[vi]);  // dummy
+    }
 
-  for (int fi = 0; fi < _facevec.size(); ++fi) {
-      // Only read if there is a chance this process will own.
-      // TODO(arbenson): add a check here.
-      Index3& face = _facevec[fi];
-      // Get the three vertices of the face.
-      Point3 pos0 = _vertvec[face(0)];
-      Point3 pos1 = _vertvec[face(1)];
-      Point3 pos2 = _vertvec[face(2)];
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (mpirank == 0) {
+	std::cout << "putting in ownerinfo" << std::endl;
+    }
 
-      double are = _arevec[fi];
-      Point3 nor = cross(pos1 - pos0, pos2 - pos0);
-      nor = nor / nor.l2();
-
-      for (int gi = 0; gi < num_quad_points; ++gi) {
-          if (!Own(fi * num_quad_points + gi, mpirank)) {
-              continue;
-          }
-          double loc0 = gauwgt(gi, 0);
-          double loc1 = gauwgt(gi, 1);
-          double loc2 = gauwgt(gi, 2);
-          double wgt  = gauwgt(gi, 3);
-          posvec.push_back(loc0 * pos0 + loc1 * pos1 + loc2 * pos2);
-          norvec.push_back(nor);
-      }
-  }
-  int num_faces = _facevec.size();
-  for (int vi = 0; vi < _vertvec.size(); ++vi) {
-      if (!Own(num_faces * num_quad_points + vi, mpirank)) {
-          continue;
-      }
-      posvec.push_back(_vertvec[vi]);
-      norvec.push_back(_vertvec[vi]);  // dummy
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (mpirank == 0) {
-      std::cout << "putting in ownerinfo" << std::endl;
-  }
-
-  // Positions, densities, potentials, and normals all follow this partitioning.
-  ParVec<int, Point3, PtPrtn>& positions = _wave._positions;
-  ParVec<int, Point3, PtPrtn>& normal_vecs = _wave._normal_vecs;
-  positions.prtn().ownerinfo() = _dist;
-  normal_vecs.prtn().ownerinfo() = _dist;
-
-  int start_ind = _dist[mpirank];
-  for (int i = 0; i < posvec.size(); ++i) {
-      positions.insert(start_ind + i, posvec[i]);
-  }
-  for (int i = 0; i < norvec.size(); ++i) {
-      normal_vecs.insert(start_ind + i, norvec[i]);
-  }
-
-  _wave._ctr = _ctr;
-  _wave._ACCU = _accu;
-  _wave._kernel = Kernel3d(KERNEL_HELM_MIXED);
-  _wave._equiv_kernel = Kernel3d(KERNEL_HELM);
-
-  // Deal with geometry partition.  For now, we just do a cyclic partition.
-  // TODO(arbenson): be more clever about the partition.
-  int num_levels = ceil(log(sqrt(_K)) / log(2));
-  int num_cells = pow2(num_levels);
-  _wave._geomprtn.resize(num_cells, num_cells, num_cells);
-  int curr_proc = 0;
-  for (int k = 0; k < num_cells; ++k) {
-      for (int j = 0; j < num_cells; ++j) {
-          for (int i = 0; i < num_cells; ++i) {
-              _wave._geomprtn(i, j, k) = curr_proc;
-              curr_proc = (curr_proc + 1) % mpisize;
-          }
-      }
-  }
-
-  Mlib3d& mlib = _wave._mlib;
-  mlib._NPQ = _wave._NPQ;
-  mlib._kernel = Kernel3d(KERNEL_HELM);
-  mlib.setup(opts);
-
-  _wave.setup(opts);
-  return 0;
+    // Positions, densities, potentials, and normals all follow this partitioning.
+    ParVec<int, Point3, PtPrtn>& positions = _wave._positions;
+    ParVec<int, Point3, PtPrtn>& normal_vecs = _wave._normal_vecs;
+    positions.prtn().ownerinfo() = _dist;
+    normal_vecs.prtn().ownerinfo() = _dist;
+    
+    int start_ind = _dist[mpirank];
+    for (int i = 0; i < posvec.size(); ++i) {
+	positions.insert(start_ind + i, posvec[i]);
+    }
+    for (int i = 0; i < norvec.size(); ++i) {
+	normal_vecs.insert(start_ind + i, norvec[i]);
+    }
+    
+    _wave._ctr = _ctr;
+    _wave._ACCU = _accu;
+    _wave._kernel = Kernel3d(KERNEL_HELM_MIXED);
+    _wave._equiv_kernel = Kernel3d(KERNEL_HELM);
+    
+    // Deal with geometry partition.  For now, we just do a cyclic partition.
+    // TODO(arbenson): be more clever about the partition.
+    int num_levels = ceil(log(sqrt(_K)) / log(2));
+    int num_cells = pow2(num_levels);
+    _wave._geomprtn.resize(num_cells, num_cells, num_cells);
+    int curr_proc = 0;
+    for (int k = 0; k < num_cells; ++k) {
+	for (int j = 0; j < num_cells; ++j) {
+	    for (int i = 0; i < num_cells; ++i) {
+		_wave._geomprtn(i, j, k) = curr_proc;
+		curr_proc = (curr_proc + 1) % mpisize;
+	    }
+	}
+    }
+    
+    Mlib3d& mlib = _wave._mlib;
+    mlib._NPQ = _wave._NPQ;
+    mlib._kernel = Kernel3d(KERNEL_HELM);
+    mlib.setup(opts);
+    
+    _wave.setup(opts);
+    return 0;
 }
 
 int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out) {
@@ -297,7 +296,7 @@ int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& ou
 }
 
 void Acoustic3d::RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
-			      ParVec<int, cpx, PtPrtn>& densities) {
+                              ParVec<int, cpx, PtPrtn>& densities) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::RemoveNearby");
 #endif
@@ -316,14 +315,15 @@ void Acoustic3d::RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtP
             out.prtn().owner(ind(2)) == mpirank) {
             for (int i = 0; i < num_quad_points; ++i) {
                 req_keys.push_back(fi * num_quad_points + i);
-	    }
-	}
+            }
+        }
     }
     std::vector<int> all(1, 1);
     densities.getBegin(req_keys, all);
     densities.getEnd(req_keys);
 
-    // TODO(arbenson): what is this doing?
+    // We deal with the singularity directly, so we remove contributions from
+    // adjacent triangles.
     for (int fi = 0; fi < _facevec.size(); fi++) {
         Index3& ind = _facevec[fi];
         if (out.prtn().owner(ind(0)) != mpirank &&
@@ -336,53 +336,53 @@ void Acoustic3d::RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtP
         Point3 pos1 = _vertvec[ind(1)];
         Point3 pos2 = _vertvec[ind(2)];
 
-	Point3 nor = cross(pos1 - pos0, pos2 - pos0);
-	nor = nor / nor.l2();
+        Point3 nor = cross(pos1 - pos0, pos2 - pos0);
+        nor = nor / nor.l2();
 
-	// Positions at this face
-	DblNumMat srcpos(3, num_quad_points);
-	// Normal vectors at this face
-	DblNumMat srcnor(3, num_quad_points);
+        // Positions at this face
+        DblNumMat srcpos(3, num_quad_points);
+        // Normal vectors at this face
+        DblNumMat srcnor(3, num_quad_points);
 
-	for (int gi = 0; gi < num_quad_points; ++gi) {
+        for (int gi = 0; gi < num_quad_points; ++gi) {
             double loc0 = gauwgt(gi, 0);
             double loc1 = gauwgt(gi, 1);
             double loc2 = gauwgt(gi, 2);
             double wgt  = gauwgt(gi, 3);
-	    Point3 pos = loc0 * pos0 + loc1 * pos1 + loc2 * pos2;
-	    for (int i = 0; i < 3; ++i) {
+            Point3 pos = loc0 * pos0 + loc1 * pos1 + loc2 * pos2;
+            for (int i = 0; i < 3; ++i) {
                 srcpos(i, gi) = pos(i);
-		srcnor(i, gi) = nor(i);
-	    }
-	}
+                srcnor(i, gi) = nor(i);
+            }
+        }
 
-	// Positions at the vertices.
-	vector<Point3> trgpostmp;
-	trgpostmp.push_back(_vertvec[ind(0)]);
-	trgpostmp.push_back(_vertvec[ind(1)]);
-	trgpostmp.push_back(_vertvec[ind(2)]);
-	DblNumMat trgpos(3, 3, false, (double*)(&(trgpostmp[0])));
-	// Values at this face from FMM.
-	CpxNumVec srcden(num_quad_points);
-	for (int i = 0; i < num_quad_points; ++i) {
+        // Positions at the vertices.
+        vector<Point3> trgpostmp;
+        trgpostmp.push_back(_vertvec[ind(0)]);
+        trgpostmp.push_back(_vertvec[ind(1)]);
+        trgpostmp.push_back(_vertvec[ind(2)]);
+        DblNumMat trgpos(3, 3, false, (double*)(&(trgpostmp[0])));
+        // Values at this face from FMM.
+        CpxNumVec srcden(num_quad_points);
+        for (int i = 0; i < num_quad_points; ++i) {
             srcden(i) = densities.access(fi * num_quad_points + i);
-	}
-	CpxNumVec trgval(3);
-	CpxNumMat mat;
-	_wave._kernel.kernel(trgpos, srcpos, srcnor, mat);
-	zgemv(1.0, mat, srcden, 0.0, trgval);
+        }
+        CpxNumVec trgval(3);
+        CpxNumMat mat;
+        _wave._kernel.kernel(trgpos, srcpos, srcnor, mat);
+        zgemv(1.0, mat, srcden, 0.0, trgval);
       
-	for (int i = 0; i < 3; ++i) {
-	    if (out.prtn().owner(ind(i)) == mpirank) {
-		cpx val = out.access(ind(i)) - trgval(i);
-	        out.insert(ind(i), val);
-	    }
-	}
+        for (int i = 0; i < 3; ++i) {
+            if (out.prtn().owner(ind(i)) == mpirank) {
+                cpx val = out.access(ind(i)) - trgval(i);
+                out.insert(ind(i), val);
+            }
+        }
     }
 }
 
 void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in,
-				       ParVec<int, cpx, PtPrtn>& out) {
+                                       ParVec<int, cpx, PtPrtn>& out) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::SingularityCorrection");
 #endif
@@ -431,12 +431,12 @@ void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in,
             vector<Point3> trgpostmp;
             vector<cpx> srcdentmp;
             for (int li = 0; li < numsig; ++li) {
-                double loc0 = sigwgt(li,0);
-                double loc1 = sigwgt(li,1);
-                double loc2 = sigwgt(li,2);
-                double wgt  = sigwgt(li,3);
-		Point3 pos;
-		cpx den;
+                double loc0 = sigwgt(li, 0);
+                double loc1 = sigwgt(li, 1);
+                double loc2 = sigwgt(li, 2);
+                double wgt  = sigwgt(li, 3);
+                Point3 pos;
+                cpx den;
                 if (corner == 0) {
                     Point3 pos = loc0 * pos0 + loc1 * pos1 + loc2 * pos2;
                     cpx den = (loc0 * den0 + loc1 * den1 + loc2 * den2) * (are * wgt);
@@ -458,18 +458,18 @@ void Acoustic3d::SingularityCorrection(ParVec<int, cpx, PtPrtn>& in,
             } else if (corner == 2) {
                 trgpostmp.push_back(pos2);
             }
-            DblNumMat srcpos(3,numsig,false,(double*)(&(srcpostmp[0])));
-            DblNumMat srcnor(3,numsig,false,(double*)(&(srcnortmp[0])));
-            DblNumMat trgpos(3,1,false,(double*)(&(trgpostmp[0])));
-            CpxNumVec srcden(numsig,false,(cpx*)(&(srcdentmp[0])));
+            DblNumMat srcpos(3, numsig, false, (double*)(&(srcpostmp[0])));
+            DblNumMat srcnor(3, numsig, false, (double*)(&(srcnortmp[0])));
+            DblNumMat trgpos(3, 1, false, (double*)(&(trgpostmp[0])));
+            CpxNumVec srcden(numsig, false, (cpx*)(&(srcdentmp[0])));
             CpxNumVec trgval(1);
             CpxNumMat mat;
             _wave._kernel.kernel(trgpos, srcpos, srcnor, mat);
             zgemv(1.0, mat, srcden, 0.0, trgval);
-	    if (out.prtn().owner(ind(corner)) == mpirank) {
+            if (out.prtn().owner(ind(corner)) == mpirank) {
                 cpx val = out.access(ind(corner)) + trgval(0);
-		out.insert(ind(corner), val);
-	    }
+                out.insert(ind(corner), val);
+            }
         }
     }
 }
@@ -487,7 +487,7 @@ void Acoustic3d::Apply(CpxNumVec&x, CpxNumVec& y) {
     CHECK_TRUE(start_index + x.m() == _vert_distrib[mpirank + 1]);
     
     for (int i = 0; i < x.m(); ++i) {
-	cpx val = x(i);
+        cpx val = x(i);
         in.insert(i + start_index, val);
         out.insert(i + start_index, val);  // dummy
     }
@@ -498,7 +498,7 @@ void Acoustic3d::Apply(CpxNumVec&x, CpxNumVec& y) {
     // Store the result in y
     CHECK_TRUE(x.m() == y.m());
     for (int i = 0; i < y.m(); ++i) {
-	y(i) = out.access(i + start_index);
+        y(i) = out.access(i + start_index);
     }
 }
 
@@ -527,7 +527,7 @@ void Acoustic3d::Run(std::map<std::string, std::string>& opts) {
         b(i) = val;
     }
     double tol = 1e-4;
-    int max_iter = 10;
+    int max_iter = 30;
     auto apply_func = [this] (CpxNumVec& x, CpxNumVec& y) { Apply(x, y); };
     GMRES(b, x0, apply_func, tol, max_iter);
 }
