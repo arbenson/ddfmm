@@ -31,7 +31,6 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
     int M = trgpos.n();
     int N = srcpos.n();
     double TWO_PI = 2 * M_PI;
-    double FOUR_PI = 4 * M_PI;
     cpx I(0, 1);
     double mindif2 = _mindif * _mindif;
 
@@ -100,11 +99,11 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         }
     } else if (_type == KERNEL_HELM_MIXED) {
         // Mixed single + double layer potential.
-        // D(x, y) = (1 / 4pi) * (exp^{i * 2pi * r} (1 - i * 2pi * r) / r^3) * (r \cdot n)
-        // S(x, y) = (1 / 4pi) * exp^{i * 2pi * r} / r
+        // D(x, y) = (exp^{i * 2pi * r} (1 - i * 2pi * r) / r^3) * (r \cdot n)
+        // S(x, y) = exp^{i * 2pi * r} / r
         // Evaluate: D(x, y) - i * eta * S(x, y) 
-        //           = (1 / (4pi * r)) * exp^{i * 2pi * r} * 
-        //             ((r \cdot n)(1 - i * 2pi * r) / r^2 - i * eta)
+        //           = (1 / r) * exp^{i * 2pi * r} * 
+        //             ((r \cdot n)(1 - i * 2pi r) / r^2 - i * eta)
         DblNumMat r2(M, N);  // r^2
 	DblNumMat rn(M, N);  // r \cdot n
 	for (int j = 0; j < N; ++j) {
@@ -130,11 +129,11 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
 	DblNumMat ir2(M, N); // 1 / r^2
         mat_dinv(M, N, r2, ir2);
 
-        DblNumMat& ir = r2;  // 1 / r
+        DblNumMat ir(M, N);  // 1 / r
         mat_dinv(M, N, r, ir);
 
         DblNumMat& kr = r;  // 2pi * r
-        mat_dscale(M, N, kr, TWO_PI);
+        mat_dscale(M, N, kr, TWO_PI);  // (overwrite r)
 
 	// sin and cos of 2pi * r
         DblNumMat skr(M, N), ckr(M, N);
@@ -145,10 +144,11 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
 	double eta = TWO_PI;
 	for (int j = 0; j < N; ++j) {
 	    for (int i = 0; i < M; ++i) {
-	        // exp^{i * 2pi * r} / (4 * pi * r)
-                cpx exp = cpx(ckr(i, j), skr(i, j)) * ir(i, j) / FOUR_PI;
-	        // (r \cdot n) * (1 - i * 2pi *r) / r^2
-	        cpx tmp1 = rn(i, j) * ir2(i, j) * cpx(1, -kr(i, j));
+	        // exp^{i * 2pi * r} / r
+                cpx exp = cpx(ckr(i, j), skr(i, j)) * ir(i, j);
+	        // (r \cdot n) * (1 - i * 2pi * r) / r^2
+	        cpx tmp1 = rn(i, j) * ir2(i, j) * (- cpx(1, kr(i, j)));
+		// - i * eta
 	        cpx tmp2 = cpx(0, eta);
 	        inter(i, j) = exp * (tmp1 - tmp2);
             }
