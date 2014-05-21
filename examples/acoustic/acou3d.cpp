@@ -278,7 +278,7 @@ int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& ou
     potentials.getEnd(potential_reqs);
     
     for (int i = 0; i < _vertvec.size(); ++i) {
-        // TODO(arbenson): what is this doing?
+        // Add TODO(arbenson): what is this doing?
         if (out.prtn().owner(i) == mpirank) {
             cpx diag = _diavec[i] * in.access(i);
             cpx potential = potentials.access(num_faces * num_quad_points + i);
@@ -288,7 +288,7 @@ int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& ou
     }
 
     // 4. Remove nearby from the output
-    RemoveNearby(in, out, potentials);
+    RemoveNearby(in, out, densities);
 
     // 5. Visit faces and add singularity correction.
     SingularityCorrection(in, out);
@@ -297,7 +297,7 @@ int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& ou
 }
 
 void Acoustic3d::RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
-			      ParVec<int, cpx, PtPrtn>& potentials) {
+			      ParVec<int, cpx, PtPrtn>& densities) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::RemoveNearby");
 #endif
@@ -320,8 +320,8 @@ void Acoustic3d::RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtP
 	}
     }
     std::vector<int> all(1, 1);
-    potentials.getBegin(req_keys, all);
-    potentials.getEnd(req_keys);
+    densities.getBegin(req_keys, all);
+    densities.getEnd(req_keys);
 
     // TODO(arbenson): what is this doing?
     for (int fi = 0; fi < _facevec.size(); fi++) {
@@ -365,7 +365,7 @@ void Acoustic3d::RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtP
 	// Values at this face from FMM.
 	CpxNumVec srcden(num_quad_points);
 	for (int i = 0; i < num_quad_points; ++i) {
-            srcden(i) = potentials.access(fi * num_quad_points + i);
+            srcden(i) = densities.access(fi * num_quad_points + i);
 	}
 	CpxNumVec trgval(3);
 	CpxNumMat mat;
@@ -526,8 +526,8 @@ void Acoustic3d::Run(std::map<std::string, std::string>& opts) {
         cpx val(real, imag);
         b(i) = val;
     }
-    double tol = 1e-6;
-    int max_iter = 2;
+    double tol = 1e-4;
+    int max_iter = 10;
     auto apply_func = [this] (CpxNumVec& x, CpxNumVec& y) { Apply(x, y); };
     GMRES(b, x0, apply_func, tol, max_iter);
 }

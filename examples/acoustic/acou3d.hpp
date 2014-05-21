@@ -55,7 +55,7 @@ public:
     void Apply(CpxNumVec& x, CpxNumVec& y);
     void SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
     void RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
-		      ParVec<int, cpx, PtPrtn>& potentials);
+		      ParVec<int, cpx, PtPrtn>& densities);
     void Run(std::map<std::string, std::string>& opts);
 
 private:
