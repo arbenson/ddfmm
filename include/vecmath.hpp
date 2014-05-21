@@ -46,7 +46,7 @@ int mat_dsqrt(int M, int N, DblNumMat& in, DblNumMat& out)
 #else
     for(int i = 0; i < M; i++) {
         for(int j = 0; j < N; j++)      {
-            out(i,j) = sqrt(in(i,j));
+            out(i, j) = sqrt(in(i, j));
         }
     }
 #endif
@@ -62,9 +62,9 @@ int mat_dinv(int M, int N, DblNumMat& in, DblNumMat& out)
     int TTL = M * N;
     vdinv_(&TTL, in.data(), out.data());
 #else
-    for(int i = 0; i < M; i++) {
-        for(int j = 0; j < N; j++)      {
-            out(i,j) = 1.0 / in(i,j);
+    for (int j = 0; j < N; j++) {
+	for (int i = 0; i < M; i++) {
+            out(i, j) = 1.0 / in(i, j);
         }
     }
 #endif
@@ -81,8 +81,8 @@ int mat_dsincos(int M, int N, DblNumMat& in, DblNumMat& out_sin,
     int TTL = M * N;
     vdsincos_(&TTL, in.data(), out_sin.data(), out_cos.data());
 #else
-    for(int i = 0; i < M; i++) {
-        for(int j = 0; j < N; j++)      {
+    for (int j = 0; j < N; j++) {
+	for (int i = 0; i < M; i++) {
 #ifdef OS_X
             out_sin(i, j) = sin(in(i, j));
             out_cos(i, j) = cos(in(i, j));
