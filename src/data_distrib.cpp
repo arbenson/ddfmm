@@ -100,7 +100,9 @@ void ScatterKeys(std::vector<BoxAndDirKey>& keys, int level) {
     }
     unsigned int avg_size = total_size / mpisize;
     if (mpirank == 0) {
+#ifdef _VERBOSE_
         std::cout << "Targeting " << avg_size << " keys per process." << std::endl;
+#endif
     }
     CHECK_TRUE_MSG(avg_size > 0, "Not enough keys!");
     std::vector<int> diffs(mpisize);

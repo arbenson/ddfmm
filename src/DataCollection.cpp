@@ -102,11 +102,13 @@ void PrintParData(ParData data, std::string message) {
 #endif
     int mpirank = getMPIRank();
     if (mpirank == 0) {
+#ifdef _VERBOSE_
 	std::cout << message << std::endl
 		  << "mean: " << data.mean << std::endl
 		  << "var: "  << data.var  << std::endl
 		  << "max: "  << data.max  << std::endl
 		  << "min: "  << data.min  << std::endl;
+#endif
     }
 }
 
@@ -116,12 +118,14 @@ void PrintCommData(CommData data, std::string message) {
 #endif
     int mpirank = getMPIRank();
     if (mpirank == 0) {
+#ifdef _VERBOSE_
 	std::cout << message << std::endl
 	          << "total: " << data.total << std::endl
 		  << "mean: " << data.mean << std::endl
 		  << "var: "  << data.var  << std::endl
 		  << "max: "  << data.max  << std::endl
 		  << "min: "  << data.min  << std::endl;
+#endif
     }
 }
 

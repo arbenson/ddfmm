@@ -80,8 +80,10 @@ int Wave3d::HighFreqPass() {
     for (int level = level_hdmap_out.size() - 1; level >= 0; --level) {
         double W = _K / pow2(level);
         if (mpirank == 0) {
+#ifdef _VERBOSE_	    
             std::cout << "---------------------------------" << std::endl;
             std::cout << "Box width for upwards pass: " << W << std::endl;
+#endif
         }
         std::map<Index3, std::vector<BoxKey> >& level_out = level_hdmap_out[level];
 
@@ -115,8 +117,10 @@ int Wave3d::HighFreqPass() {
     for (int level = 0;
          level < static_cast<int>(_level_prtns._hdkeys_inc.size()); ++level) {
         if (mpirank == 0) {
+#ifdef _VERBOSE_
             std::cout << "----------------------" << std::endl;
             std::cout << "Level: " << level << std::endl;
+#endif
 	}
         std::set<BoxAndDirKey> request_keys;
         HighFreqInteractionListKeys(level, request_keys);
@@ -133,8 +137,10 @@ int Wave3d::HighFreqPass() {
         double W = _K / pow2(level);
         SAFE_FUNC_EVAL(MPI_Barrier(MPI_COMM_WORLD));
         if (mpirank == 0) {
+#ifdef _VERBOSE_
             std::cout << "---------------------------------" << std::endl;
             std::cout << "Box width for downwards pass: " << W << std::endl;
+#endif
         }
         std::map<Index3, std::vector<BoxKey> >& level_inc = level_hdmap_inc[level];
 

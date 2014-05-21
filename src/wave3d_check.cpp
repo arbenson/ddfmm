@@ -94,11 +94,14 @@ double Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& va
         errval(i) = allval(i) - truval(i);
     }
 
+
     if (mpirank == 0) {
-      std::cout << "key    |   computed    |    actual" << std::endl;
+#ifdef _VERBOSE_
+      std::cout << "key   | computed | actual" << std::endl;
       for (int i = 0; i < truval.m(); ++i) {
 	std::cout << chkkeyvec[i] << " | " << truval(i) << " | " << allval(i) << std::endl;
       }
+#endif
     }
 
     double tn = sqrt( energy(truval) );
