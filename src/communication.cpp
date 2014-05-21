@@ -89,8 +89,10 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
     SAFE_FUNC_EVAL( den.getEnd(all) );
     double t1 = MPI_Wtime();
     if (mpirank == 0) {
+#ifdef _VERBOSE_
         std::cout << "Density communication: " << MPIDiffTime(t0, t1)
                   << " secs" << std::endl;
+#endif
     }
     if (_kernel.type() == KERNEL_HELM_MIXED) {
         // We also need to communicate the normal vectors.
@@ -99,8 +101,10 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
 	SAFE_FUNC_EVAL(_normal_vecs.getEnd(all));
 	double t1 = MPI_Wtime();
 	if (mpirank == 0) {
+#ifdef _VERBOSE_
 	    std::cout << "Normal vector communication: " << MPIDiffTime(t0, t1)
 		      << " secs" << std::endl;
+#endif
 	}
 	
     }
