@@ -40,10 +40,13 @@ public:
 
     bool contains(Key);
 
-    // gather all entries st pid contains this proc
+    int getBegin(int (*e2ps)(Key, Data&, std::vector<int>&), const std::vector<int>& mask);
+
+    // gather all entries such that pid contains this process
     // e2ps is a function that takes as input a Key-Data pair, and a vector of
     // ints to be filled with processor IDs.
-    int getBegin(int (*e2ps)(Key, Data&, std::vector<int>&), const std::vector<int>& mask);
+    int getBegin(std::function<int (Key, Data&, std::vector<int>&)> e2ps,
+		 const std::vector<int>& mask);
 
     // gather all entries with key in keyvec
     int getBegin(std::vector<Key>& keyvec, const std::vector<int>& mask);
@@ -209,6 +212,54 @@ bool ParVec<Key,Data,Partition>::contains(Key key) {
     typename std::map<Key,Data>::iterator mi = _lclmap.find(key);
     return mi  != _lclmap.end();
 }
+
+ 
+template <class Key, class Data, class Partition>
+int ParVec<Key,Data,Partition>::getBegin(std::function<int (Key, Data&, std::vector<int>&)> e2ps,
+					 const std::vector<int>& mask) {
+    int mpirank, mpisize;
+    getMPIInfo(&mpirank, &mpisize);
+    resetVecs();
+    _sbufvec.resize(mpisize);
+    _rbufvec.resize(mpisize);
+    _reqs = new MPI_Request[2 * mpisize];
+    _stats = new MPI_Status[2 * mpisize];
+    std::vector<std::ostringstream*> ossvec(mpisize);
+    for (int k = 0; k < mpisize; ++k)        {
+        ossvec[k] = new std::ostringstream();
+    }
+
+    // 1. serialize
+    for (auto& kv : _lclmap) {
+        Key key = kv.first;
+        const Data& dat = kv.second;
+        if (_prtn.owner(key) == mpirank) {
+            std::vector<int> pids;
+            e2ps(kv.first, kv.second, pids);
+            for (int pid : pids) {
+                if (pid != mpirank) { //DO NOT SEND TO MYSELF
+                    SAFE_FUNC_EVAL( serialize(key, *(ossvec[pid]), mask) );
+                    SAFE_FUNC_EVAL( serialize(dat, *(ossvec[pid]), mask) );
+                    _snbvec[pid]++; //LEXING: VERY IMPORTANT
+                }
+            }
+        }
+    }
+
+    // to vector
+    strs2vec(ossvec);
+
+    // 2. all the sendsize of the message
+    std::vector<int> sszvec;
+    std::vector<int> rszvec;
+    getSizes(rszvec, sszvec);
+
+    // 3. allocate space, send and receive
+    makeBufReqs(rszvec, sszvec);
+    SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+    return 0;
+}
+
 
 //--------------------------------------------
 template <class Key, class Data, class Partition>

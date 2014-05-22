@@ -158,17 +158,21 @@ int Wave3d::HighFreqL2LLevelCommPre(int level) {
 
     // The mask is zero because we are just getting the necessary keys
     std::vector<int> mask(BoxAndDirDat_Number, 0);
+    auto func = [this] (BoxAndDirKey key, BoxAndDirDat& dat,
+			std::vector<int>& pids) {
+	return HighFreqL2LDataUp(key, dat, pids);
+    };
     if (childlevel == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
 	vec.initialize_data();
-        SAFE_FUNC_EVAL(vec.getBegin(&Wave3d::HighFreqL2LDataUp_wrapper, mask));
+        SAFE_FUNC_EVAL(vec.getBegin(func, mask));
         SAFE_FUNC_EVAL(vec.getEnd(mask));
 	PrintCommData(GatherCommData(vec.kbytes_sent()),
 		      "L2L Pre: kbytes sent");
     } else {
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_inc[childlevel];
 	vec.initialize_data();
-        SAFE_FUNC_EVAL(vec.getBegin(&Wave3d::HighFreqL2LDataUp_wrapper, mask));
+        SAFE_FUNC_EVAL(vec.getBegin(func, mask));
         SAFE_FUNC_EVAL(vec.getEnd(mask));
 	PrintCommData(GatherCommData(vec.kbytes_sent()),
 		      "L2L Pre: kbytes sent");
@@ -231,13 +235,6 @@ int Wave3d::HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
     return 0;
 }
 
-int Wave3d::HighFreqL2LDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-                                      std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFreqL2LDataUp_wrapper");
-#endif
-    return (Wave3d::_self)->HighFreqL2LDataUp(key, dat, pids);
-}
 
 int Wave3d::HighFreqM2LComm(int level,
                             std::set<BoxAndDirKey>& request_keys) {
@@ -281,17 +278,21 @@ int Wave3d::HighFreqM2MLevelComm(int level) {
     }
     std::vector<int> mask(BoxAndDirDat_Number, 0);
     mask[BoxAndDirDat_dirupeqnden] = 1;
+    auto func = [this] (BoxAndDirKey key, BoxAndDirDat& dat,
+			std::vector<int>& pids) {
+	return HighFreqM2MDataUp(key, dat, pids);
+    };
     if (level == UnitLevel()) {
         ParVec<BoxAndDirKey, BoxAndDirDat, UnitLevelBoxPrtn>& vec = _level_prtns._unit_vec;
 	vec.initialize_data();	
-        SAFE_FUNC_EVAL(vec.getBegin(&Wave3d::HighFreqM2MDataUp_wrapper, mask));
+        SAFE_FUNC_EVAL(vec.getBegin(func, mask));
         SAFE_FUNC_EVAL(vec.getEnd(mask));
 	PrintCommData(GatherCommData(vec.kbytes_sent()),
 		      "M2M: kbytes sent");
     } else {
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_out[level];
 	vec.initialize_data();
-        SAFE_FUNC_EVAL(vec.getBegin(&Wave3d::HighFreqM2MDataUp_wrapper, mask));
+        SAFE_FUNC_EVAL(vec.getBegin(mask, func));
         SAFE_FUNC_EVAL(vec.getEnd(mask));
 	PrintCommData(GatherCommData(vec.kbytes_sent()),
 		      "M2M: kbytes sent");
@@ -314,12 +315,4 @@ int Wave3d::HighFreqM2MDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
         }
     }
     return 0;
-}
-
-int Wave3d::HighFreqM2MDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-                                      std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::HighFreqM2MDataUp_wrapper");
-#endif
-    return (Wave3d::_self)->HighFreqM2MDataUp(key, dat, pids);
 }

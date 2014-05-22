@@ -388,13 +388,6 @@ int Wave3d::TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
     return 0;
 }
 
-int Wave3d::TransferBoxAndDirData_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-                                          std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::TransferBoxAndDirData_wrapper");
-#endif
-    return (Wave3d::_self)->TransferBoxAndDirData(key, dat, pids);
-}
 
 int Wave3d::TransferDataToLevels() {
 #ifndef RELEASE
@@ -439,13 +432,6 @@ int Wave3d::TransferUnitLevelData(BoxKey key, BoxDat& dat,
     return 0;
 }
 
-int Wave3d::TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
-                                          std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::TransferUnitLevelData_wrapper");
-#endif
-    return (Wave3d::_self)->TransferUnitLevelData(key, dat, pids);
-}
 
 void LevelPartitions::Init(int K) {
 #ifndef RELEASE
@@ -459,6 +445,7 @@ void LevelPartitions::Init(int K) {
     _level_hdmap_out.resize(unit_level_ + 1);
     _level_hdmap_inc.resize(unit_level_ + 1);
 }
+
 
 void InsertIntoDirMap(std::map<Index3, std::vector<BoxKey> >& dir_map,
                       std::map<BoxAndDirKey, BoxAndDirDat>& curr_map) {
