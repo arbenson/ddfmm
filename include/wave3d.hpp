@@ -398,8 +398,6 @@ public:
     CpxNumTns _denfft, _valfft;
     fftw_plan _fplan, _bplan;
 
-    static Wave3d* _self;
-
     Wave3d();
     ~Wave3d();
     Kernel3d& kernel() { return _kernel; }

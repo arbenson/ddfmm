@@ -27,7 +27,6 @@ double Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& va
 #endif
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
   
-    _self = this;
     int mpirank = getMPIRank();
   
     std::vector<int> all(1, 1);

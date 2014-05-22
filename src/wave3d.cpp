@@ -17,24 +17,13 @@
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
 #include "wave3d.hpp"
 
-
-Wave3d* Wave3d::_self = NULL;
-
-
 Wave3d::Wave3d(): _ACCU(1), _NPQ(4), _K(64), _ctr(Point3(0, 0, 0)), _ptsmax(100),
-		  _fplan(NULL), _bplan(NULL), _starting_level(0) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::Wave3d");
-#endif
-    _self = this;
-}
-
+		  _fplan(NULL), _bplan(NULL), _starting_level(0) {}
 
 Wave3d::~Wave3d() {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::~Wave3d");
 #endif
-    _self = this;
     if (_fplan != NULL) { fftw_destroy_plan(_fplan); }
     if (_bplan != NULL) { fftw_destroy_plan(_bplan); }
 }

@@ -57,7 +57,6 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     CallStackEntry entry("Wave3d::setup");
 #endif
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    _self = this;
     int mpirank = getMPIRank();
     // Read optional data
     std::map<std::string, std::string>::iterator mi;

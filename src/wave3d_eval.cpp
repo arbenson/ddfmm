@@ -249,7 +249,6 @@ int Wave3d::eval(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val) {
     CallStackEntry entry("Wave3d::eval");
 #endif
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
-    _self = this;
     int mpirank = getMPIRank();
 
     // Compute extden on leaf nodes using ptidxvec
