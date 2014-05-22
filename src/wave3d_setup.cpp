@@ -148,7 +148,11 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     std::vector<int> mask1(BoxDat_Number, 0);
     mask1[BoxDat_tag] = 1;
     mask1[BoxDat_ptidxvec] = 1;
-    SAFE_FUNC_EVAL(_boxvec.getBegin(&Wave3d::TransferUnitLevelData_wrapper, mask1));
+    auto transfer_unit_data = [this] (BoxKey key, BoxDat& dat,
+				      std::vector<int>& pids) {
+	return TransferUnitLevelData(key, dat, pids);
+    };
+    SAFE_FUNC_EVAL(_boxvec.getBegin(transfer_unit_data, mask1));
     SAFE_FUNC_EVAL(_boxvec.getEnd(mask1));
 
     // Now we have the unit level information, so we can setup our part of the tree.
@@ -162,7 +166,11 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     // Gather the interaction lists.
     std::vector<int> mask2(BoxAndDirDat_Number, 0);
     mask2[BoxAndDirDat_interactionlist] = 1;
-    SAFE_FUNC_EVAL(_bndvec.getBegin(&Wave3d::TransferBoxAndDirData_wrapper, mask2));
+    auto transfer_data = [this] (BoxAndDirKey key, BoxAndDirDat& dat,
+				 std::vector<int>& pids) {
+	return TransferBoxAndDirData(key, dat, pids);
+    };
+    SAFE_FUNC_EVAL(_bndvec.getBegin(transfer_data, mask2));
     SAFE_FUNC_EVAL(_bndvec.getEnd(mask2));
     TransferDataToLevels();
     _bndvec.lclmap().clear();
@@ -263,8 +271,11 @@ int Wave3d::SetupTree() {
     
     // Get all of the geometry information needed for this processor
     std::vector<int> all(1, 1);
-    SAFE_FUNC_EVAL( _positions.getBegin(&(Wave3d::DistribCellPts_wrapper), all) );
-    SAFE_FUNC_EVAL( _positions.getEnd(all) );
+    auto distrib_pts = [this] (int key, Point3& dat, std::vector<int>& pids) {
+	return DistribCellPts(key, dat, pids);
+    };
+    SAFE_FUNC_EVAL(_positions.getBegin(distrib_pts, all));
+    SAFE_FUNC_EVAL(_positions.getEnd(all));
     
     int numC = _geomprtn.m();
     int lvlC = CellLevel();
@@ -629,8 +640,12 @@ int Wave3d::SetupHighFreqCallLists() {
     // call get DistribBoxes to get the right boxes
     std::vector<int> mask1(BoxDat_Number, 0);
     mask1[BoxDat_tag] = 1;
-    SAFE_FUNC_EVAL( _boxvec.getBegin( &(Wave3d::DistribBoxes_wrapper), mask1 ) );
-    SAFE_FUNC_EVAL( _boxvec.getEnd( mask1 ) );
+    auto distrib_boxes = [this] (BoxKey key, BoxDat& dat,
+				 std::vector<int>& pids) {
+	return DistribBoxes(key, dat, pids);
+    };
+    SAFE_FUNC_EVAL(_boxvec.getBegin(distrib_boxes, mask1 ));
+    SAFE_FUNC_EVAL(_boxvec.getEnd( mask1 ));
     // Compute lists, low list and high list
     for (auto& kv : _boxvec.lclmap()) {
         BoxKey curkey = kv.first;
@@ -769,14 +784,20 @@ int Wave3d::SetupLowFreqOctree() {
     
     // Get all of the point information needed.
     std::vector<int> all(1, 1);
-    SAFE_FUNC_EVAL( _positions.getBegin(&(Wave3d::DistribUnitPts_wrapper), all) );
+    auto distrib_unit_pts = [this] (int key, Point3& dat, std::vector<int>& pids) {
+	return DistribUnitPts(key, dat, pids);
+    };
+    SAFE_FUNC_EVAL( _positions.getBegin(distrib_unit_pts, all) );
     SAFE_FUNC_EVAL( _positions.getEnd(all) );
     RecursiveBoxInsert(lf_q, false);
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_tag] = 1;
-    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(&(Wave3d::DistribLowFreqBoxes_wrapper),
-                                                     mask) );
-    SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
+    auto distrib_low_freq_boxes = [this] (BoxKey key, BoxDat& dat,
+					  std::vector<int>& pids) {
+	return DistribLowFreqBoxes(key, dat, pids);
+    };    
+    SAFE_FUNC_EVAL(_level_prtns._lf_boxvec.getBegin(distrib_low_freq_boxes, mask));
+    SAFE_FUNC_EVAL(_level_prtns._lf_boxvec.getEnd(mask));
 
     // Setup the call lists.
     SetupLowFreqCallLists();
@@ -784,34 +805,4 @@ int Wave3d::SetupLowFreqOctree() {
     // Get data needed.
     GetExtPos();
     return 0;
-}
-
-
-//---------------------------------------------------------------------
-int Wave3d::DistribCellPts_wrapper(int key, Point3& dat, std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::DistribCellPts_wrapper");
-#endif
-    return (Wave3d::_self)->DistribCellPts(key, dat, pids);
-}
-
-int Wave3d::DistribBoxes_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::DistribBoxes_wrapper");
-#endif
-    return (Wave3d::_self)->DistribBoxes(key, dat, pids);
-}
-
-int Wave3d::DistribLowFreqBoxes_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::DistribLowFreqBoxes_wrapper");
-#endif
-    return (Wave3d::_self)->DistribLowFreqBoxes(key, dat, pids);
-}
-
-int Wave3d::DistribUnitPts_wrapper(int key, Point3& dat, std::vector<int>& pids) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::lDistribUnitPts_wrapper");
-#endif
-    return (Wave3d::_self)->DistribUnitPts(key, dat, pids);
 }

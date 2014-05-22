@@ -475,10 +475,6 @@ private:
 
     // Stuff for setup
     int SetupTree();
-    static int DistribCellPts_wrapper(int key, Point3& dat, std::vector<int>& pids);
-    static int DistribBoxes_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids);
-    static int DistribLowFreqBoxes_wrapper(BoxKey key, BoxDat& dat, std::vector<int>& pids);
-    static int DistribUnitPts_wrapper(int key, Point3& dat, std::vector<int>& pids);
     int DistribCellPts(int key, Point3& dat, std::vector<int>& pids);
     int DistribBoxes(BoxKey key, BoxDat& dat, std::vector<int>& pids);
     int DistribLowFreqBoxes(BoxKey key, BoxDat& dat, std::vector<int>& pids);
@@ -600,12 +596,8 @@ private:
                         std::set<BoxAndDirKey>& request_keys);
     int HighFreqL2LDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
                           std::vector<int>& pids);
-    static int HighFreqL2LDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-                                         std::vector<int>& pids);
     int HighFreqM2MDataUp(BoxAndDirKey key, BoxAndDirDat& dat,
                           std::vector<int>& pids);
-    static int HighFreqM2MDataUp_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-                                         std::vector<int>& pids);
 
     // Tools for data distribution.
     void PrtnDirections(level_hdkeys_t& level_hdkeys,
@@ -616,12 +608,8 @@ private:
 
     int TransferBoxAndDirData(BoxAndDirKey key, BoxAndDirDat& dat,
                               std::vector<int>& pids);
-    static int TransferBoxAndDirData_wrapper(BoxAndDirKey key, BoxAndDirDat& dat,
-                                             std::vector<int>& pids);
     int TransferUnitLevelData(BoxKey key, BoxDat& dat,
                               std::vector<int>& pids);
-    static int TransferUnitLevelData_wrapper(BoxKey key, BoxDat& dat,
-                                             std::vector<int>& pids);
     int TransferDataToLevels();
 
     int CleanLevel(int level);
@@ -629,19 +617,19 @@ private:
     void DeleteEmptyBoxes(std::map<BoxKey, BoxDat>& data);
 };
 
-//-------------------
+
 int serialize(const PtPrtn&, std::ostream&, const std::vector<int>&);
 int deserialize(PtPrtn&, std::istream&, const std::vector<int>&);
-//-------------------
+
 int serialize(const BoxKey&, std::ostream&, const std::vector<int>&);
 int deserialize(BoxKey&, std::istream&, const std::vector<int>&);
-//-------------------
+
 int serialize(const BoxDat&, std::ostream&, const std::vector<int>&);
 int deserialize(BoxDat&, std::istream&, const std::vector<int>&);
-//-------------------
+
 int serialize(const BoxAndDirDat&, std::ostream&, const std::vector<int>&);
 int deserialize(BoxAndDirDat&, std::istream&, const std::vector<int>&);
-//-------------------
+
 int serialize(const BoxAndDirKey&, std::ostream&, const std::vector<int>&);
 int deserialize(BoxAndDirKey&, std::istream&, const std::vector<int>&);
 

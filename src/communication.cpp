@@ -292,7 +292,7 @@ int Wave3d::HighFreqM2MLevelComm(int level) {
     } else {
         LevelBoxAndDirVec& vec = _level_prtns._hf_vecs_out[level];
 	vec.initialize_data();
-        SAFE_FUNC_EVAL(vec.getBegin(mask, func));
+        SAFE_FUNC_EVAL(vec.getBegin(func, mask));
         SAFE_FUNC_EVAL(vec.getEnd(mask));
 	PrintCommData(GatherCommData(vec.kbytes_sent()),
 		      "M2M: kbytes sent");
