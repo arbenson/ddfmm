@@ -264,13 +264,13 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
     CpxNumMat& is = uc2ue(1);
     CpxNumMat& up = uc2ue(2);
     CpxNumVec mid(up.m());
-    setvalue(mid,cpx(0, 0));
+    setvalue(mid, cpx(0, 0));
     SAFE_FUNC_EVAL( zgemv(1.0, up, upchkval, 0.0, mid) );
     for (int k = 0; k < mid.m(); ++k) {
         mid(k) = mid(k) * is(k, 0);
     }
     upeqnden.resize(v.m());
-    setvalue(upeqnden,cpx(0, 0));
+    setvalue(upeqnden, cpx(0, 0));
     SAFE_FUNC_EVAL( zgemv(1.0, v, mid, 0.0, upeqnden) );
 
     return 0;
