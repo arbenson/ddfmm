@@ -172,9 +172,6 @@ int Wave3d::HighFreqPass() {
         HighFreqL2LLevelCommPost(level, affected_keys);
 	t3 = MPI_Wtime();
 	PrintParData(GatherParData(t2, t3), "L2L level communication (post).");
-
-        // Remove old data from memory.
-        CleanLevel(level);
     }
     t1 = MPI_Wtime();
     PrintParData(GatherParData(t0, t1), "High frequency downward pass");
@@ -232,11 +229,6 @@ int Wave3d::GatherLocalKeys() {
                     int level = curkey._level;
                     level_hdkeys_inc[level].push_back(BoxAndDirKey(curkey, dir));
                 }
-
-                // Save memory by clearing interaction lists stored in curdat.
-                for (auto& kv : curdat.fndeidxvec()) {
-                    std::vector<BoxKey>().swap(kv.second);
-                }
             }
         }
     }
@@ -290,6 +282,8 @@ int Wave3d::eval(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& val) {
     val.putEnd(all);
     val.discard(write_pts);
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
+    // Zero out data so that subsequent calls to eval are not contaminated.
+    Finalize();
     return 0;
 }
 
