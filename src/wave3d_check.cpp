@@ -95,10 +95,10 @@ double Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& va
 
 
     if (mpirank == 0) {
-#ifdef _VERBOSE_
+#ifdef _VERBOSE_	
       std::cout << "key   | computed | actual" << std::endl;
       for (int i = 0; i < truval.m(); ++i) {
-	std::cout << chkkeyvec[i] << " | " << truval(i) << " | " << allval(i) << std::endl;
+	  std::cout << chkkeyvec[i] << " | " << truval(i) << " | " << allval(i) << std::endl;
       }
 #endif
     }
