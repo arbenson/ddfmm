@@ -58,9 +58,9 @@ int Acoustic3d::setup(vector<Point3>& vertvec, vector<Index3>& facevec,
     for (int k = 0; k < _diavec.size(); ++k) {
         _diavec[k] /= (4*M_PI);
     }
-    SAFE_FUNC_EVAL( trmesh.compute_area(_arevec) );
+    SAFE_FUNC_EVAL(trmesh.compute_area(_arevec));
     // Load the quadrature weights
-    vector<int> all(1,1);
+    vector<int> all(1, 1);
     std::ifstream gin("gauwgts.bin");
     CHECK_TRUE_MSG(!gin.fail(), "Could not open gauwgts.bin");
     SAFE_FUNC_EVAL( deserialize(_gauwgts, gin, all) );
@@ -155,7 +155,7 @@ int Acoustic3d::InitializeData(std::map<std::string, std::string>& opts) {
     
     _wave._ctr = _ctr;
     _wave._ACCU = _accu;
-    _wave._kernel = Kernel3d(KERNEL_HELM_MIXED);
+    _wave._kernel = Kernel3d(KERNEL_HELM);
     _wave._equiv_kernel = Kernel3d(KERNEL_HELM);
     
     // Deal with geometry partition.  For now, we just do a cyclic partition.
@@ -177,8 +177,10 @@ int Acoustic3d::InitializeData(std::map<std::string, std::string>& opts) {
     mlib._NPQ = _wave._NPQ;
     mlib._kernel = Kernel3d(KERNEL_HELM);
     mlib.setup(opts);
-    
+
     _wave.setup(opts);
+    SetupDistrib(_vertvec.size(), _vert_distrib);
+
     return 0;
 }
 
@@ -255,14 +257,33 @@ int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& ou
 
     // 2. Call directional FMM
     SAFE_FUNC_EVAL(_wave.eval(densities, potentials));
+
+    // Check solution
     IntNumVec check_keys(mpisize);
     for (int i = 0; i < mpisize; ++i) {
         int ind = (_dist[i] + _dist[i + 1]) / 2;
         check_keys(i) = ind;
     }
-    _wave.check(densities, potentials, check_keys);
+    double rel_err = _wave.check(densities, potentials, check_keys);
+    if (mpirank == 0) {
+	std::cout << "relative error: " << rel_err << std::endl;
+    }
 
-    // 3. Handle angle
+    HandleAngle(in, out, potentials);
+    RemoveNearby(in, out, densities);
+    SingularityCorrection(in, out);
+
+    return 0;
+}
+
+void Acoustic3d::HandleAngle(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
+			     ParVec<int, cpx, PtPrtn>& potentials) {
+#ifndef RELEASE
+    CallStackEntry entry("Acoustic3d::HandleAngle");
+#endif
+    int num_faces = _facevec.size();
+    int num_quad_points = _gauwgts[5].m();
+    int mpirank = getMPIRank();
     // First, communicate data.
     std::vector<int> in_reqs, potential_reqs;
     for (int i = 0; i < _vertvec.size(); ++i) {
@@ -271,13 +292,13 @@ int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& ou
             potential_reqs.push_back(num_faces * num_quad_points + i);
         }
     }
+    std::vector<int> all(1, 1);
     in.getBegin(in_reqs, all);
     potentials.getBegin(potential_reqs, all);
     in.getEnd(in_reqs);
     potentials.getEnd(potential_reqs);
     
     for (int i = 0; i < _vertvec.size(); ++i) {
-        // Add TODO(arbenson): what is this doing?
         if (out.prtn().owner(i) == mpirank) {
             cpx diag = _diavec[i] * in.access(i);
             cpx potential = potentials.access(num_faces * num_quad_points + i);
@@ -285,14 +306,6 @@ int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& ou
             out.insert(i, val);
         }
     }
-
-    // 4. Remove nearby from the output
-    RemoveNearby(in, out, densities);
-
-    // 5. Visit faces and add singularity correction.
-    SingularityCorrection(in, out);
-
-    return 0;
 }
 
 void Acoustic3d::RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
@@ -485,11 +498,12 @@ void Acoustic3d::Apply(CpxNumVec&x, CpxNumVec& y) {
     
     int start_index = _vert_distrib[mpirank];
     CHECK_TRUE(start_index + x.m() == _vert_distrib[mpirank + 1]);
-    
+
+    cpx dummy(0, 0);
     for (int i = 0; i < x.m(); ++i) {
         cpx val = x(i);
         in.insert(i + start_index, val);
-        out.insert(i + start_index, val);  // dummy
+        out.insert(i + start_index, dummy);
     }
 
     // Call the function.
@@ -502,32 +516,38 @@ void Acoustic3d::Apply(CpxNumVec&x, CpxNumVec& y) {
     }
 }
 
+
+
 void Acoustic3d::Run(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::Run");
 #endif
     InitializeData(opts);
-    SetupDistrib(_vertvec.size(), _vert_distrib);
 
     // Random entries for now.
     // TODO (arbenson): change this when real input is taken.
     int mpirank = getMPIRank();
 
     int m = _vert_distrib[mpirank + 1] - _vert_distrib[mpirank];
-    // Initialize starting guess to 0.
-    CpxNumVec x0(m);
-    setvalue(x0, cpx(0.0));
 
     // Initialize right-hand-side (random for now)
+    CpxNumVec x0(m);
+    setvalue(x0, cpx(0.0, 0.0));
+
     CpxNumVec b(m);
+    cpx oneone(1, 1);
     for (int i = 0; i < b.m(); ++i) {
-        double real = static_cast<double>(rand()) / RAND_MAX;
-        double imag = static_cast<double>(rand()) / RAND_MAX;
-        cpx val(real, imag);
+	double real = static_cast<double>(rand()) / RAND_MAX;
+	double imag = static_cast<double>(rand()) / RAND_MAX;
+	cpx val(1e-3 * real, 1e-3 * imag);
         b(i) = val;
+	b(i) = oneone;
     }
-    double tol = 1e-4;
-    int max_iter = 30;
+#if 1
+    double tol = 1e-2;
+    int max_iter = 50;
     auto apply_func = [this] (CpxNumVec& x, CpxNumVec& y) { Apply(x, y); };
     GMRES(b, x0, apply_func, tol, max_iter);
+#endif
 }
+

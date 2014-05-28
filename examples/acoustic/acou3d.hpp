@@ -53,14 +53,30 @@ public:
               Point3 ctr, int accu);
     int Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
     void Apply(CpxNumVec& x, CpxNumVec& y);
-    void SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
-    void RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
-		      ParVec<int, cpx, PtPrtn>& densities);
     void Run(std::map<std::string, std::string>& opts);
 
 private:
+    // Given an index, return true if and only if the process with rank
+    // mpirank owns the index in the distributed vectors.
     bool Own(int index, int mpirank);
+
+    // Initialize faces, vertices, normal vectors, wave structure.
     int InitializeData(std::map<std::string, std::string>& opts);
+
+    // Handle diagonal component.  In the limit, this is 1/2, but since
+    // we discretize, we need to account for the angle.
+    void HandleAngle(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
+		     ParVec<int, cpx, PtPrtn>& potentials);
+
+    // Remove nearby from the output.  We deal with these cases with the
+    // singulairty correction.
+    void RemoveNearby(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out,
+		      ParVec<int, cpx, PtPrtn>& densities);
+
+    // Deal with integration over a corner singularity for each face.
+    void SingularityCorrection(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& out);
+
+    std::map<std::string, std::string> _opts;
 };
 
 #endif

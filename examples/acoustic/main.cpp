@@ -93,14 +93,6 @@ int main(int argc, char** argv) {
     std::istringstream K_input(opt);
     K_input >> acou._K;
 
-    // Get right-hand-side.
-    std::string boundary_file = FindOption(opts, "-bcnfile");
-    if (boundary_file.empty()) {
-	return -1;
-    }
-    ifstream boundary_data(boundary_file);
-    SAFE_FUNC_EVAL( deserialize(acou._boundary, boundary_data, all) );
-
     acou.Run(opts);
 
 #ifndef RELEASE
