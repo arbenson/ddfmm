@@ -427,7 +427,6 @@ private:
     ldmap_t _ldmap;
 
     double width() { return _K; }
-    //access information from BoxKey
     Point3 BoxCenter(BoxKey& curkey);
     double BoxWidth(BoxKey& curkey) { return _K / pow2(curkey._level); }
     bool IsCellLevelBox(const BoxKey& curkey) { return curkey._level == CellLevel(); }
@@ -613,6 +612,8 @@ private:
     int CleanLevel(int level);
     int CleanBoxvec();
     void DeleteEmptyBoxes(std::map<BoxKey, BoxDat>& data);
+
+    void Finalize();
 };
 
 
