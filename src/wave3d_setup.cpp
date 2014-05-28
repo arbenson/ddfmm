@@ -52,6 +52,42 @@ void Wave3d::DeleteEmptyBoxes(std::map<BoxKey, BoxDat>& data) {
     }
 }
 
+void Wave3d::Finalize() {
+    // Go through low frequency boxes and set things to zero.
+    for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
+	BoxDat& dat = kv.second;
+	setvalue(dat._extden, cpx(0, 0));
+	setvalue(dat._upeqnden, cpx(0, 0));
+	setvalue(dat._extval, cpx(0, 0));
+	setvalue(dat._dnchkval, cpx(0, 0));
+	setvalue(dat._upeqnden_fft, cpx(0, 0));
+    }
+
+
+    // Go through high frequency boxes and set things to zero.
+    for (LevelBoxAndDirVec& bndvec : _level_prtns._hf_vecs_out) {
+	for (auto& kv : bndvec.lclmap()) {
+	    BoxAndDirDat& dat = kv.second;
+	    setvalue(dat._dirupeqnden, cpx(0, 0));
+	    setvalue(dat._dirdnchkval, cpx(0, 0));
+	}
+    }
+
+    for (LevelBoxAndDirVec& bndvec : _level_prtns._hf_vecs_inc) {
+	for (auto& kv : bndvec.lclmap()) {
+	    BoxAndDirDat& dat = kv.second;
+	    setvalue(dat._dirupeqnden, cpx(0, 0));
+	    setvalue(dat._dirdnchkval, cpx(0, 0));
+	}
+    }
+
+    for (auto& kv : _level_prtns._unit_vec.lclmap()) {
+	BoxAndDirDat& dat = kv.second;
+	setvalue(dat._dirupeqnden, cpx(0, 0));
+	setvalue(dat._dirdnchkval, cpx(0, 0));
+    }
+}
+
 int Wave3d::setup(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Wave3d::setup");
@@ -136,7 +172,6 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
     DeleteEmptyBoxes(_boxvec.lclmap());
 
     // Setup of low and high frequency maps
-    ldmap_t ldmap;
     _level_prtns.Init(_K);
     GatherLocalKeys();
     PrtnDirections(_level_prtns._hdkeys_out, _level_prtns._hf_vecs_out);
@@ -156,6 +191,7 @@ int Wave3d::setup(std::map<std::string, std::string>& opts) {
 
     // Now we have the unit level information, so we can setup our part of the tree.
     SetupLowFreqOctree();
+
     // Remove old boxvec data.
     CleanBoxvec();
 
