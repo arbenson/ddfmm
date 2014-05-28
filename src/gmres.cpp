@@ -71,64 +71,82 @@ void Add(CpxNumVec& x, CpxNumVec& y, CpxNumVec& z, cpx alpha, cpx beta) {
 
 
 // Add in k-th column.
-void UpdateQ(CpxNumMat& Q, CpxNumVec& r, cpx curr_resid, int k) {
+void UpdateV(CpxNumMat& V, CpxNumVec& r, double norm2_r, int k) {
 #ifndef RELEASE
-    CallStackEntry entry("UpdateQ");
+    CallStackEntry entry("UpdateV");
 #endif
-    for (int i = 0; i < Q.m(); ++i) {
-	Q(i, k) = r(i) / curr_resid;
+    CHECK_TRUE(V.m() == r.m());
+    for (int i = 0; i < V.m(); ++i) {
+	V(i, k) = r(i) / norm2_r;
     }
 }
 
 
 // Update H matrix in GMRES
-void UpdateResidual(CpxNumMat& H, CpxNumMat& Q, CpxNumVec& r, int iter) {
+void UpdateResidual(CpxNumMat& H, CpxNumMat& V, CpxNumVec& r, int k) {
 #ifndef RELEASE
     CallStackEntry entry("UpdateResidual");
 #endif
-    for (int i = 0; i < iter; ++i) {
-	CpxNumVec qi(r.m(), false, Q.data() + i * r.m());
-	H(i, iter) = InnerProduct(qi, r);
-	Add(r, qi, r, cpx(1, 0), -H(i, iter));
+    for (int i = 0; i < k; ++i) {
+	CpxNumVec qi(V.m(), false, V.data() + i * V.m());
+	H(i, k - 1) = InnerProduct(qi, r);
+	Add(r, qi, r, cpx(1, 0), -H(i, k - 1));
     }
 }
 
 // After the GMRES iterations have completed, this forms the solution vector.
-void FormSolution(CpxNumMat& H, CpxNumMat& Q, double h10,
-		  CpxNumVec& x0, int num_iters) {
+void FormSolution(CpxNumMat& H, CpxNumMat& V, double h10,
+		  CpxNumVec& x0, int iter) {
 #ifndef RELEASE
     CallStackEntry entry("FormSolution");
 #endif
     // Solve y_* = \arg\min_y \| h10 e_1 - H y \|_2
-    //   zgels (TRANS, M, N, NRHS, A, LDA, B, LDB, WORK, LWORK, INFO)
     char trans = 'N';
-    int M = num_iters;
-    int N = num_iters - 1;
+    int M = iter + 1;
+    int N = iter;
     int NRHS = 1;
     int lda = H.m();
-    int ldb = M;
-    int lwork = -1;
-    cpx opt_work;
-    CpxNumVec b(num_iters);
+    CpxNumVec b(M);
     setvalue(b, cpx(0, 0));
     b(0) = h10;
-    int info;
+    int ldb = M;
 
+    int lwork = -1;
+    cpx opt_work;
+    int info;
     // Workspace query
-    zgels_(&trans, &M, &N, &NRHS, H.data(), &lda, b.data(), &ldb, &opt_work, &lwork, &info);
+    zgels_(&trans, &M, &N, &NRHS, H.data(), &lda, b.data(), &ldb,
+	   &opt_work, &lwork, &info);
     CHECK_TRUE_MSG(info == 0, "Bad least-squares call");
+
+    int mpirank = getMPIRank();
+    if (mpirank == 0) {
+	std::cout << "H: " << H << std::endl;
+    }
+
     // Actual least squares solve
     lwork = static_cast<int>(std::real(opt_work));
     cpx *work = new cpx[lwork];
-    zgels_(&trans, &M, &N, &NRHS, H.data(), &lda, b.data(), &ldb, work, &lwork, &info);
+    zgels_(&trans, &M, &N, &NRHS, H.data(), &lda, b.data(), &ldb,
+	   work, &lwork, &info);
     CHECK_TRUE_MSG(info == 0, "Bad least-squares call");
+    delete [] work;
 
-    // Now solve x_* = x_0 + Q y.  y is stored in the vector b.
-    zgemv(M, N, 1, Q.data(), b.data(), 1, x0.data());
+    // Now solve x_* = x_0 + V y.  y is stored in the vector b.
+    int m = x0.m();
+    int n = iter;
+    lda = V.m();
+    CHECK_TRUE(lda == m);
+    cpx alpha(1, 0);
+    int incx = 1;
+    int incy = 1;
+    cpx beta(1, 0);
+    zgemv_(&trans, &m, &n, &alpha, V.data(), &lda, b.data(), &incx,
+	   &beta, x0.data(), &incy);
 }
 
 
-// Very simple GMRES (following GVL).
+// Very simple GMRES with restarts (following Saad).
 void GMRES(CpxNumVec& b, CpxNumVec& x0,
 	   std::function<void (CpxNumVec& x, CpxNumVec& y)> Apply,
 	   double tol, int max_iter) {
@@ -136,52 +154,74 @@ void GMRES(CpxNumVec& b, CpxNumVec& x0,
     CallStackEntry entry("GMRES");
 #endif
     int mpirank = getMPIRank();
-    // r = b - Ax
-    CpxNumVec result(x0.m());
-    CpxNumVec r(x0.m());
-    Apply(x0, result);
-    Add(b, result, r, cpx(1, 0), cpx(-1, 0));
-    double h10 = Norm2(r);
+
     double normb = Norm2(b);
     if (mpirank == 0) {
 	std::cout << "norm of right-hand-side: " << normb << std::endl;
     }
+    int total_iter = 0;
+    int restart_size = 5;
+    double beta;
+    double break_tol = 1e-14;
 
-    CpxNumMat Q(x0.m(), max_iter);
-    CpxNumMat H(max_iter + 1, max_iter);
-    setvalue(H, cpx(0, 0));
-
-    double curr_resid = h10;
-    int iter = 0;
-    while (curr_resid > tol * normb && iter < max_iter) {
-	if (mpirank == 0) {
-	    std::cout << "residual: " << curr_resid << std::endl;
-	}
-	// q_{k+1} = r_k / h_{k+1, k}
-	UpdateQ(Q, r, curr_resid, iter);
-
-	// Update iteration
-	++iter;
-
-	// r_{k+1} = Aq_{k+1}
-	CpxNumVec q(x0.m(), false, Q.data() + (iter - 1) * x0.m());
-	Apply(q, r);
-
-	// Get the new residual, fill in H
-	UpdateResidual(H, Q, r, iter);
+    while (total_iter < max_iter) {
+	// r = b - Ax
+	CpxNumVec result(x0.m());
+	CpxNumVec w(x0.m());
+	Apply(x0, w);
+	Add(b, w, w, cpx(1, 0), cpx(-1, 0));
 	
-	// H_{k + 1, k} = || r_{k} ||
-	curr_resid = Norm2(r);
-	H(iter, iter - 1) = curr_resid;
+	// beta = || r ||_2
+	double beta = Norm2(w);
+	if (mpirank == 0) { std::cout << "Starting residual: " << beta << std::endl; }
+	if (beta < tol * normb) { break; }
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	// Setup V with first column = r / beta
+	CpxNumMat V(x0.m(), restart_size);
+	setvalue(V, cpx(0, 0));
+	UpdateV(V, w, beta, 0);
+
+	// Initialize Hessenberg matrix
+	CpxNumMat H(restart_size + 1, restart_size);
+	setvalue(H, cpx(0, 0));
+
+	int j;
+	for (j = 0; j < restart_size; ++j) {
+	    // w_{j} = Av_{j}
+	    CpxNumVec v(V.m(), false, V.data() + j * V.m());
+	    Apply(v, w);
+	    
+	    // Update Hessenberg matrix and w
+	    for (int i = 0; i <= j; ++i) {
+		CpxNumVec vi(V.m(), false, V.data() + i * V.m());
+		H(i, j) = InnerProduct(w, vi);
+		Add(w, vi, w, cpx(1, 0), -H(i, j));
+	    }
+
+	    H(j + 1, j) = Norm2(w);
+	    if (std::abs(H(j + 1, j)) < break_tol) {
+		if (mpirank == 0) {
+		    std::cout << "Early stop" << std::endl;
+		}
+		break;
+	    }
+
+	    ++total_iter;
+
+	    if (j < restart_size - 1) {
+		// Generate next column
+		UpdateV(V, w, std::abs(H(j + 1, j)), j + 1);
+	    }
+
+	    MPI_Barrier(MPI_COMM_WORLD);
+	}
+	    
+	if (mpirank == 0) { std::cout << "Forming solution" << std::endl; }
+	FormSolution(H, V, beta, x0, j);
     }
 
     if (mpirank == 0) {
-	std::cout << "Final residual: " << curr_resid << std::endl;
-	std::cout << "Number of iterations: " << iter << std::endl;
+	std::cout << "Number of iterations: " << total_iter << std::endl;
+	std::cout << "soln: " << x0 << std::endl;
     }
-
-    // We are now satisfied with the residual.  Solve the problem.
-    FormSolution(H, Q, h10, x0, iter);
 }
