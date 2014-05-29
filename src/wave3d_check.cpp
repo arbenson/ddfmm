@@ -15,6 +15,7 @@
 
     You should have received a copy of the GNU General Public License
     along with DDFMM.  If not, see <http://www.gnu.org/licenses/>. */
+#include "kernel3d.hpp"
 #include "wave3d.hpp"
 #include "vecmatop.hpp"
 
@@ -36,33 +37,39 @@ double Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& va
     }
     _positions.getBegin(chkkeyvec, all);
     _positions.getEnd(all);
-    std::vector<Point3> tmpsrcpos;
-    for (std::map<int, Point3>::iterator mi = _positions.lclmap().begin();
-        mi != _positions.lclmap().end(); ++mi) {
-        if (_positions.prtn().owner(mi->first) == mpirank) {
-            tmpsrcpos.push_back(mi->second);
+    std::vector<Point3> tmpsrcpos, tmpsrcnor;
+    for (auto& kv : _positions.lclmap()) {
+        if (_positions.prtn().owner(kv.first) == mpirank) {
+            tmpsrcpos.push_back(kv.second);
+	    if (_kernel.NeedsNormals()) {
+		tmpsrcnor.push_back(_normal_vecs.access(kv.first));
+	    }
         }
     }
     std::vector<cpx> tmpsrcden;
-    for (std::map<int, cpx>::iterator mi = den.lclmap().begin();
-        mi != den.lclmap().end(); ++mi) {
-        if (den.prtn().owner(mi->first) == mpirank) {
-            tmpsrcden.push_back(mi->second);
+    for (auto& kv : den.lclmap()) {
+        if (den.prtn().owner(kv.first) == mpirank) {
+            tmpsrcden.push_back(kv.second);
         }
     }
   
     std::vector<Point3> tmptrgpos;
-    for (int i = 0; i < static_cast<int>(chkkeyvec.size()); ++i) {
-        tmptrgpos.push_back( _positions.access(chkkeyvec[i]) );
+    for (int key : chkkeyvec) {
+        tmptrgpos.push_back(_positions.access(key));
     }
 
     DblNumMat srcpos(3, tmpsrcpos.size(), false, (double*)&(tmpsrcpos[0]));
     CpxNumVec srcden(tmpsrcden.size(), false, (cpx*)&(tmpsrcden[0]));
     DblNumMat trgpos(3, tmptrgpos.size(), false, (double*)&(tmptrgpos[0]));
     CpxNumVec trgval(tmptrgpos.size());
-
     CpxNumMat inter;
-    SAFE_FUNC_EVAL( _kernel.kernel(trgpos, srcpos, srcpos, inter) );
+
+    if (_kernel.NeedsNormals()) {
+	DblNumMat srcnor(3, tmpsrcnor.size(), false, (double*)&(tmpsrcnor[0]));
+	SAFE_FUNC_EVAL( _kernel.kernel(trgpos, srcpos, srcnor, inter) );	
+    } else {
+	SAFE_FUNC_EVAL( _kernel.kernel(trgpos, srcpos, srcpos, inter) );
+    }
     // If no points were assigned to this processor, then the trgval
     // should be zero.
     if (inter.n() != 0) {
@@ -76,11 +83,12 @@ double Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& va
     CpxNumVec allval(trgval.m());
     SAFE_FUNC_EVAL( MPI_Barrier(MPI_COMM_WORLD) );
     // Note: 2 doubles per complex number
+    // TODO(arbenson): Change to MPI_COMPLEX
     SAFE_FUNC_EVAL( MPI_Allreduce(trgval.data(), allval.data(), trgval.m() * 2,
 				  MPI_DOUBLE,
                                   MPI_SUM, MPI_COMM_WORLD) );
   
-    // 2. get val
+    // 2. Get the computed values and compare.
     val.getBegin(chkkeyvec, all);
     val.getEnd(all);
     CpxNumVec truval(chkkeyvec.size());
@@ -95,12 +103,10 @@ double Wave3d::check(ParVec<int, cpx, PtPrtn>& den, ParVec<int, cpx, PtPrtn>& va
 
 
     if (mpirank == 0) {
-#ifdef _VERBOSE_	
       std::cout << "key   | computed | actual" << std::endl;
       for (int i = 0; i < truval.m(); ++i) {
 	  std::cout << chkkeyvec[i] << " | " << truval(i) << " | " << allval(i) << std::endl;
       }
-#endif
     }
 
     double tn = sqrt( energy(truval) );
