@@ -271,13 +271,24 @@ int Wave3d::RecursiveBoxInsert(std::queue< std::pair<BoxKey, BoxDat> >& tmpq,
         } else {
             // Copy data into _extpos
             curdat.extpos().resize(3, curdat.ptidxvec().size());
+	    if (_kernel.NeedsNormals()) {
+		curdat.extnor().resize(3, curdat.ptidxvec().size());
+	    }
             for (int g = 0; g < static_cast<int>(curdat.ptidxvec().size()); ++g) {
                 int tmpidx = curdat.ptidxvec()[g];
                 Point3 tmp = _positions.access(tmpidx);
                 for (int d = 0; d < 3; ++d) {
                     curdat.extpos()(d, g) = tmp(d);
                 }
+		if (_kernel.NeedsNormals()) {
+		    // Put in normal vectors.
+		    Point3 nor = _normal_vecs.access(tmpidx);
+		    for (int d = 0; d < 3; ++d) {
+			curdat.extnor()(d, g) = nor(d);
+		    }
+		}
             }
+
             //LEXING: VERY IMPORTANT
             curdat.tag() |= WAVE3D_LEAF;
         }
@@ -734,8 +745,12 @@ int Wave3d::GetExtPos() {
     reqbox.insert(reqbox.begin(), reqboxset.begin(), reqboxset.end());
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_extpos] = 1;
+    if (_kernel.NeedsNormals()) {
+	mask[BoxDat_extnor] = 1;
+    }
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getBegin(reqbox, mask) );
     SAFE_FUNC_EVAL( _level_prtns._lf_boxvec.getEnd(mask) );
+
     for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
         BoxKey curkey = kv.first;
         BoxDat& curdat = kv.second;
@@ -824,7 +839,20 @@ int Wave3d::SetupLowFreqOctree() {
     };
     SAFE_FUNC_EVAL( _positions.getBegin(distrib_unit_pts, all) );
     SAFE_FUNC_EVAL( _positions.getEnd(all) );
+
+    // Also get the normal vectors if we need them.
+    if (_kernel.NeedsNormals()) {
+	std::vector<int> req_nor;
+	for (auto& kv : _positions.lclmap()) {
+	    req_nor.push_back(kv.first);
+	}
+	SAFE_FUNC_EVAL( _normal_vecs.getBegin(req_nor, all) );
+	SAFE_FUNC_EVAL( _normal_vecs.getEnd(all) );
+    }
+    
+    // Construct the octree in the low-frequency regime.
     RecursiveBoxInsert(lf_q, false);
+
     std::vector<int> mask(BoxDat_Number, 0);
     mask[BoxDat_tag] = 1;
     auto distrib_low_freq_boxes = [this] (BoxKey key, BoxDat& dat,
