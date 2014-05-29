@@ -155,8 +155,8 @@ int Acoustic3d::InitializeData(std::map<std::string, std::string>& opts) {
     
     _wave._ctr = _ctr;
     _wave._ACCU = _accu;
-    _wave._kernel = Kernel3d(KERNEL_HELM);
-    _wave._equiv_kernel = Kernel3d(KERNEL_HELM);
+    _wave._kernel = Kernel3d(KERNEL_HELM_SINGLE);
+    _wave._equiv_kernel = Kernel3d(KERNEL_HELM_SINGLE);
     
     // Deal with geometry partition.  For now, we just do a cyclic partition.
     // TODO(arbenson): be more clever about the partition.
@@ -175,7 +175,7 @@ int Acoustic3d::InitializeData(std::map<std::string, std::string>& opts) {
     
     Mlib3d& mlib = _wave._mlib;
     mlib._NPQ = _wave._NPQ;
-    mlib._kernel = Kernel3d(KERNEL_HELM);
+    mlib._kernel = Kernel3d(KERNEL_HELM_SINGLE);
     mlib.setup(opts);
 
     _wave.setup(opts);
@@ -272,7 +272,6 @@ int Acoustic3d::Apply(ParVec<int, cpx, PtPrtn>& in, ParVec<int, cpx, PtPrtn>& ou
     HandleAngle(in, out, potentials);
     RemoveNearby(in, out, densities);
     SingularityCorrection(in, out);
-
     return 0;
 }
 
@@ -517,37 +516,34 @@ void Acoustic3d::Apply(CpxNumVec&x, CpxNumVec& y) {
 }
 
 
-
 void Acoustic3d::Run(std::map<std::string, std::string>& opts) {
 #ifndef RELEASE
     CallStackEntry entry("Acoustic3d::Run");
 #endif
     InitializeData(opts);
 
-    // Random entries for now.
-    // TODO (arbenson): change this when real input is taken.
     int mpirank = getMPIRank();
 
     int m = _vert_distrib[mpirank + 1] - _vert_distrib[mpirank];
 
-    // Initialize right-hand-side (random for now)
+    // Initial guess is 0
     CpxNumVec x0(m);
-    setvalue(x0, cpx(0.0, 0.0));
+    setvalue(x0, cpx(0, 0));
 
+    // Right-hand-side is just all 1 + 1i
     CpxNumVec b(m);
     cpx oneone(1, 1);
     for (int i = 0; i < b.m(); ++i) {
-	double real = static_cast<double>(rand()) / RAND_MAX;
-	double imag = static_cast<double>(rand()) / RAND_MAX;
-	cpx val(1e-3 * real, 1e-3 * imag);
-        b(i) = val;
-	b(i) = oneone;
+        b(i) = oneone;
     }
-#if 1
-    double tol = 1e-2;
-    int max_iter = 50;
+
+    Apply(b, x0);
+
+#if 0
     auto apply_func = [this] (CpxNumVec& x, CpxNumVec& y) { Apply(x, y); };
-    GMRES(b, x0, apply_func, tol, max_iter);
+    double tol = 1e-3;
+    int max_iter = 20;
+    int restart_size = 5;
+    GMRES(b, x0, apply_func, tol, max_iter, restart_size);
 #endif
 }
-
