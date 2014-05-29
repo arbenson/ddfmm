@@ -30,11 +30,12 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
 #endif
     int M = trgpos.n();
     int N = srcpos.n();
+    inter.resize(M, N);
     double TWO_PI = 2 * M_PI;
     cpx I(0, 1);
     double mindif2 = _mindif * _mindif;
 
-    if (_type == KERNEL_HELM) {
+    if (_type == KERNEL_HELM_SINGLE) {
         DblNumMat r2(M, N);
 	for (int j = 0; j < N; ++j) {
             for (int i = 0; i < M; ++i) {
@@ -61,7 +62,6 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         DblNumMat skr(M, N), ckr(M, N);
         mat_dsincos(M, N, kr, skr, ckr);
     
-        inter.resize(M, N);
 	for (int j = 0; j < N; ++j) {
 	    for (int i = 0; i < M; ++i) {
                 inter(i, j) = cpx( ckr(i, j) * ir(i, j), skr(i, j) * ir(i, j) );
@@ -91,7 +91,6 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         DblNumMat skr(M, N), ckr(M, N);
         mat_dsincos(M, N, kr, skr, ckr);
     
-        inter.resize(M, N);
         for (int i = 0; i < M; ++i) {
             for (int j = 0; j < N; ++j) {
                 inter(i, j) = cpx(ckr(i, j), skr(i, j));
@@ -104,7 +103,7 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
         // Evaluate: D(x, y) - i * eta * S(x, y) 
         //           = (1 / r) * exp^{i * 2pi * r} * 
         //             ((r \cdot n)(1 - i * 2pi r) / r^2 - i * eta)
-        DblNumMat r2(M, N);  // r^2
+        DblNumMat rr(M, N);  // r^2
 	DblNumMat rn(M, N);  // r \cdot n
 	for (int j = 0; j < N; ++j) {
             for (int i = 0; i < M; ++i) {
@@ -115,32 +114,30 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
 		double n1 = srcnor(1, j);
 		double n2 = srcnor(2, j);
 		rn(i, j) = x * n0 + y * n1 + z * n2;
-                r2(i, j) = x * x + y * y + z * z;
-                if (r2(i, j) < mindif2) {
-                    r2(i, j) = 1;
+                rr(i, j) = x * x + y * y + z * z;
+                if (rr(i, j) < mindif2) {
+                    rr(i, j) = 1;
 		    rn(i, j) = 0;
                 }
 	    }
         }
 
         DblNumMat r(M, N);
-        mat_dsqrt(M, N, r2, r);
+        mat_dsqrt(M, N, rr, r);
     
 	DblNumMat ir2(M, N); // 1 / r^2
-        mat_dinv(M, N, r2, ir2);
+        mat_dinv(M, N, rr, ir2);
 
         DblNumMat ir(M, N);  // 1 / r
         mat_dinv(M, N, r, ir);
 
-        DblNumMat& kr = r;  // 2pi * r
-        mat_dscale(M, N, kr, TWO_PI);  // (overwrite r)
+        DblNumMat kr = r;  // 2pi * r
+        mat_dscale(M, N, kr, TWO_PI);
 
 	// sin and cos of 2pi * r
         DblNumMat skr(M, N), ckr(M, N);
         mat_dsincos(M, N, kr, skr, ckr);
 
-        inter.resize(M, N);
-	// TODO(arbenson): what should eta be here?
 	double eta = TWO_PI;
 	for (int j = 0; j < N; ++j) {
 	    for (int i = 0; i < M; ++i) {
@@ -153,6 +150,27 @@ int Kernel3d::kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
 	        inter(i, j) = exp * (tmp1 - tmp2);
             }
         }
+    } else if (_type == KERNEL_HELM_DOUBLE) {
+	for (int j = 0; j < N; ++j) {
+	    for (int i = 0; i < M; ++i) {
+		double r0 = trgpos(0, i) - srcpos(0, j);
+		double r1 = trgpos(1, i) - srcpos(1, j);
+		double r2 = trgpos(2, i) - srcpos(2, j);
+		double n0 = srcnor(0, j);
+		double n1 = srcnor(1, j);
+		double n2 = srcnor(2, j);
+		double rr = r0*r0 + r1*r1 + r2*r2;
+		double rn = r0*n0 + r1*n1 + r2*n2;
+		double r = sqrt(rr);
+		double rrr = rr * r;
+		if (r < _mindif) {
+		    inter(i, j) = 0;
+		} else {
+		    double Kr = TWO_PI * r;
+		    inter(i, j) = 1.0/(4*M_PI) * cpx(cos(Kr),sin(Kr)) * (1.0-I*Kr) / rrr * rn;
+		}
+	    }
+	}
     } else {
 	std::cerr << "Unknown kernel type " << _type << std::endl;
         throw new std::exception();
