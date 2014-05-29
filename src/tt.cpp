@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
             std::cerr << "Done setting val " << val.lclmap().size() << " "
                  << val.prtn().ownerinfo().size() << std::endl;
         }
-        Kernel3d kernel(KERNEL_HELM);
+        Kernel3d kernel(KERNEL_HELM_SINGLE);
         mi = opts.find("-kernel");
         // TODO (Austin): change this to the other format for getting an option
         if (mi != opts.end()) {
@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
             ss >> type;
             kernel.type() = type;
         }
-	Kernel3d equiv_kernel(KERNEL_HELM);
+	Kernel3d equiv_kernel(KERNEL_HELM_SINGLE);
 	if (kernel.type() == KERNEL_EXPR) {
 	  equiv_kernel = Kernel3d(KERNEL_EXPR);
 	}
@@ -211,6 +211,5 @@ int main(int argc, char** argv) {
         DumpCallStack();
     }
 #endif
-    MPI_Finalize();
     return 0;
 }
