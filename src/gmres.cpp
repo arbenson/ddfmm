@@ -81,75 +81,90 @@ void UpdateV(CpxNumMat& V, CpxNumVec& r, double norm2_r, int k) {
     }
 }
 
-
-// Update H matrix in GMRES
-void UpdateResidual(CpxNumMat& H, CpxNumMat& V, CpxNumVec& r, int k) {
-#ifndef RELEASE
-    CallStackEntry entry("UpdateResidual");
-#endif
-    for (int i = 0; i < k; ++i) {
-	CpxNumVec qi(V.m(), false, V.data() + i * V.m());
-	H(i, k - 1) = InnerProduct(qi, r);
-	Add(r, qi, r, cpx(1, 0), -H(i, k - 1));
-    }
-}
-
 // After the GMRES iterations have completed, this forms the solution vector.
-void FormSolution(CpxNumMat& H, CpxNumMat& V, double h10,
+void FormSolution(CpxNumMat& H, CpxNumMat& V, double beta,
 		  CpxNumVec& x0, int iter) {
 #ifndef RELEASE
     CallStackEntry entry("FormSolution");
 #endif
-    // Solve y_* = \arg\min_y \| h10 e_1 - H y \|_2
+    // Solve y_* = \arg\min_y \| beta e_1 - H y \|_2
     char trans = 'N';
     int M = iter + 1;
     int N = iter;
     int NRHS = 1;
     int lda = H.m();
-    CpxNumVec b(M);
-    setvalue(b, cpx(0, 0));
-    b(0) = h10;
+    CpxNumVec rhs(M);
+    setvalue(rhs, cpx(0, 0));
+    rhs(0) = beta;
     int ldb = M;
 
     int lwork = -1;
     cpx opt_work;
     int info;
     // Workspace query
-    zgels_(&trans, &M, &N, &NRHS, H.data(), &lda, b.data(), &ldb,
+    zgels_(&trans, &M, &N, &NRHS, H.data(), &lda, rhs.data(), &ldb,
 	   &opt_work, &lwork, &info);
     CHECK_TRUE_MSG(info == 0, "Bad least-squares call");
 
     int mpirank = getMPIRank();
-    if (mpirank == 0) {
-	std::cout << "H: " << H << std::endl;
-    }
 
     // Actual least squares solve
     lwork = static_cast<int>(std::real(opt_work));
     cpx *work = new cpx[lwork];
-    zgels_(&trans, &M, &N, &NRHS, H.data(), &lda, b.data(), &ldb,
+    zgels_(&trans, &M, &N, &NRHS, H.data(), &lda, rhs.data(), &ldb,
 	   work, &lwork, &info);
     CHECK_TRUE_MSG(info == 0, "Bad least-squares call");
     delete [] work;
 
-    // Now solve x_* = x_0 + V y.  y is stored in the vector b.
+    // Now compute x_0 := x_0 + V y.  y is stored in the vector rhs.
     int m = x0.m();
-    int n = iter;
     lda = V.m();
     CHECK_TRUE(lda == m);
     cpx alpha(1, 0);
+    cpx beta2(1, 0);
     int incx = 1;
     int incy = 1;
-    cpx beta(1, 0);
-    zgemv_(&trans, &m, &n, &alpha, V.data(), &lda, b.data(), &incx,
-	   &beta, x0.data(), &incy);
+    zgemv_(&trans, &m, &N, &alpha, V.data(), &lda, rhs.data(), &incx,
+	   &beta2, x0.data(), &incy);
 }
 
 
-// Very simple GMRES with restarts (following Saad).
+// Compute the residual naively without overwriting any data.
+double ComputeResidual(CpxNumMat& H, CpxNumMat& V, double beta,
+		     CpxNumVec& x0, int iter, CpxNumVec& b,
+		     std::function<void (CpxNumVec& x, CpxNumVec& y)> Apply) {
+#ifndef RELEASE
+    CallStackEntry entry("ComputeResidual");
+#endif
+    // Copy data
+    CpxNumMat H_copy = H;
+    CpxNumMat V_copy = V;
+    CpxNumVec x0_copy = x0;
+
+#if 0
+    if (getMPIRank() == 0) {
+	std::cout << "H: " << H_copy << std::endl;
+    }
+#endif
+
+    FormSolution(H_copy, V_copy, beta, x0_copy, iter);
+    
+    // Solution is now stored in x0.  Compute r = Ax - b.
+    CpxNumVec resid(x0_copy.m());
+    setvalue(resid, cpx(0, 0));
+    // r = Ax
+    Apply(x0_copy, resid);
+    // r = r - b   (Ax - b)
+    Add(resid, b, resid, cpx(1, 0), cpx(-1, 0));
+
+    return Norm2(resid);
+}
+
+
+// Very simple restarted GMRES (following Saad).
 void GMRES(CpxNumVec& b, CpxNumVec& x0,
 	   std::function<void (CpxNumVec& x, CpxNumVec& y)> Apply,
-	   double tol, int max_iter) {
+	   double tol, int max_iter, int restart_size) {
 #ifndef RELEASE
     CallStackEntry entry("GMRES");
 #endif
@@ -160,20 +175,17 @@ void GMRES(CpxNumVec& b, CpxNumVec& x0,
 	std::cout << "norm of right-hand-side: " << normb << std::endl;
     }
     int total_iter = 0;
-    int restart_size = 5;
-    double beta;
     double break_tol = 1e-14;
 
     while (total_iter < max_iter) {
-	// r = b - Ax
-	CpxNumVec result(x0.m());
+	// r = b - Ax_0
 	CpxNumVec w(x0.m());
 	Apply(x0, w);
 	Add(b, w, w, cpx(1, 0), cpx(-1, 0));
 	
 	// beta = || r ||_2
 	double beta = Norm2(w);
-	if (mpirank == 0) { std::cout << "Starting residual: " << beta << std::endl; }
+	if (mpirank == 0) { std::cout << "Current residual: " << beta << std::endl; }
 	if (beta < tol * normb) { break; }
 
 	// Setup V with first column = r / beta
@@ -187,6 +199,14 @@ void GMRES(CpxNumVec& b, CpxNumVec& x0,
 
 	int j;
 	for (j = 0; j < restart_size; ++j) {
+	    // Compute the residual at every iteration just to check.
+	    if (j > 0) {
+		double resid = ComputeResidual(H, V, beta, x0, j, b, Apply);
+		if (mpirank == 0) {
+		    std::cout << "residual: " << resid << std::endl;
+		}
+	    }
+
 	    // w_{j} = Av_{j}
 	    CpxNumVec v(V.m(), false, V.data() + j * V.m());
 	    Apply(v, w);
@@ -199,29 +219,26 @@ void GMRES(CpxNumVec& b, CpxNumVec& x0,
 	    }
 
 	    H(j + 1, j) = Norm2(w);
+	    // If the bottom-right entry is too small, quit early.
 	    if (std::abs(H(j + 1, j)) < break_tol) {
 		if (mpirank == 0) {
-		    std::cout << "Early stop" << std::endl;
+		    std::cout << "Bottom entry of H is too small... breaking..."
+			      << std::endl;
 		}
+		++j;
 		break;
 	    }
-
-	    ++total_iter;
 
 	    if (j < restart_size - 1) {
 		// Generate next column
 		UpdateV(V, w, std::abs(H(j + 1, j)), j + 1);
 	    }
 
+	    ++total_iter;
 	    MPI_Barrier(MPI_COMM_WORLD);
 	}
 	    
 	if (mpirank == 0) { std::cout << "Forming solution" << std::endl; }
 	FormSolution(H, V, beta, x0, j);
-    }
-
-    if (mpirank == 0) {
-	std::cout << "Number of iterations: " << total_iter << std::endl;
-	std::cout << "soln: " << x0 << std::endl;
     }
 }

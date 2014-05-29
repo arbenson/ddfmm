@@ -24,7 +24,7 @@
 
 void GMRES(CpxNumVec& b, CpxNumVec& x0,
 	   std::function<void (CpxNumVec& x, CpxNumVec& y)> Apply,
-	   double tol, int max_iter);
+	   double tol, int max_iter, int restart_size);
 
 int dgemm(double alpha, const DblNumMat& A, const DblNumMat& B, double beta, DblNumMat& C);
 int dgemm(int m, int n, int k, double alpha, double* A, double* B, double beta, double* C);
