@@ -241,6 +241,10 @@ int Wave3d::LowFreqM2M(BoxKey& srckey, BoxDat& srcdat, DblNumMat& uep,
             }
         }
         CpxNumMat mat;
+	if (_kernel.NeedsNormals()) {
+	    CHECK_TRUE_MSG(srcdat.extpos().n() == srcdat.extnor().n(),
+			   "Normals do not match.");
+	}
         SAFE_FUNC_EVAL( _kernel.kernel(upchkpos, srcdat.extpos(),
 				       srcdat.extnor(), mat) );
         SAFE_FUNC_EVAL( zgemv(1.0, mat, srcdat.extden(), 1.0, upchkval) );
@@ -339,7 +343,7 @@ int Wave3d::LowFreqL2L(BoxKey& trgkey, BoxDat& trgdat, DblNumMat& dep,
             }
         }
         CpxNumMat mat;
-        SAFE_FUNC_EVAL( _equiv_kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
+        SAFE_FUNC_EVAL( _kernel.kernel(trgdat.extpos(), dneqnpos, dneqnpos, mat) );
         SAFE_FUNC_EVAL( zgemv(1.0, mat, dneqnden, 1.0, trgdat.extval()) );
     } else {
         // put stuff to children
@@ -369,10 +373,14 @@ int Wave3d::UListCompute(BoxDat& trgdat) {
 #endif
     for (BoxKey& neikey : trgdat.undeidxvec()) {
         BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
-        CHECK_TRUE(HasPoints(neidat));
+        CHECK_TRUE(HasPoints(neidat) && IsLeaf(neidat));
         CpxNumMat mat;
-        SAFE_FUNC_EVAL( _equiv_kernel.kernel(trgdat.extpos(), neidat.extpos(),
-				       neidat.extpos(), mat) );
+	if (_kernel.NeedsNormals()) {
+	    CHECK_TRUE_MSG(neidat.extpos().n() == neidat.extnor().n(),
+			   "Normals do not match.");
+	}
+        SAFE_FUNC_EVAL(_kernel.kernel(trgdat.extpos(), neidat.extpos(),
+				      neidat.extnor(), mat));
         SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
     }
     return 0;
@@ -435,28 +443,6 @@ int Wave3d::VListCompute(double W, BoxDat& trgdat, Point3& trgctr, DblNumMat& ue
     return 0;
 }
 
-int Wave3d::XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
-                         CpxNumVec& dnchkval) {
-#ifndef RELEASE
-    CallStackEntry entry("Wave3d::XListCompute");
-#endif
-    for (BoxKey& neikey : trgdat.xndeidxvec()) {
-        BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
-        CHECK_TRUE(HasPoints(neidat));
-        Point3 neictr = BoxCenter(neikey);
-        if (IsLeaf(trgdat) && trgdat.extpos().n() < dcp.n()) {
-            CpxNumMat mat;
-            SAFE_FUNC_EVAL( _equiv_kernel.kernel(trgdat.extpos(), neidat.extpos(),
-					   neidat.extpos(), mat) );
-            SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
-        } else {
-            CpxNumMat mat;
-            SAFE_FUNC_EVAL( _equiv_kernel.kernel(dnchkpos, neidat.extpos(), neidat.extpos(), mat) );
-            SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, dnchkval) );
-        }
-    }
-    return 0;
-}
 
 int Wave3d::WListCompute(double W, BoxDat& trgdat, DblNumMat& uep) {
 #ifndef RELEASE
@@ -469,8 +455,12 @@ int Wave3d::WListCompute(double W, BoxDat& trgdat, DblNumMat& uep) {
         // upchkpos
         if (IsLeaf(neidat) && neidat.extpos().n() < uep.n()) {
             CpxNumMat mat;
-            SAFE_FUNC_EVAL( _equiv_kernel.kernel(trgdat.extpos(), neidat.extpos(),
-					   neidat.extpos(), mat) );
+	    if (_kernel.NeedsNormals()) {
+		CHECK_TRUE_MSG(neidat.extpos().n() == neidat.extnor().n(),
+			       "Normals do not match.");
+	    }
+            SAFE_FUNC_EVAL(_kernel.kernel(trgdat.extpos(), neidat.extpos(),
+					  neidat.extnor(), mat) );
             SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
         } else {
             double coef = BoxWidth(neikey) / W; // LEXING: SUPER IMPORTANT
@@ -487,3 +477,32 @@ int Wave3d::WListCompute(double W, BoxDat& trgdat, DblNumMat& uep) {
     }
     return 0;
 }
+
+
+int Wave3d::XListCompute(BoxDat& trgdat, DblNumMat& dcp, DblNumMat& dnchkpos,
+                         CpxNumVec& dnchkval) {
+#ifndef RELEASE
+    CallStackEntry entry("Wave3d::XListCompute");
+#endif
+    for (BoxKey& neikey : trgdat.xndeidxvec()) {
+        BoxDat& neidat = _level_prtns._lf_boxvec.access(neikey);
+        CHECK_TRUE(HasPoints(neidat));
+        Point3 neictr = BoxCenter(neikey);
+	if (_kernel.NeedsNormals()) {
+	    CHECK_TRUE_MSG(neidat.extpos().n() == neidat.extnor().n(),
+			   "Normals do not match.");
+	}
+        if (IsLeaf(trgdat) && trgdat.extpos().n() < dcp.n()) {
+            CpxNumMat mat;
+            SAFE_FUNC_EVAL(_kernel.kernel(trgdat.extpos(), neidat.extpos(),
+					  neidat.extnor(), mat));
+            SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, trgdat.extval()) );
+        } else {
+            CpxNumMat mat;
+            SAFE_FUNC_EVAL( _kernel.kernel(dnchkpos, neidat.extpos(), neidat.extnor(), mat) );
+            SAFE_FUNC_EVAL( zgemv(1.0, mat, neidat.extden(), 1.0, dnchkval) );
+        }
+    }
+    return 0;
+}
+
