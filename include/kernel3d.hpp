@@ -22,9 +22,10 @@
 #include "vec3t.hpp"
 
 enum {
-    KERNEL_HELM = 0,
-    KERNEL_EXPR = 1,
-    KERNEL_HELM_MIXED = 2
+    KERNEL_HELM_SINGLE = 0,
+    KERNEL_HELM_DOUBLE = 1,
+    KERNEL_HELM_MIXED = 2,
+    KERNEL_EXPR = 3
 };
 
 class Kernel3d {
@@ -32,16 +33,15 @@ protected:
   static double _mindif;
   int _type;
 public:
-  Kernel3d(int t=KERNEL_HELM): _type(t) {;}
-  ~Kernel3d() {;}
-  int& type() { return _type; }
-  
-  int dim() const { return 3; }
-  int sdof() const { return 1; }
-  int tdof() const { return 1; }
-  
-  int kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
-             const DblNumMat& srcnor, CpxNumMat& mat);
+    Kernel3d(int t=KERNEL_HELM_SINGLE): _type(t) {;}
+    ~Kernel3d() {;}
+    int& type() { return _type; }
+    
+    int kernel(const DblNumMat& trgpos, const DblNumMat& srcpos,
+	       const DblNumMat& srcnor, CpxNumMat& mat);
+    
+    bool NeedsNormals () { return _type == KERNEL_HELM_MIXED ||
+	                          _type == KERNEL_HELM_DOUBLE; }
 };
 
 #endif
