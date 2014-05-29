@@ -94,20 +94,6 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
                   << " secs" << std::endl;
 #endif
     }
-    if (_kernel.type() == KERNEL_HELM_MIXED) {
-        // We also need to communicate the normal vectors.
-        double t0 = MPI_Wtime();
-	SAFE_FUNC_EVAL(_normal_vecs.getBegin(reqpts, all));
-	SAFE_FUNC_EVAL(_normal_vecs.getEnd(all));
-	double t1 = MPI_Wtime();
-	if (mpirank == 0) {
-#ifdef _VERBOSE_
-	    std::cout << "Normal vector communication: " << MPIDiffTime(t0, t1)
-		      << " secs" << std::endl;
-#endif
-	}
-	
-    }
 
     // Now set the densities.
     for (auto& kv : _level_prtns._lf_boxvec.lclmap()) {
@@ -119,21 +105,9 @@ int Wave3d::GatherDensities(ParVec<int, cpx, PtPrtn>& den) {
             std::vector<int>& curpis = curdat.ptidxvec();
             CpxNumVec& extden = curdat.extden();
             extden.resize(curpis.size());
-	    if (_kernel.type() == KERNEL_HELM_MIXED) {
-                // Make room for the normal vectors
-	        DblNumMat& extnor = curdat.extnor();
-		extnor.resize(3, curpis.size());
-	    }
             for (int k = 0; k < static_cast<int>(curpis.size()); ++k) {
                 int poff = curpis[k];
                 extden(k) = den.access(poff);
-		if (_kernel.type() == KERNEL_HELM_MIXED) {
-                    // Put in normal vectors.
-                    Point3 nor = _normal_vecs.access(poff);
-		    for (int d = 0; d < 3; ++d) {
-                        curdat.extnor()(d, k) = nor(d);
-		    }
-		}
             }
         }
     }
