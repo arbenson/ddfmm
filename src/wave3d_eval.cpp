@@ -30,9 +30,11 @@ int Wave3d::LowFreqUpwardPass(std::set<BoxKey>& reqboxset) {
     CallStackEntry entry("Wave3d::LowFreqUpwardPass");
 #endif
     int mpirank = getMPIRank();
+#ifdef _VERBOSE_
     if (mpirank == 0) {
         std::cout << "Beginning low frequency upward pass..." << std::endl;
     }
+#endif
 
     double t0 = MPI_Wtime();
     // For each box width in the low frequency regime that this processor
@@ -70,9 +72,11 @@ int Wave3d::HighFreqPass() {
     level_hdkeys_map_t& level_hdmap_out = _level_prtns._level_hdmap_out;
     level_hdkeys_map_t& level_hdmap_inc = _level_prtns._level_hdmap_inc;
     
+#ifdef _VERBOSE_
     if(mpirank == 0) {
         std::cout << "Beginning high frequency pass..." << std::endl;
     }
+#endif
 
     // Upward pass (M2M)
     double t0, t1, t2, t3;
